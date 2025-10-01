@@ -2,8 +2,6 @@
 
 This project aims at being a complete, end-to-end solution for the functioning of a Dehradun based NGO, Badlaav Foundation, which is a not-for-profit organization founded in order to improve the lives and livelihoods of people from the vulnerable, marginalized and under-developed sections of the society. This single-page landing website was created to increase the awareness of the NGO (Badlaav Founadation) and reach as much people as possible. It was essential to have global presence that is to have online presence.
 
-Link to the Website - [Bdalaav Foundation Website](https://anshumansrivastava108.github.io/BadlaavFoundation-NGO-Website/)
-
 ### Technologies Used:
 
 - HTML, CSS, Javascript
@@ -38,46 +36,4 @@ The website currently has the following sections:
 
 ### Screenshots of different Sections of the Website
 
-Home: 
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(463).png)
-
-About:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(455).png)
-
-Projects:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(456).png)
-
-Join Us:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(457).png)
-
-Our Team:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(458).png)
-
-Testimonials:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(459).png)
-
-Blogs:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(460).png)
-
-Contact Us:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(461).png)
-
-Footer:
-
-![image](https://raw.githubusercontent.com/AnshumanSrivastava108/BadlaavFoundation-NGO-Website/main/Screenshots/Screenshot%20(462).png)
-
 ## Author
-
-**Anshuman Srivastava**
-
-* Twitter: [@Anshuman_121](https://twitter.com/Anshuman_121)
-* Github: [@AnshumanSrivastava108](https://github.com/AnshumanSrivastava108)
-* LinkedIn: [@AnshumanSrivastava108](https://www.linkedin.com/in/anshumansrivastava108)
