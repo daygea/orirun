@@ -46,7 +46,7 @@
 if (location.protocol !== 'file:') {
   var link = document.createElement('link');
   link.rel  = 'manifest';
-  link.href = '/manifest.json';
+  link.href = 'manifest.json';
   document.head.appendChild(link);
 }
 </script>
@@ -960,7 +960,7 @@ if (location.protocol !== 'file:') {
 <script src="public/js/dailyGuidance.js" defer></script>
 <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+      navigator.serviceWorker.register('./sw.js', { scope: '/' }).then(reg => {
         if (reg.waiting) {
           reg.waiting.postMessage({type: 'SKIP_WAITING'});
         }
