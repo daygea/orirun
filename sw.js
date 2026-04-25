@@ -104,7 +104,7 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   if (event.action === "dismiss") return;
 
-  const targetUrl = event.notification.data?.url || "/";
+  const targetUrl = event.notification.data?.url || "./";
 
   event.waitUntil(
     clients
