@@ -514,6 +514,8 @@ button:disabled{
 
 #chatbot-input::placeholder {
   color: #65676b;
+  font-size: 13px;
+  font-weight: normal;
 }
 
 .queryBtn {
