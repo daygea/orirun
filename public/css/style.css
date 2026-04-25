@@ -1285,6 +1285,31 @@ input:checked + .slider:before {
   vertical-align: middle;
 }
 
+.kb-pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.kb-page-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.kb-ellipsis {
+  padding: 0 2px;
+  font-size: 13px;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+}
+
 .kb-page-btn {
   border: 1px solid #d4edda;
   background: #ffffff;

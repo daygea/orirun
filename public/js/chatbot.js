@@ -182,7 +182,7 @@ async function sendMessage(userInput, options = {}) {
   try {
 
     if (isHelpRequest) {
-      aiText = getKnowledgeBaseIndex(1, 20, "");
+      aiText = getKnowledgeBaseIndex(1, 5, "");
       source = "Internal";
 
     } else {
@@ -252,7 +252,7 @@ function checkIfaKnowledgeBase(userMessage) {
   return null;
 }
 
-const pageSize = 20;
+const pageSize = 5;
 let currentSearch = "";
 
 function highlightMatch(text, searchTerm) {
@@ -310,7 +310,6 @@ function getKnowledgeBaseIndex(page = 1, pageSizeLocal = pageSize, searchTerm = 
 
     return `
         <div class="kb-index">
-            <p>Search or click a topic to explore its teachings:</p>
             <input type="text" id="kb-search" placeholder="🔍 Search topics..." value="${searchTerm}" />
             <div class="kb-list">${listHtml || "<p>No topics match your search.</p>"}</div>
             ${paginationHtml}
