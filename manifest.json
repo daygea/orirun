@@ -3,8 +3,8 @@
   "short_name": "Orirun",
   "description": "Explore African spirituality through Ifa divination, Yoruba wisdom, and numerology.",
   "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
@@ -13,19 +13,19 @@
   "categories": ["lifestyle", "education", "spirituality"],
   "icons": [
     {
-      "src": "/public/img/icons/icon-192.png",
+      "src": "public/img/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/public/img/icons/icon-512.png",
+      "src": "public/img/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/public/img/icons/icon-512-maskable.png",
+      "src": "public/img/icons/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -33,7 +33,7 @@
   ],
   "screenshots": [
     {
-      "src": "/public/img/screenshots/home.png",
+      "src": "public/img/screenshots/home.png",
       "sizes": "1080x1920",
       "type": "image/png",
       "label": "Home Page",
