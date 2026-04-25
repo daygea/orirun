@@ -3,7 +3,7 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 
 const APP_SHELL_CACHE = "orirun-shell-v1";
 const RUNTIME_CACHE   = "orirun-runtime-v1";
-const OFFLINE_PAGE    = "/offline.html";
+const OFFLINE_PAGE    = "./offline.html";
 
 // ---------------------------------------------------------
 // 1. Precache Only Essential App Shell Files
