@@ -31,7 +31,7 @@ workbox.routing.registerRoute(
 // ---------------------------------------------------------
 // 3. Cache Images (with fallback)
 // ---------------------------------------------------------
-const FALLBACK_IMG = "/public/img/logo.png";
+const FALLBACK_IMG = "./public/img/logo.png";
 workbox.routing.registerRoute(
   ({ request }) => request.destination === "image",
   new workbox.strategies.CacheFirst({
@@ -82,11 +82,11 @@ self.addEventListener("message", (event) => {
     event.waitUntil(
       self.registration.showNotification(title || "🧿 Orírùn", {
         body:               body || "Your daily Ifa guidance is ready.",
-        icon:               icon || "/public/img/logo.png",
-        badge:              icon || "/public/img/logo.png",
+        icon:               icon || "./public/img/logo.png",
+        badge:              icon || "./public/img/logo.png",
         tag:                tag  || "orirun-daily",
         requireInteraction: false,
-        data:               { url: url || "/" },
+        data:               { url: url || "./" },
         vibrate:            [200, 100, 200],
         actions: [
           { action: "open",    title: "Open App" },
@@ -136,10 +136,10 @@ self.addEventListener("periodicsync", (event) => {
 
       return self.registration.showNotification("🧿 Orírùn — Daily Ifa Guidance", {
         body:    "Your daily message from the Ori is waiting.",
-        icon:    "/public/img/logo.png",
-        badge:   "/public/img/logo.png",
+        icon:    "./public/img/logo.png",
+        badge:   "./public/img/logo.png",
         tag:     "orirun-daily",
-        data:    { url: "/" },
+        data:    { url: "./" },
         vibrate: [200, 100, 200]
       });
     })
@@ -154,10 +154,10 @@ self.addEventListener("push", (event) => {
   let payload = {
     title: "🧿 Orírùn — Daily Ifa Guidance",
     body:  "Your daily message from the Ori is waiting.",
-    icon:  "/public/img/logo.png",
-    badge: "/public/img/logo.png",
+    icon:  "./public/img/logo.png",
+    badge: "./public/img/logo.png",
     tag:   "orirun-daily",
-    url:   "/"
+    url:   "./"
   };
 
   if (event.data) {
@@ -167,12 +167,12 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body:               payload.body,
-      icon:               payload.icon  || "/public/img/logo.png",
-      badge:              payload.badge || "/public/img/logo.png",
+      icon:               payload.icon  || "./public/img/logo.png",
+      badge:              payload.badge || "./public/img/logo.png",
       tag:                payload.tag   || "orirun-daily",
       requireInteraction: false,
       vibrate:            [200, 100, 200],
-      data:               { url: payload.url || "/" },
+      data:               { url: payload.url || "./" },
       actions: [
         { action: "open",    title: "Open App" },
         { action: "dismiss", title: "Later"    }
