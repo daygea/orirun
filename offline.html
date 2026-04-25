@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orirun – Offline Mode</title>
+  <style>
+    body {
+      background-color: #faf7f2;
+      color: #333;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      padding: 20px;
+    }
+    img {
+      width: 120px;
+      height: auto;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+      color: #1a1a1a;
+    }
+    p {
+      max-width: 300px;
+      font-size: 1rem;
+      color: white;
+    }
+    .retry {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <img src="/public/img/icons/icon-512.png" alt="Orirun">
+  <h1>You’re Offline</h1>
+  <p>It seems your connection is lost. You can still explore Orirun when you reconnect.</p>
+  <button class="retry" onclick="location.reload()">🔄 Try Again</button>
+</body>
+</html>

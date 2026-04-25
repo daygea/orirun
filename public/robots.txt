@@ -1,0 +1,37 @@
+# Allow all good crawlers (Google, Bing, etc.)
+User-agent: *
+Allow: /
+
+# Block common scraping tools
+User-agent: HTTrack
+Disallow: /
+
+User-agent: WebCopier
+Disallow: /
+
+User-agent: Teleport
+Disallow: /
+
+User-agent: Wget
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /
+
+User-agent: Python-urllib
+Disallow: /
+
+User-agent: requests
+Disallow: /
+
+User-agent: headless
+Disallow: /
+
+User-agent: selenium
+Disallow: /
+
+User-agent: phantomjs
+Disallow: /
+
+# Point bots to your sitemap
+Sitemap: https://orirun.com/sitemap.xml
