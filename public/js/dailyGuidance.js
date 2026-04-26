@@ -929,7 +929,7 @@ slot.innerHTML = `
       </div>
 
       ${hardBlock ? "" : `
-      <div
+      <button
         role="switch"
         aria-checked="${enabled}"
         tabindex="0"
@@ -938,7 +938,6 @@ slot.innerHTML = `
         data-status="${statusId}"
         data-cb="${cbId}"
         onclick="_handleNotifToggleClick(this)"
-        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_handleNotifToggleClick(this);}"
         style="
           position:relative;
           display:inline-block;
@@ -949,6 +948,10 @@ slot.innerHTML = `
           border-radius:24px;
           background:${enabled ? "#2e7d32" : "#ccc"};
           transition:background 0.2s;
+          border:none;
+          padding:0;
+          outline:none;
+          -webkit-tap-highlight-color:transparent;
         "
         id="${cbId}"
       >
@@ -964,57 +967,94 @@ slot.innerHTML = `
           box-shadow:0 1px 3px rgba(0,0,0,0.3);
           pointer-events:none;
         "></span>
-      </div>`}
+      </button>`}
     </div>`;
 }
 
+
 async function _handleNotifToggleClick(el) {
-  /* Read current state from aria-checked — works regardless of which
-     slot this toggle lives in, no getElementById ID conflicts */
   const isCurrentlyOn = el.getAttribute("aria-checked") === "true";
   const willTurnOn    = !isCurrentlyOn;
-
   const thumbId  = el.getAttribute("data-thumb");
   const statusId = el.getAttribute("data-status");
-  const thumb      = document.getElementById(thumbId);
-  const statusText = document.getElementById(statusId);
+  const cbId     = el.id;
 
   if (willTurnOn) {
     if (Notification.permission === "granted") {
+      /* Already granted — update visuals immediately */
       localStorage.removeItem(DG_NOTIF_DISABLED);
+      localStorage.setItem(DG_NOTIF_ASKED, "1");
+
+      const thumb      = document.getElementById(thumbId);
+      const statusText = document.getElementById(statusId);
+      el.style.background = "#2e7d32";
+      el.setAttribute("aria-checked", "true");
+      if (thumb) thumb.style.left = "23px";
+      if (statusText) statusText.innerHTML =
+        '<span data-translate>You will receive a daily personalised guidance notification.</span>';
+
+      /* Subscribe in background — do not block UI */
+      navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+        if (swReg) {
+          await _registerPeriodicSync(swReg);
+          await _subscribeToPush(swReg);
+        }
+      });
+
     } else {
+      /* Need to request permission first */
       localStorage.removeItem(DG_NOTIF_ASKED);
       const perm = await Notification.requestPermission();
+
+      /* Re-fetch elements after async wait — refs may be stale */
+      const freshEl     = document.getElementById(cbId);
+      const freshThumb  = document.getElementById(thumbId);
+      const freshStatus = document.getElementById(statusId);
+      const liveEl      = freshEl    || el;
+      const liveThumb   = freshThumb || document.getElementById(thumbId);
+      const liveSt      = freshStatus || document.getElementById(statusId);
+
       if (perm !== "granted") {
-        if (statusText) statusText.innerHTML =
+        if (liveSt) liveSt.innerHTML =
           '<span data-translate>Permission denied. Enable notifications in your browser settings.</span>';
-        return; // leave toggle off
+        return;
       }
+
+      /* Permission granted — update visuals IMMEDIATELY */
       localStorage.removeItem(DG_NOTIF_DISABLED);
-      const swReg = await navigator.serviceWorker?.ready.catch(() => null);
-      if (swReg) {
-        await _registerPeriodicSync(swReg);
-        await _subscribeToPush(swReg);
-      }
+      localStorage.setItem(DG_NOTIF_ASKED, "1");
+
+      liveEl.style.background = "#2e7d32";
+      liveEl.setAttribute("aria-checked", "true");
+      if (liveThumb) liveThumb.style.left = "23px";
+      if (liveSt) liveSt.innerHTML =
+        '<span data-translate>You will receive a daily personalised guidance notification.</span>';
+
+      /* Subscribe in background — do not block UI */
+      navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+        if (swReg) {
+          await _registerPeriodicSync(swReg);
+          await _subscribeToPush(swReg);
+        }
+      });
     }
-    /* Visual: on */
-    el.style.background = "#2e7d32";
-    el.setAttribute("aria-checked", "true");
-    if (thumb) thumb.style.left = "23px";
-    if (statusText) statusText.innerHTML =
-      '<span data-translate>You will receive a daily personalised guidance notification.</span>';
-    localStorage.setItem(DG_NOTIF_ASKED, "1");
 
   } else {
-    /* Visual: off */
+    /* Turning off */
+    const thumb      = document.getElementById(thumbId);
+    const statusText = document.getElementById(statusId);
+
     localStorage.setItem(DG_NOTIF_DISABLED, "1");
     el.style.background = "#ccc";
     el.setAttribute("aria-checked", "false");
     if (thumb) thumb.style.left = "3px";
     if (statusText) statusText.innerHTML =
       '<span data-translate>Daily guidance notifications are off.</span>';
-    const swRegOut = await navigator.serviceWorker?.ready.catch(() => null);
-    _unsubscribeFromPush(swRegOut);
+
+    /* Unsubscribe in background */
+    navigator.serviceWorker?.ready.catch(() => null).then(swReg => {
+      _unsubscribeFromPush(swReg);
+    });
   }
 }
 
