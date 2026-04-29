@@ -813,7 +813,7 @@ h1 {
 }
 
 #birthdate {
-  width: 100%;
+  width: 80%;
   max-width: 250px;
   padding: 10px 12px;
   font-size: 16px;
@@ -823,24 +823,21 @@ h1 {
   font-family: Courier, monospace;
   font-weight: bold;
   background: white;
-  -webkit-appearance: none;
-  appearance: none;
   box-sizing: border-box;
+  display: block;
+  margin: 0 auto;
 }
 
-/* Hide browser's own date format hint until date is selected */
-#birthdate::-webkit-datetime-edit-text,
-#birthdate::-webkit-datetime-edit-month-field,
-#birthdate::-webkit-datetime-edit-day-field,
-#birthdate::-webkit-datetime-edit-year-field {
-  color: transparent;
-}
-
-#birthdate:valid::-webkit-datetime-edit-text,
-#birthdate:valid::-webkit-datetime-edit-month-field,
-#birthdate:valid::-webkit-datetime-edit-day-field,
-#birthdate:valid::-webkit-datetime-edit-year-field {
+/* Safari and Chrome — style the date text */
+#birthdate::-webkit-datetime-edit {
   color: green;
+  font-family: Courier, monospace;
+  font-weight: bold;
+}
+
+/* Empty state — show placeholder color */
+#birthdate:not(:valid)::-webkit-datetime-edit {
+  color: #aaa;
 }
 button {
     font-size: 16px;
