@@ -867,6 +867,7 @@ window.onload = async () => {
 
   generateCircularButtons();
   printArea.style.display = "block";
+  
 
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   document.addEventListener("click", () => speechSynthesis.getVoices(), { once: true });
