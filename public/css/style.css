@@ -809,19 +809,39 @@ h1 {
 }
 
 #birthdate-box {
-        margin-bottom: 10px;
-    }  
+  margin-bottom: 10px;
+}
 
-input#birthdate[type="text"],
-input#birthdate[type="date"]  {
-    width: 80%;
-    max-width: 250px;
-    padding: 5px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}     
+#birthdate {
+  width: 100%;
+  max-width: 250px;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  color: green;
+  font-family: Courier, monospace;
+  font-weight: bold;
+  background: white;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+}
 
+/* Hide browser's own date format hint until date is selected */
+#birthdate::-webkit-datetime-edit-text,
+#birthdate::-webkit-datetime-edit-month-field,
+#birthdate::-webkit-datetime-edit-day-field,
+#birthdate::-webkit-datetime-edit-year-field {
+  color: transparent;
+}
+
+#birthdate:valid::-webkit-datetime-edit-text,
+#birthdate:valid::-webkit-datetime-edit-month-field,
+#birthdate:valid::-webkit-datetime-edit-day-field,
+#birthdate:valid::-webkit-datetime-edit-year-field {
+  color: green;
+}
 button {
     font-size: 16px;
     background-color: #4caf50;
