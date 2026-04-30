@@ -867,7 +867,9 @@ window.onload = async () => {
 
   const bdInput = document.getElementById("birthdate");
   if (bdInput) {
-    bdInput.max = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    bdInput.max   = today;
+    bdInput.value = today;
   }
 
   generateCircularButtons();
