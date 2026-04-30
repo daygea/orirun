@@ -865,9 +865,16 @@ window.onload = async () => {
   loadingScreen.style.display = "none";
   preloader.style.display     = "none";
 
+  /* Birthdate — set max to today and default to today */
+    const bdInput = document.getElementById("birthdate");
+    if (bdInput) {
+      const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
+      bdInput.max = today;
+    }
+
   generateCircularButtons();
   printArea.style.display = "block";
-  
+
 
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
   document.addEventListener("click", () => speechSynthesis.getVoices(), { once: true });

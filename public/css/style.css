@@ -807,7 +807,7 @@ button:disabled{
 h1 {
     margin-bottom: 20px;
 }
-
+/*
 #birthdate-box {
         margin-bottom: 10px;
     }  
@@ -820,7 +820,24 @@ input#birthdate[type="date"]  {
     font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 5px;
-}     
+}  */   
+
+#birthdate-box {
+  margin-bottom: 10px;
+}
+
+input#birthdate[type="text"],
+input#birthdate[type="date"] {
+  width: 80%;
+  max-width: 250px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  color: green;
+  font-family: Courier, monospace;
+  font-weight: bold;
+}
 
 button {
     font-size: 16px;
