@@ -887,22 +887,195 @@ function _notifAvailable() {
   return Notification.permission !== "denied";
 }
 
+// function renderNotifToggle(container) {
+//   const slot = container || document.getElementById("notif-toggle-slot");
+//   if (!slot) return;
+
+//   /* Use slot id as a unique suffix to avoid duplicate IDs when
+//      both the footer and About modal slots are rendered at once */
+//   const uid       = slot.id || ("dg-" + Math.random().toString(36).slice(2, 7));
+//   const trackId   = "dg-track-"  + uid;
+//   const thumbId   = "dg-thumb-"  + uid;
+//   const statusId  = "dg-status-" + uid;
+//   const cbId      = "dg-cb-"     + uid;
+
+//   const enabled   = _isNotifEnabled();
+//   const hardBlock = "Notification" in window && Notification.permission === "denied";
+
+// slot.innerHTML = `
+//     <div style="
+//       display:flex;
+//       align-items:center;
+//       justify-content:flex-start;
+//       gap:12px;
+//       padding:12px 0;
+//       border-top:1px solid #e0e0e0;
+//       flex-wrap:wrap;
+//       max-width:420px;
+//       margin:0 auto;
+//     ">
+//       <div style="flex:1;min-width:160px;">
+//         <p style="margin:0;font-size:13px;font-weight:bold;color:#1b4332;">
+//           🔔 <span data-translate>Daily Guidance</span>
+//         </p>
+//         <p style="margin:4px 0 0;font-size:11px;color:#666;" id="${statusId}">
+//           ${hardBlock
+//             ? '<span data-translate>Blocked in browser settings. To enable, update your browser notification permissions for this site.</span>'
+//             : enabled
+//               ? '<span data-translate>You will receive a daily personalised guidance notification.</span>'
+//               : '<span data-translate>Enable to receive a daily personalised guidance notification.</span>'
+//           }
+//         </p>
+//       </div>
+
+//       ${hardBlock ? "" : `
+//       <button
+//         role="switch"
+//         aria-checked="${enabled}"
+//         tabindex="0"
+//         data-track="${trackId}"
+//         data-thumb="${thumbId}"
+//         data-status="${statusId}"
+//         data-cb="${cbId}"
+//         onclick="_handleNotifToggleClick(this)"
+//         style="
+//           position:relative;
+//           display:inline-block;
+//           width:44px;
+//           height:24px;
+//           flex-shrink:0;
+//           cursor:pointer;
+//           border-radius:24px;
+//           background:${enabled ? "#2e7d32" : "#ccc"};
+//           transition:background 0.2s;
+//           border:none;
+//           padding:0;
+//           outline:none;
+//           -webkit-tap-highlight-color:transparent;
+//         "
+//         id="${cbId}"
+//       >
+//         <span id="${trackId}" style="display:none;"></span>
+//         <span id="${thumbId}" style="
+//           position:absolute;
+//           top:3px;
+//           left:${enabled ? "23px" : "3px"};
+//           width:18px;height:18px;
+//           background:#fff;
+//           border-radius:50%;
+//           transition:left 0.2s;
+//           box-shadow:0 1px 3px rgba(0,0,0,0.3);
+//           pointer-events:none;
+//         "></span>
+//       </button>`}
+//     </div>`;
+// }
+
+
+// async function _handleNotifToggleClick(el) {
+//   const isCurrentlyOn = el.getAttribute("aria-checked") === "true";
+//   const willTurnOn    = !isCurrentlyOn;
+//   const thumbId  = el.getAttribute("data-thumb");
+//   const statusId = el.getAttribute("data-status");
+//   const cbId     = el.id;
+
+//   if (willTurnOn) {
+//     if (Notification.permission === "granted") {
+//       /* Already granted — update visuals immediately */
+//       localStorage.removeItem(DG_NOTIF_DISABLED);
+//       localStorage.setItem(DG_NOTIF_ASKED, "1");
+
+//       const thumb      = document.getElementById(thumbId);
+//       const statusText = document.getElementById(statusId);
+//       el.style.background = "#2e7d32";
+//       el.setAttribute("aria-checked", "true");
+//       if (thumb) thumb.style.left = "23px";
+//       if (statusText) statusText.innerHTML =
+//         '<span data-translate>You will receive a daily personalised guidance notification.</span>';
+
+//       /* Subscribe in background — do not block UI */
+//       navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+//         if (swReg) {
+//           await _registerPeriodicSync(swReg);
+//           await _subscribeToPush(swReg);
+//         }
+//       });
+
+//     } else {
+//       /* Need to request permission first */
+//       localStorage.removeItem(DG_NOTIF_ASKED);
+//       const perm = await Notification.requestPermission();
+
+//       /* Re-fetch elements after async wait — refs may be stale */
+//       const freshEl     = document.getElementById(cbId);
+//       const freshThumb  = document.getElementById(thumbId);
+//       const freshStatus = document.getElementById(statusId);
+//       const liveEl      = freshEl    || el;
+//       const liveThumb   = freshThumb || document.getElementById(thumbId);
+//       const liveSt      = freshStatus || document.getElementById(statusId);
+
+//       if (perm !== "granted") {
+//         if (liveSt) liveSt.innerHTML =
+//           '<span data-translate>Permission denied. Enable notifications in your browser settings.</span>';
+//         return;
+//       }
+
+//       /* Permission granted — update visuals IMMEDIATELY */
+//       localStorage.removeItem(DG_NOTIF_DISABLED);
+//       localStorage.setItem(DG_NOTIF_ASKED, "1");
+
+//       liveEl.style.background = "#2e7d32";
+//       liveEl.setAttribute("aria-checked", "true");
+//       if (liveThumb) liveThumb.style.left = "23px";
+//       if (liveSt) liveSt.innerHTML =
+//         '<span data-translate>You will receive a daily personalised guidance notification.</span>';
+
+//       /* Subscribe in background — do not block UI */
+//       navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+//         if (swReg) {
+//           await _registerPeriodicSync(swReg);
+//           await _subscribeToPush(swReg);
+//         }
+//       });
+//     }
+
+//   } else {
+//     /* Turning off */
+//     const thumb      = document.getElementById(thumbId);
+//     const statusText = document.getElementById(statusId);
+
+//     localStorage.setItem(DG_NOTIF_DISABLED, "1");
+//     el.style.background = "#ccc";
+//     el.setAttribute("aria-checked", "false");
+//     if (thumb) thumb.style.left = "3px";
+//     if (statusText) statusText.innerHTML =
+//       '<span data-translate>Daily guidance notifications are off.</span>';
+
+//     /* Unsubscribe in background */
+//     navigator.serviceWorker?.ready.catch(() => null).then(swReg => {
+//       _unsubscribeFromPush(swReg);
+//     });
+//   }
+// }
+
 function renderNotifToggle(container) {
   const slot = container || document.getElementById("notif-toggle-slot");
   if (!slot) return;
 
-  /* Use slot id as a unique suffix to avoid duplicate IDs when
-     both the footer and About modal slots are rendered at once */
-  const uid       = slot.id || ("dg-" + Math.random().toString(36).slice(2, 7));
-  const trackId   = "dg-track-"  + uid;
-  const thumbId   = "dg-thumb-"  + uid;
-  const statusId  = "dg-status-" + uid;
-  const cbId      = "dg-cb-"     + uid;
+  const uid      = slot.id || ("dg-" + Math.random().toString(36).slice(2, 7));
+  const thumbId  = "dg-thumb-"  + uid;
+  const statusId = "dg-status-" + uid;
+  const cbId     = "dg-cb-"     + uid;
 
-  const enabled   = _isNotifEnabled();
-  const hardBlock = "Notification" in window && Notification.permission === "denied";
+  const enabled    = _isNotifEnabled();
+  const hardBlock  = "Notification" in window && Notification.permission === "denied";
 
-slot.innerHTML = `
+  /* iOS Safari — not installed as PWA */
+  const isIOS      = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isInPWA    = window.matchMedia("(display-mode: standalone)").matches;
+  const iosNoSupport = isIOS && !isInPWA && !("Notification" in window);
+
+  slot.innerHTML = `
     <div style="
       display:flex;
       align-items:center;
@@ -919,21 +1092,22 @@ slot.innerHTML = `
           🔔 <span data-translate>Daily Guidance</span>
         </p>
         <p style="margin:4px 0 0;font-size:11px;color:#666;" id="${statusId}">
-          ${hardBlock
-            ? '<span data-translate>Blocked in browser settings. To enable, update your browser notification permissions for this site.</span>'
-            : enabled
-              ? '<span data-translate>You will receive a daily personalised guidance notification.</span>'
-              : '<span data-translate>Enable to receive a daily personalised guidance notification.</span>'
+          ${iosNoSupport
+            ? '<span data-translate>To receive notifications on iPhone, add Orirun to your Home Screen first.</span>'
+            : hardBlock
+              ? '<span data-translate>Blocked in browser settings. To enable, update your browser notification permissions for this site.</span>'
+              : enabled
+                ? '<span data-translate>You will receive a daily personalised guidance notification.</span>'
+                : '<span data-translate>Enable to receive a daily personalised guidance notification.</span>'
           }
         </p>
       </div>
 
-      ${hardBlock ? "" : `
+      ${(hardBlock || iosNoSupport) ? "" : `
       <button
         role="switch"
         aria-checked="${enabled}"
         tabindex="0"
-        data-track="${trackId}"
         data-thumb="${thumbId}"
         data-status="${statusId}"
         data-cb="${cbId}"
@@ -955,7 +1129,6 @@ slot.innerHTML = `
         "
         id="${cbId}"
       >
-        <span id="${trackId}" style="display:none;"></span>
         <span id="${thumbId}" style="
           position:absolute;
           top:3px;
@@ -971,91 +1144,79 @@ slot.innerHTML = `
     </div>`;
 }
 
-
-async function _handleNotifToggleClick(el) {
+function _handleNotifToggleClick(el) {
   const isCurrentlyOn = el.getAttribute("aria-checked") === "true";
   const willTurnOn    = !isCurrentlyOn;
   const thumbId  = el.getAttribute("data-thumb");
   const statusId = el.getAttribute("data-status");
   const cbId     = el.id;
 
-  if (willTurnOn) {
-    if (Notification.permission === "granted") {
-      /* Already granted — update visuals immediately */
-      localStorage.removeItem(DG_NOTIF_DISABLED);
-      localStorage.setItem(DG_NOTIF_ASKED, "1");
-
-      const thumb      = document.getElementById(thumbId);
-      const statusText = document.getElementById(statusId);
-      el.style.background = "#2e7d32";
-      el.setAttribute("aria-checked", "true");
-      if (thumb) thumb.style.left = "23px";
-      if (statusText) statusText.innerHTML =
-        '<span data-translate>You will receive a daily personalised guidance notification.</span>';
-
-      /* Subscribe in background — do not block UI */
-      navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
-        if (swReg) {
-          await _registerPeriodicSync(swReg);
-          await _subscribeToPush(swReg);
-        }
-      });
-
-    } else {
-      /* Need to request permission first */
-      localStorage.removeItem(DG_NOTIF_ASKED);
-      const perm = await Notification.requestPermission();
-
-      /* Re-fetch elements after async wait — refs may be stale */
-      const freshEl     = document.getElementById(cbId);
-      const freshThumb  = document.getElementById(thumbId);
-      const freshStatus = document.getElementById(statusId);
-      const liveEl      = freshEl    || el;
-      const liveThumb   = freshThumb || document.getElementById(thumbId);
-      const liveSt      = freshStatus || document.getElementById(statusId);
-
-      if (perm !== "granted") {
-        if (liveSt) liveSt.innerHTML =
-          '<span data-translate>Permission denied. Enable notifications in your browser settings.</span>';
-        return;
-      }
-
-      /* Permission granted — update visuals IMMEDIATELY */
-      localStorage.removeItem(DG_NOTIF_DISABLED);
-      localStorage.setItem(DG_NOTIF_ASKED, "1");
-
-      liveEl.style.background = "#2e7d32";
-      liveEl.setAttribute("aria-checked", "true");
-      if (liveThumb) liveThumb.style.left = "23px";
-      if (liveSt) liveSt.innerHTML =
-        '<span data-translate>You will receive a daily personalised guidance notification.</span>';
-
-      /* Subscribe in background — do not block UI */
-      navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
-        if (swReg) {
-          await _registerPeriodicSync(swReg);
-          await _subscribeToPush(swReg);
-        }
-      });
-    }
-
-  } else {
-    /* Turning off */
+  if (!willTurnOn) {
+    /* Turning off — no permission needed, update immediately */
     const thumb      = document.getElementById(thumbId);
     const statusText = document.getElementById(statusId);
-
     localStorage.setItem(DG_NOTIF_DISABLED, "1");
     el.style.background = "#ccc";
     el.setAttribute("aria-checked", "false");
     if (thumb) thumb.style.left = "3px";
     if (statusText) statusText.innerHTML =
       '<span data-translate>Daily guidance notifications are off.</span>';
-
-    /* Unsubscribe in background */
     navigator.serviceWorker?.ready.catch(() => null).then(swReg => {
       _unsubscribeFromPush(swReg);
     });
+    return;
   }
+
+  /* Turning on */
+  if (Notification.permission === "granted") {
+    /* Already granted — update immediately */
+    _applyToggleOn(el, thumbId, statusId);
+    navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+      if (swReg) { await _registerPeriodicSync(swReg); await _subscribeToPush(swReg); }
+    });
+    return;
+  }
+
+  /* Need to request — MUST call requestPermission synchronously
+     from this user gesture. Safari invalidates the gesture on any await. */
+  if (!("Notification" in window)) {
+    const s = document.getElementById(statusId);
+    if (s) s.innerHTML = '<span data-translate>Notifications not supported in this browser.</span>';
+    return;
+  }
+
+  /* Call synchronously — no await before this */
+  const permPromise = Notification.requestPermission();
+
+  /* Handle result asynchronously */
+  permPromise.then(perm => {
+    const freshEl     = document.getElementById(cbId)     || el;
+    const freshThumb  = document.getElementById(thumbId);
+    const freshStatus = document.getElementById(statusId);
+
+    if (perm !== "granted") {
+      if (freshStatus) freshStatus.innerHTML =
+        '<span data-translate>Permission denied. Enable notifications in your browser settings.</span>';
+      return;
+    }
+
+    _applyToggleOn(freshEl, thumbId, statusId);
+    navigator.serviceWorker?.ready.catch(() => null).then(async swReg => {
+      if (swReg) { await _registerPeriodicSync(swReg); await _subscribeToPush(swReg); }
+    });
+  });
+}
+
+function _applyToggleOn(el, thumbId, statusId) {
+  localStorage.removeItem(DG_NOTIF_DISABLED);
+  localStorage.setItem(DG_NOTIF_ASKED, "1");
+  const thumb      = document.getElementById(thumbId);
+  const statusText = document.getElementById(statusId);
+  el.style.background = "#2e7d32";
+  el.setAttribute("aria-checked", "true");
+  if (thumb) thumb.style.left = "23px";
+  if (statusText) statusText.innerHTML =
+    '<span data-translate>You will receive a daily personalised guidance notification.</span>';
 }
 
 /* ─────────────────────────────────────────────────────────────
