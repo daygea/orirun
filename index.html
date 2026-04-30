@@ -410,10 +410,7 @@ if (location.protocol !== 'file:') {
                     <div id="birthdate-box">
                       <input
                         id="birthdate"
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        onfocus="this.type='date'; setTimeout(() => this.showPicker && this.showPicker(), 0)"
-                        onblur="if (!this.value) this.type='text'"
+                        type="date"
                         style="width:80%;max-width:250px;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:5px;color:green;font-family:Courier,monospace;font-weight:bold;"
                       /><br/><br/>
                       <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
