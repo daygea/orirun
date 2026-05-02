@@ -1091,93 +1091,93 @@ function parseEnergyAccordion(text) {
 
 async function getEnergyInterpretation(payload) {
 
-  const prompt = `
-Interpret this life chart using African spiritual wisdom,
-with Yoruba cosmology as the primary lens.
+const prompt = `
+Interpret this life chart using African spiritual wisdom, with Yoruba cosmology as the primary lens.
 
-Speak like an elder who sees beyond appearances.
-Your tone must feel grounded, wise, and observant — not instructional, not modern, not clinical.
+Speak as an elder who observes patterns clearly.
+Do not explain spirituality. Speak as if it is already understood.
 
-IMPORTANT:
-- Do NOT include any form of ebo, sacrifice, ritual, or offering.
-- Avoid modern psychological language.
-- Do not sound generic. Speak directly to the person as if you understand their path.
-- Reveal both strength and imbalance.
+------------------------
+HIERARCHY OF INTERPRETATION
+------------------------
 
-PERSON
-Name: ${payload.fullName}
-Age: ${payload.age}
-Birthdate: ${payload.birthdate}
+CORE IDENTITY (DOMINANT)
+- Life Path: ${payload.lifepath}
+- Destiny: ${payload.destiny}
+- Soul Urge: ${payload.soulUrge}
 
-CORE ÒRÌ NUMBERS
-Birthday Gift: ${payload.birthdayGift}
-Life Path: ${payload.lifepath}
-Destiny / Expression: ${payload.destiny}
-Soul Urge: ${payload.soulUrge}
-Personality: ${payload.personality}
-Reality / Life Purpose: ${payload.reality}
+EXPRESSION LAYER
+- Personality: ${payload.personality}
+- Birthday Gift: ${payload.birthdayGift}
+- Reality: ${payload.reality}
 
-DESTINY PHASES (Pinnacles)
-${payload.pinnaclePhases.map(p => `
-Age ${p.ageRange}
-Energy: ${p.pinnacleNumber} – ${p.pinnacleMeaning}
-Challenge: ${p.challengeNumber || "None"} – ${p.challengeMeaning || ""}
-`).join("")}
+TIMING LAYER (CONTEXT ONLY)
+- Pinnacle: ${payload.pinnacleNumber}
+- Challenge: ${payload.challengeNumber}
+- Year: ${payload.year}, Month: ${payload.month}, Week: ${payload.week}, Day: ${payload.day}
 
-CURRENT DESTINY WIND
-Active Pinnacle: ${payload.pinnacleNumber}
-Active Challenge: ${payload.challengeNumber}
+COSMIC LAYER (SUPPORT ONLY)
+- Zodiac: ${payload.zodiac} (${payload.zodiacElement})
+- Orisha: ${payload.zodiacOrisha}
+- Planetary Hour: ${payload.planetaryHour} (${payload.planetaryOrisha})
 
-TIME CURRENTS
-Year: ${payload.year}  Month: ${payload.month}  Week: ${payload.week}  Day: ${payload.day}
+If there is conflict, always prioritize CORE IDENTITY.
 
-ASTROLOGICAL FOUNDATION
-Zodiac Sign: ${payload.zodiac}  Element: ${payload.zodiacElement}
-Orisha Ruler: ${payload.zodiacOrisha} (Western planet: ${payload.zodiacRuler})
-Yoruba Birth Season: ${payload.zodiacYorubaMonth} (${payload.zodiacStart} – ${payload.zodiacEnd})
-Orisha Domain: ${payload.orishaDomain}
-Orisha Influence: ${payload.orishaEffect}
-Ifa Wisdom for this Sign: ${payload.ifaWisdom}
+------------------------
+STRICT RULES
+------------------------
 
-COSMIC HOUR
-Planetary Ruler: ${payload.planetaryHour}
-Orisha Influence: ${payload.planetaryOrisha}
-Energy: ${payload.planetaryEnergy}
+- Use exactly 4 sections.
+- Each section = 2 sentences ONLY.
+- Each sentence < 18 words.
+- Speak directly using "you".
+- No filler. No repetition.
 
-STRUCTURE YOUR RESPONSE AS:
+PERSONALIZATION:
+- Each section must include a real-life behavior or pattern.
+- Speak with certainty. Avoid "you may", "you tend to".
 
-1️⃣ **Nature of the Person's Òrì**
-- Describe their inner nature and outer expression.
-- Reveal what comes naturally to them and what they often struggle to understand about themselves.
-- Show both their strength and their hidden imbalance.
+ANTI-GENERIC:
+- If it can describe many people, do not include it.
 
-2️⃣ **Path of Life Phases**
-- Explain how their life unfolds across phases.
-- Highlight repeating patterns or lessons.
-- Show how past phases may still be influencing the present.
+NUMBER USAGE:
+- Do NOT mention numbers (e.g., 3, 7, 8).
+- Speak only in meaning, not calculation.
 
-3️⃣ **Present Season of Life**
-- Speak clearly about what they are currently facing.
-- Identify the tension between their opportunity and their challenge.
-- Explain what may feel difficult and why.
+STYLE:
+- Short. Sharp. Observational.
+- No motivational tone.
+- No modern psychology.
 
-4️⃣ **Movement of Time**
-- Interpret the year, month, week, and day as flowing energies.
-- Show how these layers interact (not separately).
-- Indicate whether this is a time to act, wait, reflect, or realign.
+PROHIBITED:
+- No rituals, sacrifices, or ebo.
 
-5️⃣ **Cosmic Alignment**
-- Explain how their zodiac, element, and Orisha influence their behavior and decisions.
-- Reveal where they are aligned — and where they may be acting against their nature.
+------------------------
+STRUCTURE
+------------------------
 
-6️⃣ **Guidance of Òrì**
-- Speak as an elder giving grounded life direction.
-- Be specific: mention behaviors, attitudes, or habits to watch or cultivate.
-- Do not be vague. Let the guidance feel practical, observable, and real.
+1️⃣ Nature of Òrì
+- Reveal core identity using Life Path, Destiny, Soul Urge
+- Show one internal contradiction
+- Show one repeated behavior
 
-Include one sentence that makes the person reflect on a real-life pattern they may have experienced.
-FINAL INSTRUCTION:
-Do not rush. Let the interpretation feel like it was carefully observed, not generated.
+2️⃣ Present Season
+- Use current timing
+- Show tension between pressure and opportunity
+- Tie it to identity
+
+3️⃣ Movement of Time
+- Combine year, month, week, day into one flow
+- State clearly: act, wait, adjust, or observe
+
+4️⃣ Guidance of Òrì
+- Give direct, practical behavior guidance
+- Focus on habits, decisions, mindset
+
+FINAL LINE:
+- One short sentence exposing a real pattern they have lived through.
+
+Do not rush. Speak as one who has seen this life before.
 `.trim();
 
   try {
@@ -1308,7 +1308,7 @@ const performBirthChart = async () => {
          Falls back to plain render if structure is not found.
     ── */
 
-    function parseEnergyAccordion(text) {
+function parseEnergyAccordion(text) {
   const sectionRegex = /(?=(?:1️⃣|2️⃣|3️⃣|4️⃣|5️⃣|6️⃣|\*\*[1-6][.:])\s)/g;
   const rawSections  = text.split(sectionRegex).filter(s => s.trim());
 
@@ -1357,57 +1357,49 @@ const performBirthChart = async () => {
 
     const parts = [];
 
-    /* Voice of Ori — open by default, AI loads here */
+    /* 🧿 Voice of Òrì — PRIMARY EXPERIENCE */
     parts.push(_acc("🧿 The Voice of Òrì", `
-      <div id="ori-voice-slot" style="border-left:4px solid #2e7d32;border-radius:6px;padding:12px;min-height:60px;display:flex;align-items:center;gap:10px;color:green;">
-        <span class="spinner" style="width:18px;height:18px;flex-shrink:0;"></span>
-        <em data-translate>Your reading is being prepared...</em>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <small style="opacity:0.6;">Spiritual Insight</small>
+        <button onclick="toggleEnergyBreakdown()" 
+          style="font-size:12px;border:none;background:#e8f5e9;padding:6px 10px;border-radius:6px;cursor:pointer;">
+          View Energy Breakdown
+        </button>
       </div>
+
+      <div id="ori-voice-slot" style="border-left:4px solid #2e7d32;border-radius:6px;padding:12px;min-height:60px;display:flex;align-items:center;gap:10px;color:green;">
+        <span class="spinner" style="width:18px;height:18px;"></span>
+        <em>Your reading is being prepared...</em>
+      </div>
+
+      <div id="energy-breakdown" style="display:none;margin-top:10px;padding:12px;border:1px dashed #c8e6c9;border-radius:6px;font-size:13px;line-height:1.6;"></div>
     `, true));
 
-    /* Nature & Character — collapsed */
-    parts.push(_acc("Nature & Character", `
-      <p><strong data-translate>Birthday Gift – ${data.birthdayGift?.number}</strong> – <span data-translate>${data.birthdayGift?.label || ""}</span></p>
-      <p><strong data-translate>Life Path – ${data.vibrations?.lifepath?.number}</strong> – <span data-translate>${data.vibrations?.lifepath?.label}</span></p>
-      <p><strong data-translate>Purpose – ${data.vibrations?.reality?.number}</strong> – <span data-translate>${data.vibrations?.reality?.label}</span></p>
-      <p><strong data-translate>Destiny – ${data.destiny?.number}</strong> – <span data-translate>${data.destiny?.label}</span></p>
-      <p><strong data-translate>Soul Urge – ${data.soulUrge?.number}</strong> – <span data-translate>${data.soulUrge?.label}</span></p>
-      <p><strong data-translate>Personality – ${data.quiescent?.number}</strong> – <span data-translate>${data.quiescent?.label}</span></p>
-    `, false));
 
-    /* Astrology — collapsed */
-    if (astro) {
-      parts.push(_acc(`Astrology Insight: ${astro.name} ${astro.symbol}`, `
-        <p><strong data-translate>Yoruba Birth Season:</strong> <span data-translate>${astro.yorubaMonth || ""}</span></p>
-        <p><strong data-translate>Element:</strong> <span data-translate>${astro.element}</span></p>
-        <p><strong data-translate>Ruling Orisha:</strong> <span data-translate>${astro.orisha || astro.ruler}</span>${astro.orisha ? ` <em style="font-size:0.85em;opacity:0.6">(${astro.ruler})</em>` : ""}</p>
-        <p><strong data-translate>Domain:</strong> <span data-translate>${astro.orishaInfluence?.domain || ""}</span></p>
-        <p><strong data-translate>Traits:</strong> <span data-translate>${astro.traits}</span></p>
-        <p><strong data-translate>Strengths:</strong> <span data-translate>${astro.strengths}</span></p>
-        <p><strong data-translate>Weaknesses:</strong> <span data-translate>${astro.weaknesses}</span></p>
-        <p><em data-translate>${astro.message}</em></p>
-        ${astro.orishaInfluence?.ifaWisdom ? `<p style="border-left:3px solid #2e7d32;padding-left:10px;font-style:italic;"><span data-translate>${astro.orishaInfluence.ifaWisdom}</span></p>` : ""}
-        ${astro.transits?.orishaEnergy ? `<p><strong data-translate>Orisha Energy:</strong> <span data-translate>${astro.transits.orishaEnergy}</span></p>` : ""}
-      `, false));
-    }
-
-    /* Planetary Hour — collapsed */
+    /* ⏳ Planetary Hour — SIMPLIFIED & SUPPORTIVE */
     if (planetaryHourData) {
-      parts.push(_acc("Planetary Hour", `
-        <p><strong data-translate>Ruling Orisha of this Hour:</strong> <span data-translate>${planetaryHourData.orisha}</span> <em style="font-size:0.85em;opacity:0.6">(${planetaryHourData.planet})</em></p>
-        <p><strong data-translate>Energy:</strong> <span data-translate>${planetaryHourData.energy}</span></p>
-        <p><strong data-translate>Counsel:</strong> <span data-translate>${planetaryHourData.advice}</span></p>
+      parts.push(_acc("⏳ Current Hour Influence", `
+        <p>
+          <strong data-translate>${planetaryHourData.orisha}</strong>
+          <em style="font-size:0.85em;opacity:0.6">(${planetaryHourData.planet})</em>
+        </p>
+        <p style="opacity:0.85;" data-translate>${planetaryHourData.energy}</p>
       `, false));
     } else if (locationDenied) {
-      parts.push(`<p style="color:orange"><em data-translate>Planetary hour unavailable (location access denied).</em></p>`);
+      parts.push(`
+        <p style="color:orange">
+          <em data-translate>Current hour influence unavailable (location access denied).</em>
+        </p>
+      `);
     }
 
+
+    /* Disclaimer */
     parts.push(`
       <p style="font-style:italic;font-size:0.9em;color:red;text-align:center;margin-top:12px;" data-translate>
         This content is inspired by collective scholarly works and community-preserved teachings, shared for educational purposes only.
       </p>
     `);
-
     resultElement.innerHTML = parts.join("");
 
     renderFeedbackSection("Birth Details",
@@ -1453,7 +1445,34 @@ const performBirthChart = async () => {
       slot.style.alignItems = "unset";
       slot.style.minHeight  = "unset";
       /* Render AI sections as nested accordions inside the Voice of Ori */
+      // slot.innerHTML = parseEnergyAccordion(aiInterpretation);
       slot.innerHTML = parseEnergyAccordion(aiInterpretation);
+
+      /* Populate Energy Breakdown */
+      const breakdown = document.getElementById("energy-breakdown");
+      if (breakdown) {
+        breakdown.innerHTML = `
+          <strong>Core Identity</strong><br>
+          Life Path: ${data.vibrations?.lifepath?.number} – ${data.vibrations?.lifepath?.label}<br>
+          Destiny: ${data.destiny?.number} – ${data.destiny?.label}<br>
+          Soul Urge: ${data.soulUrge?.number} – ${data.soulUrge?.label}<br><br>
+
+          <strong>Expression Layer</strong><br>
+          Personality: ${data.quiescent?.number} – ${data.quiescent?.label}<br>
+          Birthday Gift: ${data.birthdayGift?.number} – ${data.birthdayGift?.label}<br>
+          Reality: ${data.vibrations?.reality?.number} – ${data.vibrations?.reality?.label}<br><br>
+
+          <strong>Current Cycle</strong><br>
+          Pinnacle: ${currentPinnacleNumber}<br>
+          Challenge: ${currentChallengeNumber}<br><br>
+
+          <strong>Time Flow</strong><br>
+          Year: ${data.vibrations?.year?.number}<br>
+          Month: ${data.vibrations?.month?.number}<br>
+          Week: ${data.vibrations?.week?.number}<br>
+          Day: ${data.vibrations?.day?.number}
+        `;
+      }
       window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
     }).catch(() => {
       const slot = document.getElementById("ori-voice-slot");
@@ -1468,6 +1487,12 @@ const performBirthChart = async () => {
       `<center><span class="alert alert-info" data-translate>${error.message}</span></center>`;
   }
 };
+
+function toggleEnergyBreakdown() {
+  const el = document.getElementById("energy-breakdown");
+  if (!el) return;
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
 
 /* ─────────────────────────────────────────────────────────────
  *  WHAT TO DO TEXT
