@@ -31,7 +31,7 @@ workbox.routing.registerRoute(
 // ---------------------------------------------------------
 // 3. Cache Images (with fallback)
 // ---------------------------------------------------------
-const FALLBACK_IMG = "./public/img/logo.png";
+const FALLBACK_IMG = "./public/img/bird.gif";
 workbox.routing.registerRoute(
   ({ request }) => request.destination === "image",
   new workbox.strategies.CacheFirst({
@@ -81,9 +81,9 @@ self.addEventListener("message", (event) => {
     const { title, body, icon, url, tag } = event.data;
     event.waitUntil(
       self.registration.showNotification(title || "🧿 Orírùn", {
-        body:               body || "Your daily Ifa guidance is ready.",
-        icon:               icon || "./public/img/logo.png",
-        badge:              icon || "./public/img/logo.png",
+        body:               body || "Your daily guidance is ready.",
+        icon:               icon || "./public/img/bird.gif",
+        badge:              icon || "./public/img/bird.gif",
         tag:                tag  || "orirun-daily",
         requireInteraction: false,
         data:               { url: url || "./" },
@@ -134,10 +134,10 @@ self.addEventListener("periodicsync", (event) => {
       const anyVisible = wins.some((w) => w.visibilityState === "visible");
       if (anyVisible) return; // app is open — JS handles it
 
-      return self.registration.showNotification("🧿 Orírùn — Daily Ifa Guidance", {
+      return self.registration.showNotification("🧿 Orírùn — Daily Guidance", {
         body:    "Your daily message from the Ori is waiting.",
-        icon:    "./public/img/logo.png",
-        badge:   "./public/img/logo.png",
+        icon:    "./public/img/bird.gif",
+        badge:   "./public/img/bird.gif",
         tag:     "orirun-daily",
         data:    { url: "./" },
         vibrate: [200, 100, 200]
@@ -152,10 +152,10 @@ self.addEventListener("periodicsync", (event) => {
 // ---------------------------------------------------------
 self.addEventListener("push", (event) => {
   let payload = {
-    title: "🧿 Orírùn — Daily Ifa Guidance",
+    title: "🧿 Orírùn — Daily Guidance",
     body:  "Your daily message from the Ori is waiting.",
-    icon:  "./public/img/logo.png",
-    badge: "./public/img/logo.png",
+    icon:  "./public/img/bird.gif",
+    badge: "./public/img/bird.gif",
     tag:   "orirun-daily",
     url:   "./"
   };
@@ -167,8 +167,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body:               payload.body,
-      icon:               payload.icon  || "./public/img/logo.png",
-      badge:              payload.badge || "./public/img/logo.png",
+      icon:               payload.icon  || "./public/img/bird.gif",
+      badge:              payload.badge || "./public/img/bird.gif",
       tag:                payload.tag   || "orirun-daily",
       requireInteraction: false,
       vibrate:            [200, 100, 200],
