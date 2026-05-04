@@ -384,29 +384,6 @@ if (location.protocol !== 'file:') {
                     </div>
 
                     <label><span data-translate="birthDate">Select your birth date</span></label>
-                   <!--  <div id="birthdate-box">
-                      <input
-                        id="birthdate"
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        onfocus="this.type='date'; setTimeout(() => this.showPicker && this.showPicker(), 0)"
-                        onblur="if (!this.value) this.type='text'"
-                        style="width:80%;max-width:250px;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:5px;"
-                      /><br/><br/>
-
-                      <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                          <button onclick="performBirthChart()" class="btn btn-md btn-default app-btn" id="determine-btn">
-                            <span data-translate="revealMessage">Reveal Message</span>
-                          </button>
-                          <i class="ifa-tip"
-                            data-tip="Your name and birth date are used to calculate your Yoruba numerology chart — including your Life Path, Destiny, Soul Urge, and Orisha alignment."
-                            onclick="openIfaTip(this, event)"
-                            role="button"
-                            aria-label="More information">i</i>
-                      </div>
-
-                    </div> -->
-
                     <div id="birthdate-box">
                       <input
                         id="birthdate"
@@ -427,16 +404,16 @@ if (location.protocol !== 'file:') {
 
                     <p><b><span data-translate="or">OR</span></b></p>
                      <div style="display:flex;align-items:center;justify-content:center;gap:6px; margin-bottom: 10px;">
-                      <p style="margin:0;font-weight:bold;">
-                        <span data-translate>Pick a Number</span>
-                      </p>
-                      <i class="ifa-tip"
-                      data-tip="Pick a number to explore its sacred energy and meaning. Each number carries its own Ase (divine force) — revealing its spiritual essence, emotional resonance, personality traits, and physical associations as understood in Yoruba and numerological wisdom."
-                      onclick="openIfaTip(this, event)"
-                      role="button"
-                      aria-label="More information">i</i>
+                        <p style="margin:0;font-weight:bold;">
+                          <span data-translate>Pick a Number</span>
+                        </p>
+                        <i class="ifa-tip"
+                        data-tip="Pick a number to explore its sacred energy and meaning. Each number carries its own Ase (divine force) — revealing its spiritual essence, emotional resonance, personality traits, and physical associations as understood in Yoruba and numerological wisdom."
+                        onclick="openIfaTip(this, event)"
+                        role="button"
+                        aria-label="More information">i</i>
                     </div>
-                     <div class="calculator" id="calculator">    
+                     <div class="calculator" id="calculator" style="margin-bottom: 15px;">    
                     </div>
             </div>
         </div>
