@@ -259,18 +259,18 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       },
 
-      {
-        element: ".donate-btn",
-        popover: {
-          title:       "Support the Project",
-          description: "Orírùn is a free educational resource. " +
-                       "Your support helps preserve and share Africa's ancestral wisdom with the world. " +
-                       "Every contribution is deeply appreciated as it helps keep this free for all.",
-          position:    pos("top"),
-          showButtons: true,
-          doneBtnText: "✅ Done"
-        }
-      }
+      // {
+      //   element: ".donate-btn",
+      //   popover: {
+      //     title:       "Support the Project",
+      //     description: "Orírùn is a free educational resource. " +
+      //                  "Your support helps preserve and share Africa's ancestral wisdom with the world. " +
+      //                  "Every contribution is deeply appreciated as it helps keep this free for all.",
+      //     position:    pos("top"),
+      //     showButtons: true,
+      //     doneBtnText: "✅ Done"
+      //   }
+      // }
 
     ];
   }
