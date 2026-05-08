@@ -588,12 +588,12 @@ if (location.protocol !== 'file:') {
         <div id="notif-toggle-slot" style="margin-top:16px;"></div>
 
         <!-- 3. Get the Application -->
-        <div style="margin:16px auto 0;max-width:420px;">
+        <div style="display:none; margin:16px auto 0;max-width:420px;">
           <p style="margin:0 0 8px;font-size:11px;color:#aaa;letter-spacing:0.8px;text-transform:uppercase;">
             <span data-translate>GET THE APP</span>
           </p>
           <!-- <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;align-items:center;"> -->
-          <div style="display:none;flex-wrap:wrap;justify-content:center;gap:10px;align-items:center;">
+          <div style="flex-wrap:wrap;justify-content:center;gap:10px;align-items:center;">
             <!-- Google Play -->
             <a href="https://play.google.com/store/apps/details?id=com.orirun.app"
                target="_blank"
@@ -606,7 +606,7 @@ if (location.protocol !== 'file:') {
             <!-- PWA Install — shown only when prompt is available -->
             <a href="#" id="installLink"
                style="
-                 display:none;align-items:center;gap:6px;
+                 align-items:center;gap:6px;
                  background:white;color:#2e7d32;
                  padding:8px 14px;border-radius:8px;
                  text-decoration:none;font-size:12px;
