@@ -2,6 +2,38 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>
+(function () {
+  // Detect the iOS App Store wrapper (its WebView user agent ends in "PWAShell")
+  if (!/PWAShell/.test(navigator.userAgent)) return;
+  window.IS_IOS_APP = true;
+  document.documentElement.classList.add('ios-app');
+
+  // Hide payment / Play-Store UI immediately to avoid any flash before removal
+  var style = document.createElement('style');
+  style.textContent =
+    'html.ios-app #paymentModal,' +
+    'html.ios-app #payButton,' +
+    'html.ios-app .donate-btn,' +
+    'html.ios-app a[href*="paystack"],' +
+    'html.ios-app a[href*="play.google.com"]{display:none !important;}';
+  document.head.appendChild(style);
+
+  // Runs after all deferred scripts (incl. main.js) have executed
+  document.addEventListener('DOMContentLoaded', function () {
+    ['paymentModal', 'payButton'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.remove();
+    });
+    document.querySelectorAll(
+      '.donate-btn, a[href*="paystack"], a[href*="play.google.com"]'
+    ).forEach(function (el) { el.remove(); });
+
+    // No paywall on iOS — make every Odù free so the (now-removed) modal never triggers
+    window.isOduPaid = function () { return true; };
+  });
+})();
+</script>
 <title>Orírùn — Source of Ancestral Wisdom</title>
 <meta name="google-site-verification" content="W7tTnvd4Ramj0plPnmXG5_M-0IlzXcWftdLz3-PeMs8" />
 <meta name="title" content="Orírùn — Source of Ancestral Wisdom">
@@ -936,7 +968,16 @@ if (location.protocol !== 'file:') {
     </div>
 <script src="public/js/bootstrap.js" defer></script>
 <script src="public/js/crypto-js.min.js" defer></script>
-<script src="https://js.paystack.co/v1/inline.js" defer></script>
+<!-- <script src="https://js.paystack.co/v1/inline.js" defer></script> -->
+<script>
+  // Load Paystack only outside the iOS app (App Store prohibits external payment for digital content)
+  if (!/PWAShell/.test(navigator.userAgent)) {
+    var ps = document.createElement('script');
+    ps.src = 'https://js.paystack.co/v1/inline.js';
+    ps.defer = true;
+    document.head.appendChild(ps);
+  }
+</script>
 <script src="public/js/axios.min.js" defer></script>
 <script src="public/js/config.js" defer></script>
 <script src="public/js/jspdf.js" defer></script>
