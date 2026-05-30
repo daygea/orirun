@@ -968,16 +968,6 @@ if (location.protocol !== 'file:') {
     </div>
 <script src="public/js/bootstrap.js" defer></script>
 <script src="public/js/crypto-js.min.js" defer></script>
-<!-- <script src="https://js.paystack.co/v1/inline.js" defer></script> -->
-<script>
-  // Load Paystack only outside the iOS app (App Store prohibits external payment for digital content)
-  if (!/PWAShell/.test(navigator.userAgent)) {
-    var ps = document.createElement('script');
-    ps.src = 'https://js.paystack.co/v1/inline.js';
-    ps.defer = true;
-    document.head.appendChild(ps);
-  }
-</script>
 <script src="public/js/axios.min.js" defer></script>
 <script src="public/js/config.js" defer></script>
 <script src="public/js/jspdf.js" defer></script>

@@ -138,6 +138,22 @@ function grantOduAccess(oduName, orientation, specificOrientation, solution, sol
   localStorage.setItem("paidOdus", encryptData(paidOdus));
 }
 
+// Loads Paystack's inline.js on demand; resolves once PaystackPop is ready.
+let __paystackPromise = null;
+function ensurePaystack() {
+  if (window.PaystackPop) return Promise.resolve();
+  if (__paystackPromise) return __paystackPromise;
+  __paystackPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => { __paystackPromise = null; reject(new Error("Failed to load Paystack")); };
+    document.head.appendChild(s);
+  });
+  return __paystackPromise;
+}
+
 async function payForOdu(oduName, orientation, specificOrientation, solution, solutionDetails, amount) {
   const payButton = document.getElementById("payButton");
   if (payButton) { payButton.disabled = true; payButton.textContent = "Processing..."; }
@@ -153,6 +169,8 @@ async function payForOdu(oduName, orientation, specificOrientation, solution, so
     const keyResponse = await fetch("/api/paystack-key");
     if (!keyResponse.ok) throw new Error("Failed to get Paystack key");
     const { key } = await keyResponse.json();
+
+    await ensurePaystack();
 
     const handler = PaystackPop.setup({
       key,

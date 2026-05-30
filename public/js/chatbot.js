@@ -12,6 +12,27 @@ let chatHistory = [
 let _chatFeedbackTimer = null;
 let _lastChatExchange  = { userMessage: "", response: "", source: "AI" };
 
+async function reportChatMessage(msgId) {
+  const el = document.getElementById(msgId);
+  const reportedText = el ? el.innerText.slice(0, 1000) : "";
+  try {
+    await fetch(`${SERVER_URL}/api/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        feedback: "report",
+        contextType: "ai_chat_report",
+        contextData: { reportedResponse: reportedText, userMessage: _lastChatExchange?.userMessage || "" },
+        timestamp: new Date().toISOString()
+      })
+    });
+    alert("Thank you. This response has been reported to our team for review.");
+  } catch (e) {
+    window.location.href = "mailto:info@orirun.com?subject=Report%20AI%20response&body="
+      + encodeURIComponent(reportedText);
+  }
+}
+
 function _scheduleChatFeedback() {
   clearTimeout(_chatFeedbackTimer);
   _chatFeedbackTimer = setTimeout(() => {
@@ -214,7 +235,12 @@ async function sendMessage(userInput, options = {}) {
       }
     }
 
-    botWrapper.innerHTML = `<div class="chat-message bot-message">${aiText}</div>`;
+    // botWrapper.innerHTML = `<div class="chat-message bot-message">${aiText}</div>`;
+    const _msgId = 'botmsg_' + Date.now();
+    botWrapper.innerHTML =
+      `<div class="chat-message bot-message" id="${_msgId}">${aiText}</div>` +
+      `<button class="report-btn" onclick="reportChatMessage('${_msgId}')" ` +
+      `style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;margin:2px 0 8px 4px;">⚐ Report</button>`;
 
     // Save exchange details for deferred feedback
     _lastChatExchange = { userMessage: message, response: aiText, source };
