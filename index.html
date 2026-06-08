@@ -352,7 +352,7 @@ if (location.protocol !== 'file:') {
             <label for="mainCast" style="margin:0;">
               <span data-translate="oduIfa">Odu Ifa</span>
             </label>
-            <i class="ifa-tip" data-tip="An Odu is a sacred chapter of Ifa. There are 256 Odu in total, each a body of wisdom, stories, and guidance. The Odu that appears in your reading is not random — it is the one whose energy is active and relevant in your life right now."
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="An Odu is a sacred chapter of Ifa. There are 256 Odu in total, each a body of wisdom, stories, and guidance. The Odu that appears in your reading is not random — it is the one whose energy is active and relevant in your life right now."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
           </div>
           <select id="mainCast" class="form-control"></select>
@@ -363,7 +363,7 @@ if (location.protocol !== 'file:') {
             <label for="orientation" style="margin:0;">
               <span data-translate="orientation">Orientation (Ire / Ayewo)</span>
             </label>
-            <i class="ifa-tip" data-tip="Ire means the Odu is appearing in a positive, favourable alignment — blessings are available to you. Ayewo means a cautionary alignment — something needs attention or spiritual action to restore balance."
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Ire means the Odu is appearing in a positive, favourable alignment — blessings are available to you. Ayewo means a cautionary alignment — something needs attention or spiritual action to restore balance."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
           </div>
           <select id="orientation" onchange="updateSpecificOrientation()" class="form-control">
@@ -377,7 +377,7 @@ if (location.protocol !== 'file:') {
             <label for="specificOrientation" style="margin:0;">
               <span data-translate="specificOrientation">Specific Orientation</span>
             </label>
-            <i class="ifa-tip" data-tip="Within Ire or Ayewo, there are specific types of blessing or challenge. For example: Aiku = longevity and health, Aje = wealth, Isegun = victory. This tells you exactly which area of life the Odu is speaking to."
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Within Ire or Ayewo, there are specific types of blessing or challenge. For example: Aiku = longevity and health, Aje = wealth, Isegun = victory. This tells you exactly which area of life the Odu is speaking to."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
           </div>
           <select id="specificOrientation" class="form-control"></select>
@@ -388,7 +388,7 @@ if (location.protocol !== 'file:') {
             <label for="solution" style="margin:0;">
               <span data-translate="solution">Solution (Ebo / Adimu)</span>
             </label>
-            <i class="ifa-tip" data-tip="Ebo is a prescribed spiritual action or offering — something you do to activate a blessing (in Ire) or resolve a challenge (in Ayewo). Think of it as spiritual medicine. Adimu is a more personal offering made directly to your Orisha."
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Ebo is a prescribed spiritual action or offering — something you do to activate a blessing (in Ire) or resolve a challenge (in Ayewo). Think of it as spiritual medicine. Adimu is a more personal offering made directly to your Orisha."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
           </div>
           <select id="solution" onchange="updateSolutionDetails()" class="form-control">
@@ -402,7 +402,7 @@ if (location.protocol !== 'file:') {
             <label for="solutionDetails" style="margin:0;">
               <span data-translate="specificSolution">Specific Solution</span>
             </label>
-            <i class="ifa-tip" data-tip="This is the specific type of Ebo or Adimu prescribed. For example: Akoru = a material offering made to resolve the situation. Each specific solution carries its own set of items and actions as revealed by the Odu."
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="This is the specific type of Ebo or Adimu prescribed. For example: Akoru = a material offering made to resolve the situation. Each specific solution carries its own set of items and actions as revealed by the Odu."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
           </div>
           <select id="solutionDetails" class="form-control"></select>
@@ -435,7 +435,7 @@ if (location.protocol !== 'file:') {
                         <button onclick="performBirthChart()" class="btn btn-md btn-default app-btn" id="determine-btn">
                           <span data-translate="revealMessage">Reveal Message</span>
                         </button>
-                        <i class="ifa-tip"
+                        <i class="ifa-tip" data-translate-attr="data-tip"
                           data-tip="Your name and birth date are used to calculate your Yoruba numerology chart — including your Life Path, Destiny, Soul Urge, and Orisha alignment."
                           onclick="openIfaTip(this, event)"
                           role="button"
@@ -448,7 +448,7 @@ if (location.protocol !== 'file:') {
                         <p style="margin:0;font-weight:bold;">
                           <span data-translate>Pick a Number</span>
                         </p>
-                        <i class="ifa-tip"
+                        <i class="ifa-tip" data-translate-attr="data-tip"
                         data-tip="Pick a number to explore its sacred energy and meaning. Each number carries its own Ase (divine force) — revealing its spiritual essence, emotional resonance, personality traits, and physical associations as understood in Yoruba and numerological wisdom."
                         onclick="openIfaTip(this, event)"
                         role="button"
@@ -516,7 +516,7 @@ if (location.protocol !== 'file:') {
               <h2><span data-translate>My History</span> 
                 <span>
                   <a href="#" style="text-decoration: none; font-size: 14px;" onclick="openSyncModal()" data-translate>Sync Device</a>
-                  <i class="ifa-tip" data-tip="Save or restore your data across devices — no account needed."
+                  <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Save or restore your data across devices — no account needed."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
                 </span>
               </h2>
@@ -757,8 +757,8 @@ if (location.protocol !== 'file:') {
     <!-- ── Chatbot ── -->
     <div id="chatbot-container" class="hidden">
       <div id="chatbot-header">
-        💬 Orírùn <span data-translate>Learning Corner</span>
-        <button class="app-btn align-right" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
+        <span class="chatbot-title">💬 Orírùn <span data-translate>Learning Corner</span></span>
+        <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
       </div>
       <div id="chatbot-messages">
         <div class="chat-message-wrapper align-left">

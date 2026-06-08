@@ -118,30 +118,41 @@ function openIfaTip(el, event) {
   content.textContent = text;
   overlay.classList.add("visible");
 
-  // On desktop: position near the icon
+  // On desktop: position near the icon, with a pointer arrow
   if (window.innerWidth >= 640) {
     const rect = el.getBoundingClientRect();
-    let top = rect.bottom + 8;
+    const BOX_W = 300;
+    const GAP = 10;
+
     let left = rect.left;
+    if (left + BOX_W > window.innerWidth - 16) left = window.innerWidth - BOX_W - 16;
+    if (left < 16) left = 16;
 
-    // Prevent overflow off right edge
-    if (left + 260 > window.innerWidth - 16) {
-      left = window.innerWidth - 276;
-    }
-
-    // Flip above if too close to bottom
-    if (top + 200 > window.innerHeight) {
-      top = rect.top - 210;
+    const boxH = box.offsetHeight || 160;           // measured (content + visible already set)
+    let top, below;
+    if (rect.bottom + GAP + boxH <= window.innerHeight - 8) {
+      top = rect.bottom + GAP; below = true;        // below the icon
+    } else {
+      top = Math.max(8, rect.top - boxH - GAP); below = false;   // flip above
     }
 
     box.style.top = top + "px";
     box.style.left = left + "px";
     box.style.bottom = "auto";
+
+    // point the arrow at the icon
+    const iconCenter = rect.left + rect.width / 2;
+    let arrow = iconCenter - left - 6;
+    arrow = Math.max(14, Math.min(arrow, BOX_W - 26));
+    box.style.setProperty("--tip-arrow-left", arrow + "px");
+    box.classList.toggle("tip-below", below);
+    box.classList.toggle("tip-above", !below);
   } else {
-    // Mobile: reset to bottom sheet positioning
+    // Mobile: bottom-sheet positioning, no arrow
     box.style.top = "";
     box.style.left = "";
     box.style.bottom = "";
+    box.classList.remove("tip-below", "tip-above");
   }
 }
 
@@ -885,6 +896,19 @@ async function downloadDivinationPDF() {
 
 
 
+/* Translate content injected into a modal after it's loaded. Marks the
+   container as a translation root, snapshots the fresh English as the source,
+   and runs a pass so the engine translates it (and can restore English later). */
+function _translateInjected(el) {
+  if (!el) return;
+  if (typeof currentLang === "undefined" || currentLang === "baseline") return;
+  if (typeof window.translateDynamicContent !== "function") return;
+  el.setAttribute("data-translate", "");
+  el.removeAttribute("data-original");   // re-snapshot the newly injected English
+  delete el.dataset.tstate;
+  window.translateDynamicContent(el);
+}
+
 function showAboutModal() {
     const modal = document.getElementById("aboutModal");
     const closeBtn = modal.querySelector(".aboutClose");
@@ -892,6 +916,7 @@ function showAboutModal() {
     // Show modal and insert HTML from variable
     modal.style.display = "block";
     aboutContent.innerHTML = aboutHtml;
+    _translateInjected(aboutContent);
     // Close modal on click
     closeBtn.onclick = () => modal.style.display = "none";
     window.onclick = (e) => {
@@ -906,6 +931,7 @@ function showTermsModal() {
     // Show modal and insert HTML from variable
     modal.style.display = "block";
     termsContent.innerHTML = termsHtml;
+    _translateInjected(termsContent);
     // Close modal on click
     closeBtn.onclick = () => modal.style.display = "none";
     window.onclick = (e) => {

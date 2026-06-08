@@ -1982,3 +1982,91 @@ body{
 #configurationResult.odusign p a[onclick^="displayMeaning"]:hover{
   background:var(--of-green); color:#fff !important; border-color:var(--of-green);
 }
+
+/* ── Chatbot header: keep the Close button pinned far-right and visible.
+      A flex row stops a longer translated title from wrapping and pushing
+      the button onto a clipped second line (where it used to disappear). ── */
+#chatbot-header {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: auto;
+  min-height: 48px;
+  line-height: 1.2;
+}
+#chatbot-header .chatbot-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#chatbot-header .chatbot-close {
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ── Info tooltip popover — refined, modern styling ─────────────── */
+#ifa-tip-overlay { padding: 16px; }
+#ifa-tip-overlay.visible { animation: ifaTipFade .15s ease-out; }
+
+#ifa-tip-box {
+  background: #143524;
+  color: #f3f7f4;
+  font-size: 13.5px;
+  line-height: 1.6;
+  letter-spacing: .1px;
+  border-radius: 14px;
+  padding: 15px 17px;
+  max-width: 360px;
+  width: 100%;
+  max-height: min(60vh, 440px);
+  overflow-y: auto;
+  box-shadow: 0 14px 36px rgba(10,30,20,.30), 0 2px 6px rgba(10,30,20,.18);
+  border: 1px solid rgba(255,255,255,.08);
+  -webkit-font-smoothing: antialiased;
+}
+#ifa-tip-content { display: block; }
+#ifa-tip-content::before {            /* keeps line 1 clear of the close button */
+  content: ""; float: right; width: 22px; height: 14px;
+}
+#ifa-tip-box .ifa-tip-close {
+  position: absolute;
+  top: 8px; right: 9px;
+  width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.10);
+  border: none; border-radius: 50%;
+  color: #dfe9e2; font-size: 12px; line-height: 1;
+  cursor: pointer; padding: 0;
+  transition: background .15s, color .15s;
+}
+#ifa-tip-box .ifa-tip-close:hover { background: rgba(255,255,255,.20); color: #fff; }
+
+@keyframes ifaTipFade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes ifaTipPop {
+  from { opacity: 0; transform: translateY(-4px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (min-width: 640px) {
+  #ifa-tip-box {
+    position: fixed;            /* viewport-positioned by openIfaTip */
+    width: 300px; max-width: 300px;
+    font-size: 13px; line-height: 1.55;
+    animation: ifaTipPop .16s cubic-bezier(.2,.8,.2,1);
+  }
+  #ifa-tip-box::after {                /* pointer arrow toward the icon */
+    content: "";
+    position: absolute;
+    left: var(--tip-arrow-left, 22px);
+    width: 12px; height: 12px;
+    background: #143524;
+    transform: rotate(45deg);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  #ifa-tip-box.tip-below::after { top: -6px;    border-right: none; border-bottom: none; }
+  #ifa-tip-box.tip-above::after { bottom: -6px; border-left: none;  border-top: none;  }
+}

@@ -132,11 +132,25 @@ async function getAIResponse() {
       ? (LANGUAGES[_lang] || "English")
       : "English";
 
+  // Inject the language directive into the messages we send, so the model
+  // replies in the selected language even if the conversation history is in
+  // another language (and even if the backend hasn't added it yet).
+  const _msgs = chatHistory.slice(-10);
+  if (_langName && !/^english$/i.test(_langName)) {
+    _msgs.unshift({
+      role: "system",
+      content:
+        `Reply to the user ENTIRELY in ${_langName}, regardless of the language used ` +
+        `in earlier messages. Keep sacred Yoruba terms and names (Ifa, Esu, Odu, Ebo, ` +
+        `Orisha, Orunmila) in Yoruba.`,
+    });
+  }
+
   const response = await fetch(`${SERVER_URL}/api/ai/chat`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ chatHistory: chatHistory.slice(-10), langName: _langName }),
+    body: JSON.stringify({ chatHistory: _msgs, langName: _langName }),
   });
 
   const data = await response.json();

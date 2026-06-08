@@ -1,4 +1,3 @@
-
 /* ─────────────────────────────────────────────────────────────
  *  Safari / iOS fallback for requestIdleCallback
  * ───────────────────────────────────────────────────────────── */
@@ -571,7 +570,7 @@ const performUserDivination = async (
 
     if (true) {
       const tip = (text) =>
-        `<i class="ifa-tip" data-tip="${text.replace(/"/g, "&quot;")}"
+        `<i class="ifa-tip" data-translate-attr="data-tip" data-tip="${text.replace(/"/g, "&quot;")}"
           onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>`;
 
       /* ── Accordion helper ── */
@@ -1600,7 +1599,7 @@ function decodeIfaWithSpiritualContext(
   const whatToDoText = whatToDo ? `<p data-translate>${whatToDo}</p>` : "";
 
   const tip = (text) =>
-    `<i class="ifa-tip" data-tip="${text.replace(/"/g, "&quot;")}"
+    `<i class="ifa-tip" data-translate-attr="data-tip" data-tip="${text.replace(/"/g, "&quot;")}"
       onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>`;
 
   return `
@@ -1647,9 +1646,10 @@ function toggleHistory() {
   if (isHidden) {
   container.style.display = "block";
   container.classList.add("show");
-  btn.textContent = "Hide History";
+  btn.innerHTML = '<span data-translate>Hide History</span>';
   arrow.textContent = " ▲";
   btn.appendChild(arrow);
+  if (typeof window.translateDynamicContent === "function") window.translateDynamicContent(btn);
 
   // ✅ FIX: don't overwrite restored history
   if (!fullHistory.length) {
@@ -1663,9 +1663,10 @@ function toggleHistory() {
     container.classList.remove("show");
     setTimeout(() => {
       container.style.display = "none";
-      btn.textContent = "Show History";
+      btn.innerHTML = '<span data-translate>Show History</span>';
       arrow.textContent = " ▼";
       btn.appendChild(arrow);
+      if (typeof window.translateDynamicContent === "function") window.translateDynamicContent(btn);
       window.scrollTo({ top: btn.offsetTop - 20, behavior: "smooth" });
     }, 300);
   }
@@ -1744,7 +1745,7 @@ function renderHistoryPage() {
 
     const noteBlock = `
       <div class="history-note">
-        <textarea placeholder="Write your personal reflection…"
+        <textarea data-translate-attr="placeholder" placeholder="Write your personal reflection…"
           onblur="saveNote('${entryId}', this.value)">${note}</textarea>
         <small class="note-hint" data-translate>Saved automatically</small>
       </div>`;
@@ -1778,7 +1779,7 @@ function renderHistoryPage() {
           <strong>${globalIndex}.</strong>
           ${entry.mainCast} (${entry.orientation} ${entry.specificOrientation})
           (${entry.solution} ${entry.solutionDetails})<br/>
-          <small>Accessed on ${new Date(entry.timestamp).toLocaleString("en-US",{
+          <small><span data-translate>Accessed on</span> ${new Date(entry.timestamp).toLocaleString("en-US",{
             hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true,
             year:"numeric",month:"short",day:"numeric"
           })}</small>

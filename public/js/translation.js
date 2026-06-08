@@ -793,6 +793,7 @@ function _outermost(els) {
   for (const el of els) {
     if (!el || el.nodeType !== 1 || seen.has(el)) continue;
     seen.add(el);
+    if (!el.hasAttribute("data-translate")) continue;   // text roots only; attribute-only nodes (e.g. tooltips) handled separately
     if (!el.parentElement || !el.parentElement.closest("[data-translate]")) out.push(el);
   }
   return out;
