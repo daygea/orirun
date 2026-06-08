@@ -9,12 +9,15 @@ const OFFLINE_PAGE    = "./offline.html";
 // 1. Precache Only Essential App Shell Files
 // ---------------------------------------------------------
 workbox.precaching.precacheAndRoute([
-  { url: "./",                       revision: null },
-  { url: "./index.html",             revision: null },
+  { url: "./",                       revision: "v2-20260608" },
+  { url: "./index.html",             revision: "v2-20260608" },
   { url: "./public/manifest.json",   revision: null },
   { url: OFFLINE_PAGE,              revision: null },
-  { url: "./public/css/style.css",   revision: null },
-  { url: "./public/js/main.js",      revision: null }
+  { url: "./public/css/style.css",   revision: "v2-20260608" },
+  { url: "./public/js/main.js",      revision: null },
+  { url: "./public/fonts/SourceSans3-Regular.woff2", revision: null },
+  { url: "./public/fonts/SourceSans3-Medium.woff2",  revision: null },
+  { url: "./public/fonts/SourceSans3-Bold.woff2",    revision: null }
 ]);
 
 // ---------------------------------------------------------

@@ -1779,8 +1779,20 @@ input:checked + .slider:before {
 }
 
 /* ==================================================================
+   ORÍRÙN — Self-hosted body font (Source Sans 3)
+   Subset includes Latin Extended Additional (U+1E00–1EFF) so the
+   Yorùbá marks ẹ ọ ṣ and stacks ọ̀ ẹ́ ṣẹ́ render natively, offline.
+   ================================================================== */
+@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:400; font-display:swap;
+  src:url('../fonts/SourceSans3-Regular.woff2') format('woff2'); }
+@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:500; font-display:swap;
+  src:url('../fonts/SourceSans3-Medium.woff2') format('woff2'); }
+@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('../fonts/SourceSans3-Bold.woff2') format('woff2'); }
+
+/* ==================================================================
    ORÍRÙN — UI refresh (v3.1) — cleaner & minimal
-   One type family (Karla), flat hairline surfaces, calm muted footer.
+   One type family (Source Sans 3), flat hairline surfaces, calm footer.
    Fixes: numerology monospace, loud footer, chat-bubble overlap.
    ================================================================== */
 :root{
@@ -1788,7 +1800,7 @@ input:checked + .slider:before {
   --of-gold:#b8860b;
   --of-ink:#26302a; --of-ink-soft:#6b7770; --of-muted:#94a09a;
   --of-line:rgba(20,40,30,.12);
-  --font-body:'Karla',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  --font-body:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
 }
 
 /* one clean family; calmer weights */
