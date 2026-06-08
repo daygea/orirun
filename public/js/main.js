@@ -580,14 +580,13 @@ const performUserDivination = async (
         const id   = "acc-dv-" + (++_accId);
         const open = !!expandedByDefault;
         return `
-          <div style="border:1px solid #d4edda;border-radius:10px;margin-bottom:10px;overflow:hidden;background:#fff;">
-            <button
-              onclick="var b=document.getElementById('${id}');var a=this.querySelector('.acc-arrow');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';a.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';"
-              style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,#f0f7f0,#e8f5e8);border:none;cursor:pointer;font-size:14px;font-weight:bold;color:#1b4332;text-align:left;gap:8px;transform:none !important;box-shadow:none !important;">
-              <span>${title}</span>
-              <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:12px;flex-shrink:0;">▼</span>
+          <div class="dv-card${open ? " is-open" : ""}">
+            <button type="button" class="dv-card__header"
+              onclick="var c=this.parentNode;var b=c.querySelector('.dv-card__body');var o=c.classList.toggle('is-open');b.style.display=o?'block':'none';">
+              <span class="dv-card__title">${title}</span>
+              <span class="dv-arrow">▼</span>
             </button>
-            <div id="${id}" style="display:${open ? "block" : "none"};padding:14px 16px;line-height:1.7;">
+            <div id="${id}" class="dv-card__body" style="display:${open ? "block" : "none"};">
               ${bodyHtml}
             </div>
           </div>`;
@@ -597,21 +596,22 @@ const performUserDivination = async (
 
       /* ── Always visible: guide banner + heading + main message ── */
       parts.push(`
-        <div style="background:linear-gradient(135deg,#f0f7f0,#e8f5e8);border:1px solid #2e7d32;
-          border-radius:10px;padding:14px 18px;margin-top:18px;font-size:14px;
-          display:flex;flex-direction:column;align-items:center;justify-content:center;
-          gap:8px;text-align:center;animation:fadeInGuide 0.5s ease;
-          max-width:420px;margin-left:auto;margin-right:auto;">
+        <div class="dv-guide">
           <span style="font-weight:500;" data-translate>Are you new to Ifa divination?</span>
           <button id="guide-btn" onclick="handleGuideClick()" class="btn btn-md btn-default app-btn"
             style="display:flex;align-items:center;gap:6px;transform:none !important;">
             📖 <span data-translate>Read the guide</span>
           </button>
         </div>
-        <h3 style="text-align:center;margin-top:20px;font-weight:bold;">
-          ${mainCast}, ${orientationText} (${specificOrientation}), ${solution} ${solutionDetails}
-        </h3>
-        <p data-translate>${rawMessage} ${solutionInfo}</p>
+        <div class="dv-hero">
+          <div class="dv-hero__band">
+            <h3 class="dv-hero__odu">${mainCast}</h3>
+            <div class="dv-hero__tags">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
+          </div>
+          <div class="dv-hero__body">
+            <p data-translate>${rawMessage} ${solutionInfo}</p>
+          </div>
+        </div>
       `);
 
       /* ── Words of Ifa / Ase Ifa — open by default ── */
