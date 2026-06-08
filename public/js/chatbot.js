@@ -125,11 +125,18 @@ function appendMessage(message, sender = "bot") {
 }
 
 async function getAIResponse() {
+  // Tell the model which language to reply in (resolved from the app's selector).
+  const _lang = (typeof currentLang !== "undefined") ? currentLang : "en";
+  const _langName =
+    (typeof LANGUAGES !== "undefined" && _lang && _lang !== "baseline" && _lang !== "en")
+      ? (LANGUAGES[_lang] || "English")
+      : "English";
+
   const response = await fetch(`${SERVER_URL}/api/ai/chat`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ chatHistory: chatHistory.slice(-10) }),
+    body: JSON.stringify({ chatHistory: chatHistory.slice(-10), langName: _langName }),
   });
 
   const data = await response.json();

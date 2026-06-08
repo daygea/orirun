@@ -562,7 +562,7 @@ function shouldIgnoreText(text) {
   const n = normalize(text);
   if (!n) return true;
   if (/^[\s\p{P}\p{S}]+$/u.test(text)) return true;
-  return IGNORE_TEXTS.some(p => n.includes(p));
+  return IGNORE_TEXTS.some(p => n === p);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -581,6 +581,25 @@ function hideTranslationLoader() {
   newpreloader.style.display = "none";
 }
 
+/* Show the overlay only if work takes a moment, and never let it linger:
+   it hides as soon as the translation batch resolves, or after a short cap
+   (any remaining strings keep filling in progressively afterwards). */
+const LOADER_SHOW_DELAY  = 150;    // ms before showing — skips a flash on cached/instant switches
+const LOADER_MAX_VISIBLE = 1500;   // ms max on screen before auto-hiding
+async function withTranslationLoader(work) {
+  let shown = false;
+  const showTimer = setTimeout(() => { showTranslationLoader(); shown = true; }, LOADER_SHOW_DELAY);
+  try {
+    await Promise.race([
+      Promise.resolve(work),
+      new Promise((r) => setTimeout(r, LOADER_SHOW_DELAY + LOADER_MAX_VISIBLE)),
+    ]);
+  } finally {
+    clearTimeout(showTimer);
+    if (shown) hideTranslationLoader();
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
  *  LANGUAGE DROPDOWN
  * ───────────────────────────────────────────────────────────── */
@@ -596,11 +615,7 @@ function hideTranslationLoader() {
   }
 })();
 
-languageSelect.addEventListener("change", (e) => {
-  const newLang = e.target.value;
-  setLanguage(newLang);
-  try { localStorage.setItem("appLanguage", newLang); } catch {}
-});
+/* (single change handler lives in the bootstrap block below) */
 
 /* ─────────────────────────────────────────────────────────────
  *  LANGUAGE HELPERS
@@ -646,201 +661,285 @@ function showLoading(lang) {
     </div>`;
 }
 
-/* ─────────────────────────────────────────────────────────────
- *  BATCH TRANSLATION  (replaces sequential per-element calls)
+/* -----------------------------------------------------------------
+ *  TRANSLATION CORE  (batched · structure-preserving · cached)
  *
- *  All uncached texts are sent in ONE API call.
- *  Static translations (in the translations{} object) are
- *  applied instantly without any API call.
- *  Cached results are applied instantly from localStorage.
- *  First-run: 2–5 s total instead of 30–60 s.
- *  Repeat:    instant.
- * ───────────────────────────────────────────────────────────── */
-async function translatePage(targetLang) {
-  const elements = Array.from(document.querySelectorAll("[data-translate]"));
-  if (!elements.length) return;
+ *  One engine for both paths:
+ *    • language switch  -> translatePage()         (all elements)
+ *    • dynamic results  -> debounced observer flush (new elements)
+ *
+ *  Fast AND correct:
+ *    - translates the TEXT NODES under each element, so inner HTML
+ *      (links, buttons, nested spans) is preserved;
+ *    - every uncached string in the whole batch goes out in ONE
+ *      /api/translate/batch call (deduped);
+ *    - results cache in-memory + localStorage; oversized values stay
+ *      in memory only, so the quota is never hit silently;
+ *    - only OUTERMOST [data-translate] elements are processed, which
+ *      removes the old parent+child double-translation.
+ * ----------------------------------------------------------------- */
 
-  // Restore baseline first so we translate from original text
-  elements.forEach(el => {
-    const baseline = el.getAttribute("data-original");
-    if (baseline) el.innerHTML = baseline;
-  });
+/* cache: memory first, localStorage second, size-guarded */
+const _memCache = new Map();
+const _MAX_LS_VALUE = 4000;            // chars; bigger values -> memory only
 
-  const toTranslate = [];
-
-  // Pass 1 — apply static translations, collect the rest
-  elements.forEach(el => {
-    const key = el.getAttribute("data-translate");
-    if (key && key !== "true" && translations[targetLang]?.[key]) {
-      // Static translation — instant, no API needed
-      el.innerHTML = translations[targetLang][key];
-      return;
-    }
-    const text = el.textContent.trim();
-    if (text && !shouldIgnoreText(text)) {
-      toTranslate.push({ el, text });
-    }
-  });
-
-  if (!toTranslate.length) return;
-
-  // Pass 2 — serve cached items, collect truly uncached ones
-  const uncached = [];
-  toTranslate.forEach(({ el, text }) => {
-    const cached = localStorage.getItem(`${targetLang}::${text}`);
-    if (cached !== null) {
-      el.innerHTML = cached;
-    } else {
-      uncached.push({ el, text });
-    }
-  });
-
-  if (!uncached.length) return;
-
+function _cacheGet(lang, text) {
+  const k = `${lang}::${text}`;
+  if (_memCache.has(k)) return _memCache.get(k);
   try {
-    // ✅ ONE API call for ALL uncached texts
-    // ✅ Relative path — config.js fetch override handles routing
-    const response = await fetch("/api/translate/batch", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        texts:      uncached.map(u => u.text),
-        targetLang
-      })
-    });
-
-    if (!response.ok) throw new Error(`Batch translate HTTP ${response.status}`);
-    const { translated } = await response.json();
-
-    uncached.forEach(({ el, text }, i) => {
-      const result = translated?.[i] || text;
-      el.innerHTML = result;
-      try { localStorage.setItem(`${targetLang}::${text}`, result); } catch {}
-    });
-
-  } catch (err) {
-    console.error("Batch translation failed, falling back to single:", err);
-
-    // Fallback — translate individually if batch endpoint unavailable
-    for (const { el, text } of uncached) {
-      try {
-        const response = await fetch("/api/translate", {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ text, targetLang })
-        });
-        const data   = await response.json();
-        const result = data.translated || text;
-        el.innerHTML = result;
-        try { localStorage.setItem(`${targetLang}::${text}`, result); } catch {}
-      } catch {
-        /* leave original text on failure */
-      }
-    }
+    const v = localStorage.getItem(k);
+    if (v !== null) { _memCache.set(k, v); return v; }
+  } catch {}
+  return null;
+}
+function _cacheSet(lang, text, val) {
+  const k = `${lang}::${text}`;
+  _memCache.set(k, val);
+  if (val && val.length <= _MAX_LS_VALUE) {
+    try { localStorage.setItem(k, val); } catch {}
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
- *  translateWithCache  (used by chatbot and other ad-hoc calls)
- * ───────────────────────────────────────────────────────────── */
-async function translateWithCache(text, targetLang) {
-  // Static lookup first
-  if (translations[targetLang]) {
-    for (const [key, val] of Object.entries(translations["en"])) {
-      if (val === text.trim()) {
-        const translated = translations[targetLang][key];
-        if (translated) return translated;
+function _isTranslatableLang(lang) {
+  return !!lang && lang !== "baseline" && !!LANGUAGES[lang];
+}
+
+/* keep only elements with no translatable ancestor (outermost) */
+function _outermost(els) {
+  const out = [];
+  const seen = new Set();
+  for (const el of els) {
+    if (!el || el.nodeType !== 1 || seen.has(el)) continue;
+    seen.add(el);
+    if (!el.parentElement || !el.parentElement.closest("[data-translate]")) out.push(el);
+  }
+  return out;
+}
+
+/* visible text nodes under root, skipping script/style/etc. */
+function _textNodesUnder(root) {
+  const nodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(n) {
+      if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      for (let p = n.parentNode; p && p !== root.parentNode; p = p.parentNode) {
+        if (p.nodeType === 1 && SKIP_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
       }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  return nodes;
+}
+
+/* static dictionary translation when the element carries a known key */
+function _applyStaticKey(el, lang) {
+  const key = el.getAttribute("data-translate");
+  if (key && key !== "true" && translations[lang] && translations[lang][key]) {
+    el.textContent = translations[lang][key];
+    return true;
+  }
+  return false;
+}
+
+const _WS = /^(\s*)([\s\S]*?)(\s*)$/;
+
+/* the engine: translate a set of root elements in one batch */
+async function _translateRoots(rootEls, targetLang) {
+  if (!_isTranslatableLang(targetLang)) return;
+  const elements = _outermost(rootEls);
+
+  // elements needing attribute translation (placeholder / title / aria-label …)
+  const attrEls = new Set();
+  for (const el of rootEls) {
+    if (el.nodeType === 1 && el.matches && el.matches("[data-translate-attr]")) attrEls.add(el);
+    if (el.querySelectorAll) el.querySelectorAll("[data-translate-attr]").forEach((e) => attrEls.add(e));
+  }
+  if (!elements.length && !attrEls.size) return;
+
+  const jobs = [];          // { node, lead, core, trail }
+  const attrJobs = [];      // { el, attr, core }
+  const needed = new Set(); // unique strings to request
+
+  for (const el of elements) {
+    if (el.getAttribute("data-original") == null) {
+      el.setAttribute("data-original", el.innerHTML);   // remember source once
+    }
+    if (el.dataset.tstate === targetLang) continue;     // already translated
+    if (_applyStaticKey(el, targetLang)) continue;      // static dict hit
+
+    for (const node of _textNodesUnder(el)) {
+      const m = node.nodeValue.match(_WS);
+      const lead = m[1], core = m[2], trail = m[3];
+      if (!core || shouldIgnoreText(core)) continue;
+      const cached = _cacheGet(targetLang, core);
+      if (cached !== null) { node.nodeValue = lead + cached + trail; continue; }
+      jobs.push({ node, lead, core, trail });
+      needed.add(core);
     }
   }
 
-  const cacheKey = `${targetLang}::${text}`;
-  const cached   = localStorage.getItem(cacheKey);
-  if (cached !== null) return cached;
+  // attribute jobs: source read from data-o-<attr>, translation written to <attr>
+  for (const el of attrEls) {
+    const attrs = (el.getAttribute("data-translate-attr") || "").split(",").map((a) => a.trim()).filter(Boolean);
+    for (const attr of attrs) {
+      const okey = "data-o-" + attr;
+      if (el.getAttribute(okey) == null) el.setAttribute(okey, el.getAttribute(attr) || "");
+      const core = (el.getAttribute(okey) || "").trim();
+      if (!core || shouldIgnoreText(core)) continue;
+      const cached = _cacheGet(targetLang, core);
+      if (cached !== null) { el.setAttribute(attr, cached); continue; }
+      attrJobs.push({ el, attr, core });
+      needed.add(core);
+    }
+  }
 
-  try {
-    // ✅ Relative path — config.js fetch override handles routing
-    const response = await fetch("/api/translate", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ text, targetLang })
+  if (needed.size) {
+    const uniques = [...needed];
+    const map = new Map();
+    try {
+      const res = await fetch("/api/translate/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: uniques, targetLang }),
+      });
+      if (!res.ok) throw new Error(`batch HTTP ${res.status}`);
+      const { translated } = await res.json();
+      uniques.forEach((t, i) => {
+        const v = (translated && translated[i]) || t;
+        map.set(t, v);
+        _cacheSet(targetLang, t, v);
+      });
+    } catch (err) {
+      console.error("Batch translate failed, falling back to per-string:", err);
+      await Promise.all(uniques.map(async (t) => {     // concurrent, not sequential
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: t, targetLang }),
+          });
+          const d = await res.json();
+          const v = d.translated || t;
+          map.set(t, v);
+          _cacheSet(targetLang, t, v);
+        } catch { map.set(t, t); }
+      }));
+    }
+    for (const j of jobs) {
+      const v = _cacheGet(targetLang, j.core) ?? map.get(j.core) ?? j.core;
+      j.node.nodeValue = j.lead + v + j.trail;
+    }
+    for (const j of attrJobs) {
+      const v = _cacheGet(targetLang, j.core) ?? map.get(j.core) ?? j.core;
+      j.el.setAttribute(j.attr, v);
+    }
+  }
+
+  elements.forEach((el) => { el.dataset.tstate = targetLang; });
+  attrEls.forEach((el) => { el.dataset.tattr = targetLang; });
+}
+
+/* public: translate the whole page (language switch / load) */
+async function translatePage(targetLang) {
+  const all = Array.from(document.querySelectorAll("[data-translate], [data-translate-attr]"));
+  if (!all.length) return;
+  all.forEach((el) => {                                 // restore source text first
+    const base = el.getAttribute("data-original");
+    if (base != null) el.innerHTML = base;
+    delete el.dataset.tstate;
+    delete el.dataset.tattr;
+  });
+  await _translateRoots(all, targetLang);
+}
+
+/* public: restore English / baseline */
+function restoreOriginalHTML() {
+  document.querySelectorAll("[data-translate]").forEach((el) => {
+    const base = el.getAttribute("data-original");
+    if (base != null) el.innerHTML = base;
+    delete el.dataset.tstate;
+  });
+  document.querySelectorAll("[data-translate-attr]").forEach((el) => {
+    (el.getAttribute("data-translate-attr") || "").split(",").map((a) => a.trim()).filter(Boolean).forEach((attr) => {
+      const okey = "data-o-" + attr;
+      if (el.getAttribute(okey) != null) el.setAttribute(attr, el.getAttribute(okey));
     });
-    const data       = await response.json();
-    const translated = data.translated || text;
-    localStorage.setItem(cacheKey, translated);
-    return translated;
+    delete el.dataset.tattr;
+  });
+}
+
+/* single-string helper for ad-hoc callers (chatbot, popups) */
+async function translateWithCache(text, targetLang) {
+  const core = (text || "").trim();
+  if (!core || !_isTranslatableLang(targetLang)) return text;
+  if (translations[targetLang]) {
+    for (const [key, val] of Object.entries(translations.en)) {
+      if (val === core && translations[targetLang][key]) return translations[targetLang][key];
+    }
+  }
+  const cached = _cacheGet(targetLang, core);
+  if (cached !== null) return cached;
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: core, targetLang }),
+    });
+    const d = await res.json();
+    const v = d.translated || core;
+    _cacheSet(targetLang, core, v);
+    return v;
   } catch (err) {
     console.error("Translation failed:", err);
     return text;
   }
 }
 
-/* ─────────────────────────────────────────────────────────────
- *  ELEMENT-LEVEL HELPERS  (kept for dynamic observer)
- * ───────────────────────────────────────────────────────────── */
-async function translateTextNode(node, targetLang) {
-  const parent = node.parentElement;
-  if (!parent) return;
-  const key = parent.getAttribute("data-translate");
-  if (key && key !== "true" && translations[targetLang]?.[key]) {
-    node.nodeValue = translations[targetLang][key];
-    return;
-  }
-  const original = node.nodeValue.trim();
-  if (!original || shouldIgnoreText(original)) return;
-  node.nodeValue = await translateWithCache(original, targetLang);
-}
+/* dynamic content: debounced, batched observer */
+const _pending = new Set();
+let _flushTimer = null;
 
-async function translateNodeDeep(node, targetLang) {
-  if (!node) return;
-  if (node.nodeType === Node.TEXT_NODE) {
-    await translateTextNode(node, targetLang);
-  } else if (node.nodeType === Node.ELEMENT_NODE) {
-    if (SKIP_TAGS.has(node.tagName)) return;
-    for (const child of Array.from(node.childNodes)) {
-      await translateNodeDeep(child, targetLang);
+function _scheduleFlush() {
+  if (_flushTimer) return;
+  _flushTimer = setTimeout(async () => {
+    _flushTimer = null;
+    if (!_isTranslatableLang(currentLang) || !_pending.size) { _pending.clear(); return; }
+    const roots = [..._pending].filter((el) => el.isConnected);
+    _pending.clear();
+    if (roots.length) {
+      try { await _translateRoots(roots, currentLang); } catch (e) { console.error(e); }
     }
-  }
+  }, 60);
 }
 
-async function translateElement(el, targetLang) {
-  let baselineHTML = el.getAttribute("data-original");
-  if (!baselineHTML) {
-    baselineHTML = el.innerHTML;
-    el.setAttribute("data-original", baselineHTML);
-  }
-  el.innerHTML = baselineHTML;
-  await translateNodeDeep(el, targetLang);
-}
-
-function restoreOriginalHTML() {
-  const elements = document.querySelectorAll("[data-translate]");
-  for (const el of elements) {
-    const baselineHTML = el.getAttribute("data-original");
-    if (baselineHTML != null) el.innerHTML = baselineHTML;
-  }
-}
-
-/* ─────────────────────────────────────────────────────────────
- *  DYNAMIC CONTENT OBSERVER
- * ───────────────────────────────────────────────────────────── */
 function handleNewContent(mutations) {
   for (const mutation of mutations) {
     if (mutation.type !== "childList") continue;
-    mutation.addedNodes.forEach(async (node) => {
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-      if (node.hasAttribute?.("data-translate")) {
-        node.setAttribute("data-original", node.innerHTML);
-        if (currentLang !== "baseline") await translateElement(node, currentLang);
-      }
-      const translatableChildren = node.querySelectorAll?.("[data-translate]") || [];
-      for (const child of translatableChildren) {
-        child.setAttribute("data-original", child.innerHTML);
-        if (currentLang !== "baseline") await translateElement(child, currentLang);
+    mutation.addedNodes.forEach((node) => {
+      if (node.nodeType !== 1) return;
+      if (node.matches && (node.matches("[data-translate]") || node.matches("[data-translate-attr]"))) _pending.add(node);
+      if (node.querySelectorAll) {
+        node.querySelectorAll("[data-translate]").forEach((c) => _pending.add(c));
+        node.querySelectorAll("[data-translate-attr]").forEach((c) => _pending.add(c));
       }
     });
   }
+  if (_pending.size) _scheduleFlush();
 }
+
+/* let main.js trigger a deterministic pass right after rendering a result */
+window.translateDynamicContent = function (target) {
+  const root = target || document.body;
+  const els = [];
+  if (root.matches && (root.matches("[data-translate]") || root.matches("[data-translate-attr]"))) els.push(root);
+  if (root.querySelectorAll) {
+    root.querySelectorAll("[data-translate]").forEach((e) => els.push(e));
+    root.querySelectorAll("[data-translate-attr]").forEach((e) => els.push(e));
+  }
+  return _translateRoots(els, currentLang);
+};
 
 /* ─────────────────────────────────────────────────────────────
  *  BOOTSTRAP
@@ -852,18 +951,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Dropdown change handler
   languageSelect.addEventListener("change", async (e) => {
-    showTranslationLoader();
-    try {
-      currentLang = e.target.value;
-      localStorage.setItem("appLanguage", currentLang);
-      if (currentLang === "baseline") {
-        restoreOriginalHTML();
-      } else {
-        await translatePage(currentLang);
-      }
-    } finally {
-      hideTranslationLoader();
+    currentLang = e.target.value;
+    try { localStorage.setItem("appLanguage", currentLang); } catch {}
+    if (currentLang === "baseline") {
+      restoreOriginalHTML();             // instant — no overlay
+      return;
     }
+    await withTranslationLoader(translatePage(currentLang).catch((err) => console.error(err)));
   });
 
   // Apply saved language on load
@@ -871,12 +965,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (cached && LANGUAGES[cached]) {
     currentLang = cached;
     if (currentLang !== "baseline") {
-      showTranslationLoader();
-      try {
-        await translatePage(currentLang);
-      } finally {
-        hideTranslationLoader();
-      }
+      await withTranslationLoader(translatePage(currentLang).catch((err) => console.error(err)));
     }
     languageSelect.value = currentLang;
   }

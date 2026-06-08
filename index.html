@@ -270,12 +270,17 @@ if (location.protocol !== 'file:') {
         <img src="public/img/bird.gif" fetchpriority="high" alt="bird" style="display:none;" />
         <div style="margin-top: 50vh; text-align: center;" id="loading-screen"></div>
     </div>
-    <div id="new-preloader" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-    background:rgba(255,255,255,0.7); z-index:9999; flex-direction:column;">
-            <center>
-                <span style="margin:auto; font-size:20px; font-weight:bold;">Translating, please wait...</span><br/>
-                <span style="color:red;">Translation is powered by AI and may not be accurate.</span>
-            </center>
+    <div id="new-preloader" role="status" aria-live="polite"
+         style="display:none; position:fixed; inset:0; z-index:9999; flex-direction:column;
+                align-items:center; justify-content:center;
+                background:rgba(246,243,236,0.82); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
+                  background:#fff; border:1px solid rgba(20,40,30,0.14); border-top:3px solid #0f7b3d;
+                  border-radius:14px; box-shadow:0 8px 28px rgba(20,45,30,0.12); padding:22px 26px; max-width:300px;">
+        <span class="spinner"></span>
+        <span style="font-size:16px; font-weight:700; color:#0c3d24;">Translating…</span>
+        <span style="font-size:12.5px; color:#6b7770; line-height:1.5;">AI translation — may not be fully accurate.</span>
+      </div>
     </div>
     <div class="container-fluid" style="display: none;" id="printArea">
         <center><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" style="height:60px; margin-top: 3vh" alt="Orirun Logo"/></a></center>
@@ -299,7 +304,7 @@ if (location.protocol !== 'file:') {
             </div>
             <div class="col-md-2">
                 <button class="historyBtn btn btn-sm btn-default app-btn" onclick="toggleHistory()">
-                  Show History <span id="historyArrow"> ▼</span>
+                  <span data-translate>Show History</span> <span id="historyArrow"> ▼</span>
                 </button>
             </div>
         </div>
@@ -320,8 +325,8 @@ if (location.protocol !== 'file:') {
                 <div id="dashboard-printonly" class="admin-dashboard" style="display:none;">
                   <h2>Printonly Dashboard</h2>
                     <center> 
-                        <button class="btn btn-md btn-default admin"  onclick="downloadDivinationPDF()">Download</button>
-                        <button class="btn btn-md btn-default admin" onclick="printDivinationResult()">Print</button>
+                        <button class="btn btn-md btn-default admin"  onclick="downloadDivinationPDF()" data-translate>Download</button>
+                        <button class="btn btn-md btn-default admin" onclick="printDivinationResult()" data-translate>Print</button>
                         <button class="btn btn-md btn-default admin" onclick="logoutAdmin()">Logout</button> 
                     </center>
                 </div>
@@ -412,7 +417,7 @@ if (location.protocol !== 'file:') {
                     <label><span data-translate="enterName">Enter your full name</span></label>
                     <div id="fullname-box">
                       <center>
-                        <input class="form-control" type="text" id="fullname"
+                        <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
                           placeholder="Temitope Ola Kadri"
                           style="width:80%;max-width:270px;" />
                       </center>
@@ -473,10 +478,10 @@ if (location.protocol !== 'file:') {
         <div id="paymentModal" class="modal" style="display:none;">
           <div class="modal-content">
             <span class="close-btn" onclick="closePaymentModal()">&times;</span>
-            <h3><span>Pay ₦1000 to Unlock</span></h3>
-            <p><span>This Odu requires payment to access. Click below to proceed.</span></p>
-            <button id="payButton" onclick="processPayment()"><span>Pay ₦1000</span></button>
-            <button class="cancel-btn" onclick="closePaymentModal()"><span>Cancel</span></button>
+            <h3><span data-translate>Pay ₦1000 to Unlock</span></h3>
+            <p><span data-translate>This Odu requires payment to access. Click below to proceed.</span></p>
+            <button id="payButton" onclick="processPayment()"><span data-translate>Pay ₦1000</span></button>
+            <button class="cancel-btn" onclick="closePaymentModal()"><span data-translate>Cancel</span></button>
           </div>
         </div>
         <div id="logs" style="display:none;"></div>
@@ -508,9 +513,9 @@ if (location.protocol !== 'file:') {
                 </div>
         </div>
         <div id="myHistoryContainer" class="history-container" style="display:none;">
-              <h2>My History 
+              <h2><span data-translate>My History</span> 
                 <span>
-                  <a href="#" style="text-decoration: none; font-size: 14px;" onclick="openSyncModal()">Sync Device</a>
+                  <a href="#" style="text-decoration: none; font-size: 14px;" onclick="openSyncModal()" data-translate>Sync Device</a>
                   <i class="ifa-tip" data-tip="Save or restore your data across devices — no account needed."
               onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
                 </span>
@@ -521,9 +526,9 @@ if (location.protocol !== 'file:') {
               </div>
             
               <div id="historyPagination" class="history-pagination" style="margin-top:10px; text-align:center; display:none;">
-                  <button id="prevPageBtn" class="btn btn-sm app-btn btn-default">⬅ Prev</button>
+                  <button id="prevPageBtn" class="btn btn-sm app-btn btn-default" data-translate>⬅ Prev</button>
                   <div id="pageNumbers"></div>
-                  <button id="nextPageBtn" class="btn btn-sm app-btn btn-default">Next ➡</button>
+                  <button id="nextPageBtn" class="btn btn-sm app-btn btn-default" data-translate>Next ➡</button>
               </div>
               <center><span id="pageInfo" style="margin: 0 10px; font-weight:bold; display: none;"></span></center>
         </div>
@@ -566,7 +571,7 @@ if (location.protocol !== 'file:') {
     <!-- ── Audio Modal ── -->
     <div id="audioModal" style="display:none;position:fixed;top:20%;left:10%;width:80%;height:20%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
       <div style="text-align:right;padding:5px;">
-        <button onclick="closeAudioModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span>Close ✖</span></button>
+        <button onclick="closeAudioModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
       </div>
       <div id="audioPlayerContainer" style="padding:10px;text-align:center;"></div>
     </div>
@@ -574,7 +579,7 @@ if (location.protocol !== 'file:') {
     <!-- ── Video Modal ── -->
     <div id="videoModal" style="display:none;position:fixed;top:10%;left:10%;width:80%;height:70%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
       <div style="text-align:right;padding:5px;">
-        <button onclick="closeVideoModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span>Close ✖</span></button>
+        <button onclick="closeVideoModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
       </div>
       <iframe id="videoFrame" width="100%" height="90%" frameborder="0" allowfullscreen></iframe>
     </div>
@@ -616,7 +621,7 @@ if (location.protocol !== 'file:') {
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="orirun.restartTour()">
-            <span data-translate>Quick Tour</span>
+            <span data-translate>Restart Tour</span>
           </a>
         </div>
 
@@ -689,7 +694,7 @@ if (location.protocol !== 'file:') {
         <!-- ── Modals ── -->
         <div id="termsModal" class="termsModal" style="display:none">
           <div class="termsModal-content">
-            <button class="app-btn termsClose" style="font-size:14px !important;color:green;margin-top:5px;">Close</button>
+            <button class="app-btn termsClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
             <div id="termsContent">
               <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
             </div>
@@ -698,7 +703,7 @@ if (location.protocol !== 'file:') {
 
         <div id="aboutModal" class="aboutModal" style="display:none">
           <div class="aboutModal-content">
-            <button class="app-btn aboutClose" style="font-size:14px !important;color:green;margin-top:5px;">Close</button>
+            <button class="app-btn aboutClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
             <div id="aboutContent">
               <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
             </div>
@@ -708,16 +713,16 @@ if (location.protocol !== 'file:') {
         <div id="contributionModal" class="custom-modal">
           <div class="custom-modal-content">
             <button class="app-btn customClose"
-              style="font-size:14px !important;color:green;margin-top:15px;">Close</button>
-            <h3>Share Insight</h3>
+              style="font-size:14px !important;color:green;margin-top:15px;" data-translate>Close</button>
+            <h3 data-translate>Share Insight</h3>
             <div class="mb-3">
-              <label>Full Name</label>
-              <input type="text" id="contributorName"
+              <label data-translate>Full Name</label>
+              <input type="text" id="contributorName" data-translate-attr="placeholder"
                 placeholder="e.g. Princess Temitope Ola Kadri"
                 class="form-control allow-paste">
             </div>
             <div class="mb-3">
-              <label>Select Category</label>
+              <label data-translate>Select Category</label>
               <select id="contributionCategory" class="form-control">
                 <option value="General">General</option>
                 <option value="Ifa">Ifa</option>
@@ -727,22 +732,22 @@ if (location.protocol !== 'file:') {
             </div>
             <div id="ifaFields" style="display:none;">
               <div class="mb-3">
-                <label>Title</label>
+                <label data-translate>Title</label>
                 <input type="text" id="ifaTitle" class="form-control allow-paste">
               </div>
               <div class="mb-3">
-                <label>Link (optional)</label>
+                <label data-translate>Link (optional)</label>
                 <input type="text" id="ifaMedia" class="form-control allow-paste">
               </div>
             </div>
             <div class="mb-3">
-              <label>Contribution</label>
-              <textarea id="contributionText" class="form-control allow-paste"
+              <label data-translate>Contribution</label>
+              <textarea id="contributionText" class="form-control allow-paste" data-translate-attr="placeholder"
                 rows="5" placeholder="Enter your content here..."></textarea>
             </div>
             <button class="btn btn-primary mt-2"
               style="background-color:green;"
-              onclick="submitContribution()">Submit</button>
+              onclick="submitContribution()" data-translate>Submit</button>
           </div>
         </div>
 
@@ -761,7 +766,7 @@ if (location.protocol !== 'file:') {
         </div>
       </div>
       <div id="chatbot-input-container">
-        <textarea id="chatbot-input" placeholder="Ask a question, or type 'help' to browse topics..."></textarea>
+        <textarea id="chatbot-input" data-translate-attr="placeholder" placeholder="Ask a question, or type 'help' to browse topics..."></textarea>
         <button class="queryBtn" id="send-btn" onclick="sendMessage()">➜</button>
       </div>
     </div>
@@ -953,18 +958,18 @@ if (location.protocol !== 'file:') {
             max-width:420px;
             text-align:center;
           ">
-            <h2 style="color:#2e7d32;">Kaabo to Orírùn</h2>
+            <h2 style="color:#2e7d32;" data-translate>Kaabo to Orírùn</h2>
             <p>
-              Discover your destiny through Ifá, numerology, and ancestral wisdom.
+              <span data-translate>Discover your destiny through Ifá, numerology, and ancestral wisdom.</span>
             </p>
 
-            <button id="start-tour-btn" class="btn btn-md btn-default app-btn">
+            <button id="start-tour-btn" class="btn btn-md btn-default app-btn" data-translate>
               Take a Quick Tour
             </button>
 
             <br><br>
 
-            <button id="skip-tour-btn" class="btn btn-sm btn-default">
+            <button id="skip-tour-btn" class="btn btn-sm btn-default" data-translate>
               Skip
             </button>
           </div>
