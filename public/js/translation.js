@@ -600,6 +600,60 @@ async function withTranslationLoader(work) {
   }
 }
 
+/* Network timeout — a stalled request can't wedge the UI / lock the picker. */
+function _fetchT(url, opts, ms = 15000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+/* Translation activity: while ANY translation is running we disable the
+   language picker and show a small "Translating…" pill, so the user can tell
+   when the page is fully translated and can't switch languages mid-way.
+   A counter handles overlapping operations (switch + dynamic content). */
+let _activeTranslations = 0;
+let _statusEl = null;
+function _ensureStatusEl() {
+  if (_statusEl) return;
+  _statusEl = document.createElement("span");
+  _statusEl.id = "translation-status";
+  _statusEl.setAttribute("role", "status");
+  _statusEl.setAttribute("aria-live", "polite");
+  _statusEl.style.cssText =
+    "position:fixed; top:34px; left:10px; z-index:9999; display:none;" +
+    "align-items:center; gap:6px; padding:3px 10px; border-radius:999px;" +
+    "background:#fff; border:1px solid rgba(20,40,30,.14);" +
+    "box-shadow:0 2px 8px rgba(20,45,30,.12);" +
+    "font-size:12px; font-weight:700; color:#0a5a2c;";
+  _statusEl.innerHTML =
+    '<span class="spinner" style="width:12px;height:12px;border-width:2px;margin:0;"></span>' +
+    '<span>Translating…</span>';
+  document.body.appendChild(_statusEl);
+}
+function _beginActivity() {
+  _activeTranslations++;
+  if (_activeTranslations === 1) {
+    _ensureStatusEl();
+    if (_statusEl) _statusEl.style.display = "inline-flex";
+    if (languageSelect) {
+      languageSelect.disabled = true;
+      languageSelect.style.cursor = "wait";
+      languageSelect.style.opacity = "0.6";
+    }
+  }
+}
+function _endActivity() {
+  _activeTranslations = Math.max(0, _activeTranslations - 1);
+  if (_activeTranslations === 0) {
+    if (_statusEl) _statusEl.style.display = "none";
+    if (languageSelect) {
+      languageSelect.disabled = false;
+      languageSelect.style.cursor = "";
+      languageSelect.style.opacity = "";
+    }
+  }
+}
+
 /* ─────────────────────────────────────────────────────────────
  *  LANGUAGE DROPDOWN
  * ───────────────────────────────────────────────────────────── */
@@ -758,6 +812,9 @@ async function _translateRoots(rootEls, targetLang) {
   }
   if (!elements.length && !attrEls.size) return;
 
+  _beginActivity();   // lock the language picker + show status while working
+  try {
+
   const jobs = [];          // { node, lead, core, trail }
   const attrJobs = [];      // { el, attr, core }
   const needed = new Set(); // unique strings to request
@@ -799,7 +856,7 @@ async function _translateRoots(rootEls, targetLang) {
     const uniques = [...needed];
     const map = new Map();
     try {
-      const res = await fetch("/api/translate/batch", {
+      const res = await _fetchT("/api/translate/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts: uniques, targetLang }),
@@ -815,7 +872,7 @@ async function _translateRoots(rootEls, targetLang) {
       console.error("Batch translate failed, falling back to per-string:", err);
       await Promise.all(uniques.map(async (t) => {     // concurrent, not sequential
         try {
-          const res = await fetch("/api/translate", {
+          const res = await _fetchT("/api/translate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: t, targetLang }),
@@ -839,6 +896,10 @@ async function _translateRoots(rootEls, targetLang) {
 
   elements.forEach((el) => { el.dataset.tstate = targetLang; });
   attrEls.forEach((el) => { el.dataset.tattr = targetLang; });
+
+  } finally {
+    _endActivity();
+  }
 }
 
 /* public: translate the whole page (language switch / load) */
@@ -882,7 +943,7 @@ async function translateWithCache(text, targetLang) {
   const cached = _cacheGet(targetLang, core);
   if (cached !== null) return cached;
   try {
-    const res = await fetch("/api/translate", {
+    const res = await _fetchT("/api/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: core, targetLang }),
