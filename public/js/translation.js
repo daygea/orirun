@@ -607,6 +607,33 @@ function _fetchT(url, opts, ms = 15000) {
   return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
 }
 
+/* Send the language NAME to the API (the model mistranslates bare codes). */
+function _langName(code) {
+  return (typeof LANGUAGES !== "undefined" && LANGUAGES[code]) ? LANGUAGES[code] : code;
+}
+
+/* Split work so no single request is big enough to truncate or misalign. */
+function _chunk(arr, maxCount, maxChars) {
+  const out = []; let cur = []; let chars = 0;
+  for (const s of arr) {
+    if (cur.length && (cur.length >= maxCount || chars + s.length > maxChars)) {
+      out.push(cur); cur = []; chars = 0;
+    }
+    cur.push(s); chars += s.length;
+  }
+  if (cur.length) out.push(cur);
+  return out;
+}
+
+/* Run chunks with bounded concurrency. */
+async function _runChunks(chunks, fn, concurrency = 3) {
+  let i = 0;
+  const workers = Array.from({ length: Math.min(concurrency, chunks.length) }, async () => {
+    while (i < chunks.length) { const idx = i++; await fn(chunks[idx]); }
+  });
+  await Promise.all(workers);
+}
+
 /* Translation activity: while ANY translation is running we disable the
    language picker and show a small "Translating…" pill, so the user can tell
    when the page is fully translated and can't switch languages mid-way.
@@ -737,8 +764,9 @@ function showLoading(lang) {
 const _memCache = new Map();
 const _MAX_LS_VALUE = 4000;            // chars; bigger values -> memory only
 
+const _CACHE_NS = "tr2";   // bump to invalidate stale cached translations
 function _cacheGet(lang, text) {
-  const k = `${lang}::${text}`;
+  const k = `${_CACHE_NS}:${lang}::${text}`;
   if (_memCache.has(k)) return _memCache.get(k);
   try {
     const v = localStorage.getItem(k);
@@ -747,7 +775,7 @@ function _cacheGet(lang, text) {
   return null;
 }
 function _cacheSet(lang, text, val) {
-  const k = `${lang}::${text}`;
+  const k = `${_CACHE_NS}:${lang}::${text}`;
   _memCache.set(k, val);
   if (val && val.length <= _MAX_LS_VALUE) {
     try { localStorage.setItem(k, val); } catch {}
@@ -855,35 +883,48 @@ async function _translateRoots(rootEls, targetLang) {
   if (needed.size) {
     const uniques = [...needed];
     const map = new Map();
-    try {
-      const res = await _fetchT("/api/translate/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texts: uniques, targetLang }),
-      });
-      if (!res.ok) throw new Error(`batch HTTP ${res.status}`);
-      const { translated } = await res.json();
-      uniques.forEach((t, i) => {
-        const v = (translated && translated[i]) || t;
-        map.set(t, v);
-        _cacheSet(targetLang, t, v);
-      });
-    } catch (err) {
-      console.error("Batch translate failed, falling back to per-string:", err);
-      await Promise.all(uniques.map(async (t) => {     // concurrent, not sequential
-        try {
-          const res = await _fetchT("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: t, targetLang }),
-          });
-          const d = await res.json();
-          const v = d.translated || t;
-          map.set(t, v);
-          _cacheSet(targetLang, t, v);
-        } catch { map.set(t, t); }
-      }));
-    }
+    const apiLang = _langName(targetLang);   // send the NAME, not the code
+
+    const translateOne = async (str) => {     // reliable per-string fallback
+      try {
+        const r = await _fetchT("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: str, targetLang: apiLang }),
+        });
+        const d = await r.json();
+        const v = d.translated || str;
+        map.set(str, v); _cacheSet(targetLang, str, v);
+      } catch { map.set(str, str); }
+    };
+
+    // chunk so a long reading can't truncate or misalign the response
+    const chunks = _chunk(uniques, 20, 2400);
+    await _runChunks(chunks, async (chunk) => {
+      let arr = null;
+      try {
+        const res = await _fetchT("/api/translate/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts: chunk, targetLang: apiLang }),
+        }, 25000);
+        if (res.ok) {
+          const { translated } = await res.json();
+          // only trust a response that lines up exactly with what we sent
+          if (Array.isArray(translated) && translated.length === chunk.length) arr = translated;
+        }
+      } catch (err) { console.error("Batch chunk failed:", err); }
+
+      if (arr) {
+        chunk.forEach((str, i) => {
+          const v = (typeof arr[i] === "string" && arr[i].trim()) ? arr[i] : str;
+          map.set(str, v); _cacheSet(targetLang, str, v);
+        });
+      } else {
+        await Promise.all(chunk.map(translateOne));   // mismatch/failure -> per-item
+      }
+    }, 3);
+
     for (const j of jobs) {
       const v = _cacheGet(targetLang, j.core) ?? map.get(j.core) ?? j.core;
       j.node.nodeValue = j.lead + v + j.trail;
@@ -946,7 +987,7 @@ async function translateWithCache(text, targetLang) {
     const res = await _fetchT("/api/translate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: core, targetLang }),
+      body: JSON.stringify({ text: core, targetLang: _langName(targetLang) }),
     });
     const d = await res.json();
     const v = d.translated || core;
