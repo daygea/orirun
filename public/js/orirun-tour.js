@@ -70,6 +70,33 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  /* ── i18n: translate tour text through the shared translation engine ── */
+  function tourLang() {
+    return (typeof currentLang !== "undefined") ? currentLang : "baseline";
+  }
+  function tourTranslatable() {
+    var l = tourLang();
+    return l && l !== "baseline" && l !== "en" && typeof translateWithCache === "function";
+  }
+  async function tr(text) {
+    if (!text || !tourTranslatable()) return text;
+    try { return await translateWithCache(text, tourLang()); }
+    catch (e) { return text; }
+  }
+  // Translate many strings with limited concurrency; returns {original: translated}.
+  async function translateMany(strings, concurrency) {
+    concurrency = concurrency || 4;
+    var uniq = Array.from(new Set(strings.filter(Boolean)));
+    var map = {}, i = 0;
+    async function worker() {
+      while (i < uniq.length) { var idx = i++; map[uniq[idx]] = await tr(uniq[idx]); }
+    }
+    var workers = [], n = Math.min(concurrency, uniq.length);
+    for (var w = 0; w < n; w++) workers.push(worker());
+    await Promise.all(workers);
+    return map;
+  }
+
   /* ═══════════════════════════════════════════════════════
    *  1. LABEL WRAPPERS
    *     For each input/select, grab the label element that
@@ -278,21 +305,22 @@ document.addEventListener("DOMContentLoaded", function () {
   /* ═══════════════════════════════════════════════════════
    *  3. DRIVER INSTANCE
    * ═══════════════════════════════════════════════════════ */
-  function createDriver() {
+  function createDriver(labels) {
     if (typeof Driver === "undefined") {
       console.warn("Orírùn tour: Driver.js not loaded.");
       return null;
     }
 
+    labels = labels || {};
     return new Driver({
       animate:            true,
       opacity:            0.78,
       padding:            isMobile ? 6 : 12,
       showButtons:        true,
-      doneBtnText:        "✅ Done",
-      closeBtnText:       "✕",
-      nextBtnText:        "Next →",
-      prevBtnText:        "← Back",
+      doneBtnText:        labels.doneBtnText  || "✅ Done",
+      closeBtnText:       labels.closeBtnText || "✕",
+      nextBtnText:        labels.nextBtnText  || "Next →",
+      prevBtnText:        labels.prevBtnText  || "← Back",
       allowClose:         true,
       overlayClickNext:   false,
       keyboardControl:    true,
@@ -314,10 +342,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /* ═══════════════════════════════════════════════════════
    *  4. START TOUR
    * ═══════════════════════════════════════════════════════ */
-  function startTour() {
-    var driverInstance = createDriver();
-    if (!driverInstance) return;
-
+  async function startTour() {
     /* Purge any leftover Driver DOM from previous runs */
     [
       "#driver-page-overlay",
@@ -338,6 +363,37 @@ document.addEventListener("DOMContentLoaded", function () {
       console.warn("Orírùn tour: No valid target elements found.");
       return;
     }
+
+    /* Button labels — translated below when a language is active */
+    var labels = {
+      doneBtnText:  "✅ Done",
+      closeBtnText: "✕",
+      nextBtnText:  "Next →",
+      prevBtnText:  "← Back"
+    };
+
+    /* Translate step titles/descriptions + button labels into the selected language */
+    if (tourTranslatable()) {
+      var strings = [];
+      validSteps.forEach(function (st) {
+        if (st.popover) strings.push(st.popover.title, st.popover.description);
+      });
+      strings.push(labels.doneBtnText, labels.nextBtnText, labels.prevBtnText);
+
+      var map = await translateMany(strings, 4);
+
+      validSteps.forEach(function (st) {
+        if (!st.popover) return;
+        st.popover.title       = map[st.popover.title]       || st.popover.title;
+        st.popover.description = map[st.popover.description] || st.popover.description;
+      });
+      labels.doneBtnText = map[labels.doneBtnText] || labels.doneBtnText;
+      labels.nextBtnText = map[labels.nextBtnText] || labels.nextBtnText;
+      labels.prevBtnText = map[labels.prevBtnText] || labels.prevBtnText;
+    }
+
+    var driverInstance = createDriver(labels);
+    if (!driverInstance) return;
 
     driverInstance.defineSteps(validSteps);
     driverInstance.start();
@@ -378,20 +434,20 @@ document.addEventListener("DOMContentLoaded", function () {
       '  <div class="ob-logo">',
       '    <img src="public/img/logo.png" alt="Orírùn" />',
       '  </div>',
-      '  <h2 id="onboarding-title">Ekáàbọ̀ — Welcome to Orírùn</h2>',
-      '  <p class="ob-sub">',
+      '  <h2 id="onboarding-title" data-translate>Ekáàbọ̀ — Welcome to Orírùn</h2>',
+      '  <p class="ob-sub" data-translate>',
       '    Discover yourself through Ifá, numerology, astrology and ancestral wisdom.',
       '    Take a quick tour to get the most from your experience.',
       '  </p>',
       '  <div class="ob-actions">',
       '    <button id="ob-start-btn" class="ob-btn ob-btn--primary">',
-      '      📖 Take the Tour <span class="ob-badge">~1 min</span>',
+      '      📖 <span data-translate>Take the Tour</span> <span class="ob-badge">~1 min</span>',
       '    </button>',
-      '    <button id="ob-skip-btn" class="ob-btn ob-btn--ghost">',
+      '    <button id="ob-skip-btn" class="ob-btn ob-btn--ghost" data-translate>',
       '      Skip for now',
       '    </button>',
       '  </div>',
-      '  <p class="ob-footer-note">',
+      '  <p class="ob-footer-note" data-translate>',
       '    You can restart this tour any time from the About section.',
       '  </p>',
       '</div>'
@@ -553,6 +609,11 @@ document.addEventListener("DOMContentLoaded", function () {
    * ═══════════════════════════════════════════════════════ */
   function showOnboarding() {
     var modal = buildModal();
+
+    /* Translate the onboarding modal into the active language */
+    if (tourTranslatable() && typeof window.translateDynamicContent === "function") {
+      window.translateDynamicContent(modal);
+    }
 
     function closeModal() {
       modal.style.opacity    = "0";

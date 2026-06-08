@@ -1,24 +1,46 @@
 // Orirun PWA Service Worker (Optimized + Store Ready + Daily Guidance Notifications)
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js");
 
-const APP_SHELL_CACHE = "orirun-shell-v1";
-const RUNTIME_CACHE   = "orirun-runtime-v1";
+// 🔁 Bump BUILD on EVERY deploy so returning users fetch the new files
+// instead of the previously cached ones.
+const BUILD           = "2026-06-08d";
+const APP_SHELL_CACHE = "orirun-shell-v2";
+const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";
 
 // ---------------------------------------------------------
 // 1. Precache Only Essential App Shell Files
 // ---------------------------------------------------------
 workbox.precaching.precacheAndRoute([
-  { url: "./",                       revision: "v2-20260608" },
-  { url: "./index.html",             revision: "v2-20260608" },
-  { url: "./public/manifest.json",   revision: null },
-  { url: OFFLINE_PAGE,              revision: null },
-  { url: "./public/css/style.css",   revision: "v2-20260608" },
-  { url: "./public/js/main.js",      revision: null },
-  { url: "./public/fonts/SourceSans3-Regular.woff2", revision: null },
-  { url: "./public/fonts/SourceSans3-Medium.woff2",  revision: null },
-  { url: "./public/fonts/SourceSans3-Bold.woff2",    revision: null }
+  { url: "./",                         revision: BUILD },
+  { url: "./index.html",               revision: BUILD },
+  { url: "./public/manifest.json",     revision: BUILD },
+  { url: OFFLINE_PAGE,                 revision: BUILD },
+  { url: "./public/css/style.css",     revision: BUILD },
+  { url: "./public/js/main.js",        revision: BUILD },
+  { url: "./public/js/translation.js", revision: BUILD },
+  { url: "./public/js/chatbot.js",     revision: BUILD },
+  { url: "./public/js/utils.js",       revision: BUILD },
+  { url: "./public/js/orirun-tour.js", revision: BUILD }
 ]);
+
+// ---------------------------------------------------------
+// 1b. Activate the new version promptly and clear old caches
+// ---------------------------------------------------------
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => /^orirun-(shell|runtime)-/.test(k) && !k.includes("-v2"))
+            .map((k) => caches.delete(k))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
 
 // ---------------------------------------------------------
 // 2. Runtime Caching for CSS / JS / Fonts

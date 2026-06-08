@@ -214,7 +214,7 @@ async function sendMessage(userInput, options = {}) {
 
   const botWrapper = document.createElement("div");
   botWrapper.className = "chat-message-wrapper align-left";
-  botWrapper.innerHTML = `<div class="chat-message bot-message"><em>Loading...</em></div>`;
+  botWrapper.innerHTML = `<div class="chat-message bot-message"><em data-translate>Loading...</em></div>`;
   messagesDiv.appendChild(botWrapper);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
@@ -239,10 +239,10 @@ async function sendMessage(userInput, options = {}) {
           html += `<div class="kb-media">`;
           media.forEach(item => {
             if (item.type === "audio") {
-              html += `<button class="kb-media-btn" onclick="openAudioModal('${item.url}')">🎧 Play audio of ${item.title}</button>`;
+              html += `<button class="kb-media-btn" onclick="openAudioModal('${item.url}')">🎧 <span data-translate>Play audio of</span> ${item.title}</button>`;
             }
             if (item.type === "video") {
-              html += `<button class="kb-media-btn" onclick="openVideoModal('${item.url}')">▶️ Play video of ${item.title}</button>`;
+              html += `<button class="kb-media-btn" onclick="openVideoModal('${item.url}')">▶️ <span data-translate>Play video of</span> ${item.title}</button>`;
             }
           });
           html += `</div>`;
@@ -261,7 +261,7 @@ async function sendMessage(userInput, options = {}) {
     botWrapper.innerHTML =
       `<div class="chat-message bot-message" id="${_msgId}">${aiText}</div>` +
       `<button class="report-btn" onclick="reportChatMessage('${_msgId}')" ` +
-      `style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;margin:2px 0 8px 4px;">⚐ Report</button>`;
+      `style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;margin:2px 0 8px 4px;">⚐ <span data-translate>Report</span></button>`;
 
     // Save exchange details for deferred feedback
     _lastChatExchange = { userMessage: message, response: aiText, source };
@@ -277,8 +277,7 @@ async function sendMessage(userInput, options = {}) {
     console.error("AI error:", err.message);
     botWrapper.innerHTML = `
       <div class="chat-message bot-message">
-        ⚠️ The Orirun server is currently interpreting heavy energies.
-        Please try again shortly.
+        ⚠️ <span data-translate>The Orirun server is currently interpreting heavy energies. Please try again shortly.</span>
       </div>
     `;
   }
@@ -352,13 +351,13 @@ function getKnowledgeBaseIndex(page = 1, pageSizeLocal = pageSize, searchTerm = 
     const paginationHtml = totalPages > 1 ? `
       <div class="kb-pagination">
         <div class="kb-page-numbers">${paginationButtons}</div>
-        <div class="kb-page-info">Showing ${startIndex + 1}-${Math.min(startIndex + pageSizeLocal, keys.length)} of ${keys.length}</div>
+        <div class="kb-page-info">${startIndex + 1}–${Math.min(startIndex + pageSizeLocal, keys.length)} / ${keys.length}</div>
       </div>` : "";
 
     return `
         <div class="kb-index">
-            <input type="text" id="kb-search" placeholder="🔍 Search topics..." value="${searchTerm}" />
-            <div class="kb-list">${listHtml || "<p>No topics match your search.</p>"}</div>
+            <input type="text" id="kb-search" placeholder="🔍 Search topics..." data-translate-attr="placeholder" value="${searchTerm}" />
+            <div class="kb-list">${listHtml || "<p data-translate>No topics match your search.</p>"}</div>
             ${paginationHtml}
         </div>`;
 }
@@ -485,7 +484,7 @@ function renderKnowledgeBaseList(filter = "") {
   const keys = Object.keys(ifaKnowledgeBase).filter(k =>
     k.toLowerCase().includes(filter.toLowerCase())
   );
-  if (keys.length === 0) { kbList.innerHTML = `<p>No topics found.</p>`; return; }
+  if (keys.length === 0) { kbList.innerHTML = `<p data-translate>No topics found.</p>`; return; }
   keys.forEach((key, i) => {
     const item  = ifaKnowledgeBase[key];
     const count = Array.isArray(item) ? `(${item.length})` : "";
