@@ -264,7 +264,7 @@ if (location.protocol !== 'file:') {
     </script>
 </head>
 
-<body id="body">
+<body>
     <div id="preloader">
         <span id="flag"></span><br/>
         <img src="public/img/bird.gif" fetchpriority="high" alt="bird" style="display:none;" />
@@ -283,7 +283,8 @@ if (location.protocol !== 'file:') {
       </div>
     </div>
     <div class="container-fluid" style="display: none;" id="printArea">
-        <center><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" style="height:60px; margin-top: 3vh" alt="Orirun Logo"/></a></center>
+        <header class="app-header">
+        <div class="text-center"><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" style="height:60px; margin-top: 3vh" alt="Orirun Logo"/></a></div>
         <div class="row">
             <div class="col-md-2">
                 <div class="languageBtn">
@@ -308,10 +309,12 @@ if (location.protocol !== 'file:') {
                 </button>
             </div>
         </div>
+        </header>
+        <main id="app-main">
         <div class="row" style="display: grid; place-items: center;">
                 <div id="dashboard-superadmin" class="admin-dashboard" style="display:none;">
-                  <center><h2>Orirun Dashboard</h2></center>
-                    <center> 
+                  <div class="text-center"><h2>Orirun Dashboard</h2></div>
+                    <div class="text-center"> 
                         <button class="btn btn-md btn-default admin"  onclick="showAnalytics()">📊 Dashboard</button>
                         <button class="btn btn-md btn-default admin" onclick="showLogs('divination')">Divination</button>
                         <button class="btn btn-md btn-default admin" onclick="showLogs('chat')">Chats</button>
@@ -320,21 +323,21 @@ if (location.protocol !== 'file:') {
                         <button class="btn btn-md btn-default admin" onclick="showLogs('contribution')">Contributions</button>
                         <button class="btn btn-md btn-default admin" onclick="updateOdu()">Update Odu</button>
                         <button class="btn btn-md btn-default admin" onclick="logoutAdmin()">Logout</button> 
-                    </center>
+                    </div>
                 </div>
                 <div id="dashboard-printonly" class="admin-dashboard" style="display:none;">
                   <h2>Printonly Dashboard</h2>
-                    <center> 
+                    <div class="text-center"> 
                         <button class="btn btn-md btn-default admin"  onclick="downloadDivinationPDF()" data-translate>Download</button>
                         <button class="btn btn-md btn-default admin" onclick="printDivinationResult()" data-translate>Print</button>
                         <button class="btn btn-md btn-default admin" onclick="logoutAdmin()">Logout</button> 
-                    </center>
+                    </div>
                 </div>
                 <div id="adminPasswordContainer" style="display: none;">
-                    <center>
+                    <div class="text-center">
                         <input style="padding: 5px; font-size: 16px; border: 1px solid green; border-radius: 5px;" type="password" id="adminPassword" placeholder="Password" />
                         <button class="btn btn-sm btn-default" id="loginBtn" style="border: 1px solid green;" onclick="loginAdmin()">Login</button> 
-                    </center>
+                    </div>
                 </div>
         </div>
         <div class="row app-section">
@@ -344,7 +347,7 @@ if (location.protocol !== 'file:') {
 
             <div class="col-sm-6 ifaDetails" id="main-content" data-tour="divination">
           <h3 style="text-align:center;font-weight:bold;">
-            <span data-translate="divinationDetails">Discover Ifa Wisdom</span>
+            <span data-translate>Discover Ifa Wisdom</span>
           </h3>
 
           <!-- Odu Ifa -->
@@ -409,18 +412,18 @@ if (location.protocol !== 'file:') {
           <br>
 
           <button id="divination-btn" onclick="performUserDivination()" class="btn btn-md btn-default app-btn">
-            <span data-translate="revealMessage">Reveal Wisdom</span>
+            <span data-translate>Reveal Wisdom</span>
           </button>
         </div>
             <div class="col-sm-3 numerology" id="numerology-section">
+              <h3 style="text-align:center;font-weight:bold;">
+                <span data-translate>Numerology</span>
+              </h3>
                     <div id="result"></div>
                     <label><span data-translate="enterName">Enter your full name</span></label>
                     <div id="fullname-box">
-                      <center>
-                        <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
-                          placeholder="Temitope Ola Kadri"
-                          style="width:80%;max-width:270px;" />
-                      </center>
+                      <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
+                        placeholder="Temitope Olanbiwoninu Kadri" />
                       <br/>
                     </div>
 
@@ -429,7 +432,7 @@ if (location.protocol !== 'file:') {
                       <input
                         id="birthdate"
                         type="date"
-                        style="width:80%;max-width:250px;padding:10px;font-size:16px;border:1px solid #ccc;border-radius:5px;color:green;font-family:Courier,monospace;font-weight:bold;"
+                        class="form-control"
                       /><br/><br/>
                       <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
                         <button onclick="performBirthChart()" class="btn btn-md btn-default app-btn" id="determine-btn">
@@ -442,8 +445,7 @@ if (location.protocol !== 'file:') {
                           aria-label="More information">i</i>
                       </div>
                     </div>
-
-                    <p><b><span data-translate="or">OR</span></b></p>
+                    <br/>
                      <div style="display:flex;align-items:center;justify-content:center;gap:6px; margin-bottom: 10px;">
                         <p style="margin:0;font-weight:bold;">
                           <span data-translate>Pick a Number</span>
@@ -454,7 +456,7 @@ if (location.protocol !== 'file:') {
                         role="button"
                         aria-label="More information">i</i>
                     </div>
-                     <div class="calculator" id="calculator" style="margin-bottom: 15px;">    
+                     <div class="calculator" id="calculator" style="margin-bottom: 10px;">    
                     </div>
             </div>
         </div>
@@ -475,7 +477,7 @@ if (location.protocol !== 'file:') {
           <div id="analytics-summary"></div>
           <canvas id="analyticsChart" style="max-width:700px; margin:auto;"></canvas>
         </section>
-        <div id="paymentModal" class="modal" style="display:none;">
+        <div id="paymentModal" class="modal" role="dialog" aria-modal="true" aria-label="Payment" style="display:none;">
           <div class="modal-content">
             <span class="close-btn" onclick="closePaymentModal()">&times;</span>
             <h3><span data-translate>Pay ₦1000 to Unlock</span></h3>
@@ -488,8 +490,8 @@ if (location.protocol !== 'file:') {
         <div class="row">
                 <div class="col-md-3"></div>
                 <div class="col-sm-6" id="odu-editor-panel" style="display:none; margin-top:20px;">
-                  <center><h2>Odù Admin Editor <button class="btn btn-md btn-default" onclick="backToDashboard()">⬅ Hide</button></h2></center>
-                  <center><div class="status alert-success" id="status"></div></center>
+                  <div class="text-center"><h2>Odù Admin Editor <button class="btn btn-md btn-default" onclick="backToDashboard()">⬅ Hide</button></h2></div>
+                  <div class="text-center"><div class="status alert-success" id="status"></div></div>
                  <label>Odù Key</label>
                     <div class="input-group mb-2">
                       <input
@@ -530,8 +532,9 @@ if (location.protocol !== 'file:') {
                   <div id="pageNumbers"></div>
                   <button id="nextPageBtn" class="btn btn-sm app-btn btn-default" data-translate>Next ➡</button>
               </div>
-              <center><span id="pageInfo" style="margin: 0 10px; font-weight:bold; display: none;"></span></center>
+              <div class="text-center"><span id="pageInfo" style="margin: 0 10px; font-weight:bold; display: none;"></span></div>
         </div>
+        </main>
         <footer class="footer" style="margin-top: 0;">
   <div class="container" style="margin-top: 0;">
 
@@ -568,21 +571,6 @@ if (location.protocol !== 'file:') {
       <div class="col-md-4"></div>
     </div>
 
-    <!-- ── Audio Modal ── -->
-    <div id="audioModal" style="display:none;position:fixed;top:20%;left:10%;width:80%;height:20%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
-      <div style="text-align:right;padding:5px;">
-        <button onclick="closeAudioModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
-      </div>
-      <div id="audioPlayerContainer" style="padding:10px;text-align:center;"></div>
-    </div>
-
-    <!-- ── Video Modal ── -->
-    <div id="videoModal" style="display:none;position:fixed;top:10%;left:10%;width:80%;height:70%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
-      <div style="text-align:right;padding:5px;">
-        <button onclick="closeVideoModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
-      </div>
-      <iframe id="videoFrame" width="100%" height="90%" frameborder="0" allowfullscreen></iframe>
-    </div>
 
     <!-- ── Main footer content ── -->
     <div class="row">
@@ -611,12 +599,12 @@ if (location.protocol !== 'file:') {
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="showTermsModal()">
-            <span data-translate="terms">Terms &amp; Policy</span>
+            <span data-translate>Terms &amp; Policy</span>
           </a>
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="showContributionModal()">
-            <span data-translate="contribute">Share Insight</span>
+            <span data-translate>Share Insight</span>
           </a>
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
@@ -664,7 +652,7 @@ if (location.protocol !== 'file:') {
         </div>
 
         <!-- 4. Sponsorship / contact -->
-        <p style="margin-top:20px;" data-translate="sponsorship">
+        <p style="margin-top:20px;" data-translate>
           For sponsorships, partnerships, or collaboration inquiries, please contact us:
         </p>
         <p>
@@ -691,8 +679,31 @@ if (location.protocol !== 'file:') {
           <span data-translate="rights"> All Rights Reserved.</span>
         </p>
 
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+        <!-- ── Overlays & dialogs (moved out of the footer) ── -->
+    <!-- ── Audio Modal ── -->
+    <div id="audioModal" role="dialog" aria-modal="true" aria-label="Audio player" style="display:none;position:fixed;top:20%;left:10%;width:80%;height:20%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
+      <div style="text-align:right;padding:5px;">
+        <button onclick="closeAudioModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
+      </div>
+      <div id="audioPlayerContainer" style="padding:10px;text-align:center;"></div>
+    </div>
+
+    <!-- ── Video Modal ── -->
+    <div id="videoModal" role="dialog" aria-modal="true" aria-label="Video player" style="display:none;position:fixed;top:10%;left:10%;width:80%;height:70%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
+      <div style="text-align:right;padding:5px;">
+        <button onclick="closeVideoModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
+      </div>
+      <iframe id="videoFrame" width="100%" height="90%" frameborder="0" allowfullscreen></iframe>
+    </div>
+
         <!-- ── Modals ── -->
-        <div id="termsModal" class="termsModal" style="display:none">
+        <div id="termsModal" class="termsModal" role="dialog" aria-modal="true" aria-label="Terms and Policy" style="display:none">
           <div class="termsModal-content">
             <button class="app-btn termsClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
             <div id="termsContent">
@@ -701,7 +712,7 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
 
-        <div id="aboutModal" class="aboutModal" style="display:none">
+        <div id="aboutModal" class="aboutModal" role="dialog" aria-modal="true" aria-label="About" style="display:none">
           <div class="aboutModal-content">
             <button class="app-btn aboutClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
             <div id="aboutContent">
@@ -710,7 +721,7 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
 
-        <div id="contributionModal" class="custom-modal">
+        <div id="contributionModal" class="custom-modal" role="dialog" aria-modal="true" aria-label="Share insight">
           <div class="custom-modal-content">
             <button class="app-btn customClose"
               style="font-size:14px !important;color:green;margin-top:15px;" data-translate>Close</button>
@@ -751,9 +762,6 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
 
-      </div>
-    </div>
-
     <!-- ── Chatbot ── -->
     <div id="chatbot-container" class="hidden">
       <div id="chatbot-header">
@@ -771,16 +779,13 @@ if (location.protocol !== 'file:') {
       </div>
     </div>
     <button id="chatbot-toggle" onclick="toggleChatbot()">💬</button>
-
-  </div>
-</footer>
         
-        <div id="successPopup" class="success-popup">
+        <div id="successPopup" class="success-popup" role="status" aria-live="polite">
             <div class="success-check"><span data-translate>✔ Insight Submitted!</span></div>
         </div>
 
         <!-- Ifa Guide Modal -->
-        <div id="ifaGuideModal" style="
+        <div id="ifaGuideModal" role="dialog" aria-modal="true" aria-label="Ifa guide" style="
           display: none;
           position: fixed;
           inset: 0;
@@ -942,7 +947,7 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
 
-        <div id="onboarding-modal" style="
+        <div id="onboarding-modal" role="dialog" aria-modal="true" aria-label="Welcome" style="
           display:none;
           position:fixed;
           inset:0;
@@ -1009,7 +1014,7 @@ if (location.protocol !== 'file:') {
       }
     });
 </script>
-<script src="public/js/driver.js"></script>
-<script src="public/js/orirun-tour.js"></script>
+<script src="public/js/driver.js" defer></script>
+<script src="public/js/orirun-tour.js" defer></script>
 </body>
 </html>

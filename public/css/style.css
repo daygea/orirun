@@ -828,15 +828,8 @@ input#birthdate[type="date"]  {
 
 input#birthdate[type="text"],
 input#birthdate[type="date"] {
-  width: 80%;
-  max-width: 250px;
-  padding: 10px;
-  font-size: 16px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  color: green;
-  font-family: Courier, monospace;
-  font-weight: bold;
+  width: 100%;
+  max-width: none;
 }
 
 button {
@@ -1814,8 +1807,10 @@ p{ line-height:1.65; }
 input#birthdate[type="date"], input#birthdate[type="text"]{ font-family:var(--font-body) !important; }
 
 /* heading: simple + thin rule */
-#main-content > h3{ font-size:20px; margin-bottom:16px; }
-#main-content > h3::after{
+#main-content > h3,
+#numerology-section > h3{ font-size:20px; margin-bottom:16px; }
+#main-content > h3::after,
+#numerology-section > h3::after{
   content:""; display:block; width:40px; height:2px; margin:8px auto 0;
   background:var(--of-green); border-radius:2px; opacity:.55;
 }
@@ -1910,7 +1905,7 @@ select.form-control{
 
 @media (max-width:600px){
   #main-content.ifaDetails, #numerology-section.numerology{ padding:18px 15px; border-radius:12px; }
-  #main-content > h3{ font-size:19px; }
+  #main-content > h3, #numerology-section > h3{ font-size:19px; }
   .text-center p:has(> span[data-translate="header"]){ font-size:11.5px !important; padding:10px 14px !important; }
   .col-12.text-center p{ font-size:12.5px; }
 }
