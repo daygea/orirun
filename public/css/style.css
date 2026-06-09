@@ -2070,3 +2070,51 @@ body{
   #ifa-tip-box.tip-below::after { top: -6px;    border-right: none; border-bottom: none; }
   #ifa-tip-box.tip-above::after { bottom: -6px; border-left: none;  border-top: none;  }
 }
+/* ── App-native reading: summary clamp, grouped details, media reveal, action bar ── */
+.dv-interp-wrap:not(.is-open) .dv-interp{
+  display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden;
+}
+.dv-readmore{
+  margin-top:8px; padding:0; background:none; border:none; cursor:pointer;
+  font-family:var(--font-body); font-weight:600; font-size:13px; color:var(--of-green);
+}
+.dv-readmore .arr{ display:inline-block; transition:transform .2s; }
+.dv-interp-wrap.is-open .dv-readmore .arr{ transform:rotate(180deg); }
+.dv-readmore .label-less{ display:none; }
+.dv-interp-wrap.is-open .dv-readmore .label-more{ display:none; }
+.dv-interp-wrap.is-open .dv-readmore .label-less{ display:inline; }
+
+.odu-details{ display:flex; flex-direction:column; }
+.odu-detail + .odu-detail{ margin-top:12px; padding-top:12px; border-top:1px solid var(--of-line); }
+.odu-detail__k{ font-size:12.5px; font-weight:700; color:var(--of-green-deep); margin-bottom:3px; }
+.odu-detail__v{ font-size:14px; line-height:1.6; color:var(--of-ink); }
+
+.media-showall{
+  margin-top:10px; padding:8px 14px; background:none; cursor:pointer;
+  font-family:var(--font-body); font-weight:600; font-size:13px; color:var(--of-green);
+  border:1px solid var(--of-line); border-radius:8px;
+}
+
+.dv-actions{ display:flex; gap:10px; margin:18px 0 6px; }
+.dv-actions__btn{
+  flex:1; border-radius:10px; padding:11px 12px; cursor:pointer;
+  font-family:var(--font-body); font-weight:700; font-size:14px;
+}
+.dv-actions__btn--ghost{ border:1.5px solid var(--of-green); color:var(--of-green); background:#fff; }
+.dv-actions__btn--solid{ border:none; color:#fff; background:var(--of-green); }
+
+/* ── Words of Ifá — refined sacred-verse (quote) treatment ── */
+.ase-verse{
+  margin:2px 0; padding:4px 0 4px 16px;
+  border-left:3px solid var(--of-green);
+  color:var(--of-ink); font-size:14.5px; line-height:1.85;
+}
+.ase-verse p{ margin:0 0 12px; color:var(--of-ink); }
+.ase-verse p:last-child{ margin:0; }
+.ase-more-btn{
+  margin-top:14px; padding:8px 14px; cursor:pointer; background:none;
+  font-family:var(--font-body); font-weight:600; font-size:13px; color:var(--of-green);
+  border:1px solid var(--of-line); border-radius:8px;
+}
+.ase-more-btn:hover{ background:rgba(15,123,61,.06); }
+#extraAse{ color:var(--of-ink); line-height:1.75; }

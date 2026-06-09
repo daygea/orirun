@@ -468,20 +468,25 @@ const getInputValue = (id, fallback) =>
 
 const generateMediaLinks = (data, type, openFunc, emoji, label) => {
   if (!Array.isArray(data) || !data.length) return "";
-  return `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;">
-      ${data.map((item, index) => {
-        const safeUrl = item.url.replace(/'/g, "\\'");
-        return `
+  const cell = (item, index) => {
+    const safeUrl = item.url.replace(/'/g, "\\'");
+    return `
           <p style="margin:0;padding:8px;background:#fafafa;border-radius:6px;box-shadow:0 0 3px rgba(0,0,0,0.1);">
             ${index + 1}.
-            <a href="#" onclick="${openFunc}('${safeUrl}'); return false;" style="color:#0056b3;text-decoration:none;">
+            <a href="#" onclick="${openFunc}('${safeUrl}'); return false;" style="color:var(--of-green);text-decoration:none;">
               ${emoji} ${label}
             </a>
-            <span style="color:#555;">of ${item.author}</span>
+            <span style="color:var(--of-ink-soft);">of ${item.author}</span>
           </p>`;
-      }).join("")}
-    </div>`;
+  };
+  const grid = "display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;";
+  if (data.length <= 3) return `<div style="${grid}">${data.map(cell).join("")}</div>`;
+  return `
+    <div style="${grid}">${data.slice(0, 3).map(cell).join("")}</div>
+    <div class="media-more" style="display:none;${grid}margin-top:12px;">${data.slice(3).map((it, i) => cell(it, i + 3)).join("")}</div>
+    <button type="button" class="media-showall" onclick="var m=this.previousElementSibling;m.style.display='grid';this.style.display='none';">
+      <span data-translate>Show all ${data.length}</span>
+    </button>`;
 };
 
 /* ─────────────────────────────────────────────────────────────
@@ -608,7 +613,14 @@ const performUserDivination = async (
             <div class="dv-hero__tags">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
           </div>
           <div class="dv-hero__body">
-            <p data-translate>${rawMessage} ${solutionInfo}</p>
+            ${(`${rawMessage} ${solutionInfo}`).replace(/<[^>]+>/g, "").length > 300
+              ? `<div class="dv-interp-wrap">
+                   <p class="dv-interp" data-translate>${rawMessage} ${solutionInfo}</p>
+                   <button type="button" class="dv-readmore" onclick="this.closest('.dv-interp-wrap').classList.toggle('is-open');">
+                     <span class="label-more" data-translate>Read full interpretation</span><span class="label-less" data-translate>Show less</span> <span class="arr">▾</span>
+                   </button>
+                 </div>`
+              : `<p data-translate>${rawMessage} ${solutionInfo}</p>`}
           </div>
         </div>
       `);
@@ -620,16 +632,13 @@ const performUserDivination = async (
           : `<p>${coreMessage}</p>`;
 
         const aseBody = `
-          <span data-translate>${coreMsgHTML} ${aseIfaHTML}</span>
+          <div class="ase-verse" data-translate>${coreMsgHTML} ${aseIfaHTML}</div>
           ${(oduSummaryAse || characterHTML) ? `
-            <div style="margin-top:10px;">
-            <center>
-              <button class="btn btn-sm btn-default" id="readMoreAse"
-                style="color:#007bff;cursor:pointer;border:1px solid green;transform:none !important;">
-                <span style="color: green" data-translate>Read more for ọmọ ${mainCast} ▼ </span> 
+            <div style="margin-top:14px;">
+              <button class="ase-more-btn" id="readMoreAse">
+                <span data-translate>Read more for ọmọ ${mainCast} ▼</span>
               </button>
-            </center>
-              <div id="extraAse" style="display:none;margin-top:10px;">
+              <div id="extraAse" style="display:none;margin-top:12px;line-height:1.75;">
                 ${characterHTML ? `${characterHTML}<hr/>` : ""}
                 ${oduSummaryAse ? `<span data-translate>${oduSummaryAse}</span>` : ""}
               </div>
@@ -644,51 +653,25 @@ const performUserDivination = async (
         parts.push(_acc("Audio & Video", mediaHTML, false));
       }
 
-      /* ── Alias — collapsed ── */
-      if (alias) {
+      /* ── Odù Details — six correspondences grouped into one card ── */
+      const _detailRows = [];
+      const _row = (label, tipText, value, translate) => {
+        if (!value) return;
+        const v = translate ? `<span data-translate>${value}</span>` : value;
+        _detailRows.push(
+          `<div class="odu-detail"><div class="odu-detail__k">${label} ${tip(tipText)}</div><div class="odu-detail__v">${v}</div></div>`
+        );
+      };
+      _row("Alias (Inagije)", "Alternative sacred names this Odu is known by among Babalawo.", alias, false);
+      _row("Orisha — Ni Bibo (To Appease)", "The Orisha associated with this Odu who should be honoured or appeased.", orisha, false);
+      _row("Plant (Ewe)", "Sacred plants associated with this Odu, used in spiritual baths and ritual preparation.", herb, false);
+      _row("Names (Oruko)", "Names given to children born under this Odu.", names, false);
+      _row("Occupation (Ise)", "Vocations naturally aligned with the energy of this Odu.", occupation, false);
+      _row("Taboo (Eewo)", "Eewo are sacred prohibitions — things a person under this Odu must avoid.", taboo, true);
+      if (_detailRows.length) {
         parts.push(_acc(
-          `Alias (Inagije) ${tip("Alternative sacred names this Odu is known by among Babalawo.")}`,
-          `<p>${alias}</p>`, false
-        ));
-      }
-
-      /* ── Orisha — collapsed ── */
-      if (orisha) {
-        parts.push(_acc(
-          `Orisha — Ni Bibo (To Appease) ${tip("The Orisha associated with this Odu who should be honoured or appeased.")}`,
-          `<p>${orisha}</p>`, false
-        ));
-      }
-
-      /* ── Plant — collapsed ── */
-      if (herb) {
-        parts.push(_acc(
-          `Plant (Ewe) ${tip("Sacred plants associated with this Odu, used in spiritual baths and ritual preparation.")}`,
-          `<p>${herb}</p>`, false
-        ));
-      }
-
-      /* ── Names — collapsed ── */
-      if (names) {
-        parts.push(_acc(
-          `Names (Oruko) ${tip("Names given to children born under this Odu.")}`,
-          `<p>${names}</p>`, false
-        ));
-      }
-
-      /* ── Occupation — collapsed ── */
-      if (occupation) {
-        parts.push(_acc(
-          `Occupation (Ise) ${tip("Vocations naturally aligned with the energy of this Odu.")}`,
-          `<p>${occupation}</p>`, false
-        ));
-      }
-
-      /* ── Taboo — collapsed ── */
-      if (taboo) {
-        parts.push(_acc(
-          `Taboo (Eewo) ${tip("Eewo are sacred prohibitions — things a person under this Odu must avoid.")}`,
-          `<span data-translate>${taboo}</span>`, false
+          `Odù Details ${tip("Key correspondences for this Odù — its Orisha, sacred plant, associated names, aligned vocations, and taboos.")}`,
+          `<div class="odu-details">${_detailRows.join("")}</div>`, false
         ));
       }
 
@@ -698,6 +681,20 @@ const performUserDivination = async (
         spiritualInsight, false
       ));
 
+      /* ── Action bar: new reading + share ── */
+      parts.push(`
+        <div class="dv-actions">
+          <button type="button" class="dv-actions__btn dv-actions__btn--ghost"
+            onclick="var f=document.getElementById('main-content');if(f)f.scrollIntoView({behavior:'smooth'});">
+            <span data-translate>New reading</span>
+          </button>
+          <button type="button" class="dv-actions__btn dv-actions__btn--solid"
+            onclick="try{if(navigator.share){navigator.share({title:'Orírùn',text:'Ifá reading: ${mainCast} (${orientationText})',url:location.href}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(location.href);}}catch(e){}">
+            <span data-translate>Share</span>
+          </button>
+        </div>
+      `);
+
       if (credit) {
         parts.push(`
           <section class="credits-section">
@@ -705,7 +702,7 @@ const performUserDivination = async (
             <p data-translate>Special appreciation is extended to all Babalawo, for their publicly
               shared teachings and insights, as well as to Dunad Solutions Limited and the Aminat
               Olanbiwoninu Kadri Foundation for their invaluable support.</p>
-            <p style="font-style:italic;font-size:0.9em;color:red;text-align:center;" data-translate>
+            <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;" data-translate>
               This content is inspired by collective Ifá traditions, scholarly works, and community-preserved
               teachings, shared for educational purposes only.
             </p>
@@ -966,12 +963,12 @@ async function displayMeaning(number) {
     resultDiv.style.display = "none";
 
     resultEl.innerHTML = `
-      <h3 style="text-align:center;margin-top:20px;font-weight:bold;">
+      <h3 style="text-align:center;margin-top:14px;font-weight:bold;">
         <span data-translate>Energy ${number} - ${label}</span>
       </h3>
       <hr/>
       <p>${data.meaning || "No meaning found."}</p>
-      <p style="font-style:italic;font-size:0.9em;color:red;text-align:center;" data-translate>
+      <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;" data-translate>
         This content is inspired by collective scholarly works and community-preserved teachings,
         shared for educational purposes only.
       </p>`;
@@ -1072,7 +1069,7 @@ function parseEnergyAccordion(text) {
 
   if (rawSections.length < 2) {
     /* AI didn't use expected structure — fall back to plain render */
-    return `<div style="border-left:4px solid #2e7d32;padding:12px;border-radius:6px;line-height:1.8;">
+    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;">
       ${formatResponseAsHTML(text)}
     </div>`;
   }
@@ -1098,7 +1095,7 @@ function parseEnergyAccordion(text) {
           <span data-translate>${heading}</span>
           <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
         </button>
-        <div id="${id}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.8;font-size:14px;">
+        <div id="${id}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
           <span data-translate>${formatResponseAsHTML(body)}</span>
         </div>
       </div>`;
@@ -1330,7 +1327,7 @@ function parseEnergyAccordion(text) {
   const rawSections  = text.split(sectionRegex).filter(s => s.trim());
 
   if (rawSections.length < 2) {
-    return `<div style="border-left:4px solid #2e7d32;padding:12px;border-radius:6px;line-height:1.8;">
+    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;">
       ${formatResponseAsHTML(text)}
     </div>`;
   }
@@ -1365,7 +1362,7 @@ function parseEnergyAccordion(text) {
           <span data-translate>${displayTitle}</span>
           <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
         </button>
-        <div id="${sid}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.8;font-size:14px;">
+        <div id="${sid}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
           <span data-translate>${formatResponseAsHTML(body || heading)}</span>
         </div>
       </div>`;
@@ -1384,7 +1381,7 @@ function parseEnergyAccordion(text) {
         </button>
       </div>
 
-      <div id="ori-voice-slot" style="border-left:4px solid #2e7d32;border-radius:6px;padding:12px;min-height:60px;display:flex;align-items:center;gap:10px;color:green;">
+      <div id="ori-voice-slot" style="border-left:4px solid var(--of-green);border-radius:6px;padding:12px;min-height:60px;display:flex;align-items:center;gap:10px;color:var(--of-green);">
         <span class="spinner" style="width:18px;height:18px;"></span>
         <em>Your reading is being prepared...</em>
       </div>
@@ -1404,7 +1401,7 @@ function parseEnergyAccordion(text) {
       `, false));
     } else if (locationDenied) {
       parts.push(`
-        <p style="color:orange">
+        <p style="color:var(--of-ink-soft)">
           <em data-translate>Current hour influence unavailable (location access denied).</em>
         </p>
       `);
@@ -1413,7 +1410,7 @@ function parseEnergyAccordion(text) {
 
     /* Disclaimer */
     parts.push(`
-      <p style="font-style:italic;font-size:0.9em;color:red;text-align:center;margin-top:12px;" data-translate>
+      <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;margin-top:12px;" data-translate>
         This content is inspired by collective scholarly works and community-preserved teachings, shared for educational purposes only.
       </p>
     `);
@@ -1494,7 +1491,7 @@ function parseEnergyAccordion(text) {
     }).catch(() => {
       const slot = document.getElementById("ori-voice-slot");
       if (slot) slot.innerHTML =
-        `<em style="color:#888;" data-translate>The spiritual interpretation could not be generated at this moment. Please try again later.</em>`;
+        `<em style="color:var(--of-muted);" data-translate>The spiritual interpretation could not be generated at this moment. Please try again later.</em>`;
     });
 
   } catch (error) {
