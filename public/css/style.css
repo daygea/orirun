@@ -1924,7 +1924,8 @@ select.form-control{
 
 /* Soften the background photo so it reads as calm texture, not clutter */
 body{
-  background:#faf6ec !important;
+  background-image:linear-gradient(rgba(255,255,255,.64),rgba(255,255,255,.74)),url('../img/background.jpg') !important;
+  background-attachment:fixed;
 }
 
 /* Center & constrain the main three-column section */
@@ -2147,4 +2148,39 @@ body{
 /* ── Reading column: comfortable measure on desktop (not full-card sprawl) ── */
 @media (min-width:1025px){
   #divinationResult{ max-width:720px; margin-left:auto; margin-right:auto; }
+}
+
+/* ── Form tabs — only where the two form cards stack (small screens) ── */
+.form-tabs{ display:none; }
+@media (max-width:575px){
+  .form-tabs{
+    display:flex; gap:6px; width:100%; margin:0 0 12px; padding:5px;
+    background:#fff; border:1px solid var(--of-line); border-radius:12px;
+    box-shadow:0 2px 10px rgba(15,123,61,.06);
+  }
+  .form-tab{
+    flex:1; padding:11px 8px; border:none; border-radius:9px; cursor:pointer;
+    font-family:var(--font-body); font-weight:700; font-size:14px;
+    color:var(--of-ink-soft); background:transparent; transition:background .15s,color .15s;
+  }
+  .form-tab.is-active{ background:var(--of-green); color:#fff; }
+  .tab-hidden{ display:none !important; }
+  /* the active tab is the heading on small screens — avoid the duplicate */
+  #main-content > h3, #numerology-section > h3{ display:none; }
+}
+
+/* Pedestal is for the opele diagram only — when the bird is shown (initial /
+   numerology state), drop the frame so it isn't a tiny bird in an empty box */
+#configurationResult.odusign:has(.moving-bg){
+  background:none; border:none; box-shadow:none; padding:0; max-width:none;
+}
+
+/* ── Numerology: 'or' divider between the Reveal-Message flow and Pick a Number ── */
+.num-divider{
+  display:flex; align-items:center; gap:12px;
+  margin:18px 4px 14px; color:var(--of-muted);
+  font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.12em;
+}
+.num-divider::before, .num-divider::after{
+  content:""; flex:1; height:1px; background:var(--of-line);
 }

@@ -345,6 +345,20 @@ if (location.protocol !== 'file:') {
                 <img id="hiddenTapArea" class="moving-bg" src="public/img/bird.gif" alt="bird" />
             </div>
 
+            <div class="form-tabs col-12">
+              <button type="button" class="form-tab is-active" data-tab="discover" onclick="orFormTab('discover')" data-translate>Ifa Wisdom</button>
+              <button type="button" class="form-tab" data-tab="numerology" onclick="orFormTab('numerology')" data-translate>Numerology</button>
+            </div>
+            <script>
+              window.orFormTab = function(which){
+                var d=document.getElementById('main-content'), n=document.getElementById('numerology-section');
+                if(d) d.classList.toggle('tab-hidden', which!=='discover');
+                if(n) n.classList.toggle('tab-hidden', which!=='numerology');
+                document.querySelectorAll('.form-tab').forEach(function(b){
+                  b.classList.toggle('is-active', b.getAttribute('data-tab')===which);
+                });
+              };
+            </script>
             <div class="col-sm-6 ifaDetails" id="main-content" data-tour="divination">
           <h3 style="text-align:center;font-weight:bold;">
             <span data-translate>Discover Ifa Wisdom</span>
@@ -410,7 +424,7 @@ if (location.protocol !== 'file:') {
             <span data-translate>Reveal Wisdom</span>
           </button>
         </div>
-            <div class="col-sm-3 numerology" id="numerology-section">
+            <div class="col-sm-3 numerology tab-hidden" id="numerology-section">
               <h3 style="text-align:center;font-weight:bold;">
                 <span data-translate>Numerology</span>
               </h3>
@@ -418,7 +432,7 @@ if (location.protocol !== 'file:') {
                     <label><span data-translate="enterName">Enter your full name</span></label>
                     <div id="fullname-box">
                       <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
-                        placeholder="Temitope Ola Kadri" />
+                        placeholder="Temitope Olanbiwoninu Kadri" />
                     </div>
 
                     <label><span data-translate="birthDate">Select your birth date</span></label>
@@ -439,6 +453,7 @@ if (location.protocol !== 'file:') {
                           aria-label="More information">i</i>
                       </div>
                     </div>
+                    <div class="num-divider"><span data-translate>or</span></div>
                      <div style="display:flex;align-items:center;justify-content:center;gap:6px; margin-bottom: 10px;">
                         <p style="margin:0;font-weight:bold;">
                           <span data-translate>Pick a Number</span>
