@@ -547,6 +547,29 @@ let currentLang  = "baseline";
 const newpreloader  = document.getElementById("new-preloader");
 const languageSelect = document.getElementById("language-select");
 
+/* ─────────────────────────────────────────────────────────────
+ *  TEXT DIRECTION (RTL support)
+ *  Languages whose script reads right-to-left. Add future RTL
+ *  codes here (e.g. "he", "fa", "ur") if they join LANGUAGES.
+ * ───────────────────────────────────────────────────────────── */
+const RTL_LANGS = new Set(["ar"]);
+
+/**
+ * _applyDirection — set <html dir> (and lang) to match the
+ * selected language. Called on initial load and on every change,
+ * so layout flips to RTL for Arabic and back to LTR otherwise.
+ */
+function _applyDirection(lang) {
+  try {
+    const html = document.documentElement;
+    html.setAttribute("dir", RTL_LANGS.has(lang) ? "rtl" : "ltr");
+    html.setAttribute(
+      "lang",
+      (lang && lang !== "baseline" && LANGUAGES[lang]) ? lang : "en"
+    );
+  } catch {}
+}
+
 const IGNORE_TEXTS = [
   "please provide the text to translate",
   "please paste the app text you want translated",
@@ -687,6 +710,7 @@ function _endActivity() {
 (function populateLanguageDropdown() {
   const savedLang = localStorage.getItem("appLanguage");
   if (savedLang && LANGUAGES[savedLang]) currentLang = savedLang;
+  _applyDirection(currentLang);
   for (const [code, name] of Object.entries(LANGUAGES)) {
     const option = document.createElement("option");
     option.value = code;
@@ -1055,6 +1079,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Dropdown change handler
   languageSelect.addEventListener("change", async (e) => {
     currentLang = e.target.value;
+    _applyDirection(currentLang);
     try { localStorage.setItem("appLanguage", currentLang); } catch {}
     if (currentLang === "baseline") {
       restoreOriginalHTML();             // instant — no overlay
@@ -1067,6 +1092,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const cached = localStorage.getItem("appLanguage");
   if (cached && LANGUAGES[cached]) {
     currentLang = cached;
+    _applyDirection(currentLang);
     if (currentLang !== "baseline") {
       await withTranslationLoader(translatePage(currentLang).catch((err) => console.error(err)));
     }
