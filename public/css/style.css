@@ -1624,7 +1624,7 @@ input:checked + .slider:before {
   .app-section > div {
     width: 100% !important;
     max-width: 700px;
-    margin-bottom: 25px;
+    margin-bottom: 14px;
   }
 
   #main-content {
@@ -1857,6 +1857,10 @@ select.form-control{
   background-repeat:no-repeat; background-position:right 14px center; padding-right:32px;
 }
 
+/* form-field rhythm (replaces the old <br> spacers): compact, consistent */
+#main-content .form-control,
+#numerology-section .form-control{ margin-bottom:14px; }
+
 /* buttons: flat, solid, restrained */
 .app-btn{
   font-family:var(--font-body); font-weight:700; font-size:14px; letter-spacing:.2px;
@@ -1904,8 +1908,9 @@ select.form-control{
 #chatbot-toggle{ background:var(--of-green) !important; box-shadow:0 6px 16px rgba(15,123,61,.32) !important; }
 
 @media (max-width:600px){
-  #main-content.ifaDetails, #numerology-section.numerology{ padding:18px 15px; border-radius:12px; }
-  #main-content > h3, #numerology-section > h3{ font-size:19px; }
+  #main-content.ifaDetails, #numerology-section.numerology{ padding:14px 14px; border-radius:12px; }
+  #main-content .form-control, #numerology-section .form-control{ margin-bottom:10px; }
+  #main-content > h3, #numerology-section > h3{ font-size:19px; margin-bottom:12px; }
   .text-center p:has(> span[data-translate="header"]){ font-size:11.5px !important; padding:10px 14px !important; }
   .col-12.text-center p{ font-size:12.5px; }
 }
@@ -1937,9 +1942,9 @@ body{
   box-shadow:0 6px 20px rgba(20,45,30,.07) !important;
 }
 
-/* Desktop: align columns to the top so the panels sit level */
+/* Desktop: stretch columns so the two panels are equal height */
 @media (min-width:1025px){
-  .app-section{ align-items:flex-start; }
+  .app-section{ align-items:stretch; }
   #numerology-section.numerology{ margin-top:0 !important; }
 }
 
