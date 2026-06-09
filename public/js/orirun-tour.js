@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-maincast",
+        element: "#mainCast",
         popover: {
           title:       "Choose Your Odù Ifá",
           description: "An Odù is a sacred chapter of Ifá. There are 256 in total. " +
@@ -188,7 +188,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-orient",
+        element: "#orientation",
         popover: {
           title:       "Set the Orientation",
           description: "<strong>Ire</strong> — the Odù appears in a favourable alignment: blessings are available.<br/>" +
@@ -199,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-specorient",
+        element: "#specificOrientation",
         popover: {
           title:       "Specific Orientation",
           description: "Narrow down exactly which area of life the Odù is speaking to — " +
@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-solution",
+        element: "#solution",
         popover: {
           title:       "Choose a Solution Type",
           description: "<strong>Ebo</strong> — a prescribed offering or action to activate blessings or resolve challenges.<br/>" +
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-soldetail",
+        element: "#solutionDetails",
         popover: {
           title:       "Specific Solution",
           description: "Each Ebo or Adimu type carries its own sacred items and actions " +
@@ -243,7 +243,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-fullname",
+        element: "#fullname-box",
         popover: {
           title:       "Your Name & Birth Date",
           description: "Enter your full name and birth date to generate your Yoruba numerology birth chart — " +
@@ -254,7 +254,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#tour-g-picknum",
+        element: "#calculator",
         popover: {
           title:       "Pick a Sacred Number",
           description: "Choose any number from 1–9 to instantly explore its Àṣẹ (divine energy) — " +
@@ -326,7 +326,21 @@ document.addEventListener("DOMContentLoaded", function () {
       keyboardControl:    true,
       scrollIntoViewOptions: { behavior: "smooth", block: "center" },
 
+      onHighlightStarted: function (element) {
+        if (window.innerWidth >= 576 || typeof window.orFormTab !== "function") return;
+        var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
+        var id = node && node.id ? node.id : "";
+        if (id === "fullname-box" || id === "calculator") {
+          window.orFormTab("numerology");
+        } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
+          window.orFormTab("discover");
+        }
+      },
+
       onReset: function () {
+        if (window.innerWidth < 576 && typeof window.orFormTab === "function") {
+          window.orFormTab("discover");
+        }
         [
           "#driver-page-overlay",
           "#driver-highlighted-element-stage",
