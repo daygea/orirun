@@ -479,14 +479,7 @@ const generateMediaLinks = (data, type, openFunc, emoji, label) => {
             <span style="color:var(--of-ink-soft);">of ${item.author}</span>
           </p>`;
   };
-  const grid = "display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;";
-  if (data.length <= 3) return `<div style="${grid}">${data.map(cell).join("")}</div>`;
-  return `
-    <div style="${grid}">${data.slice(0, 3).map(cell).join("")}</div>
-    <div class="media-more" style="display:none;${grid}margin-top:12px;">${data.slice(3).map((it, i) => cell(it, i + 3)).join("")}</div>
-    <button type="button" class="media-showall" onclick="var m=this.previousElementSibling;m.style.display='grid';this.style.display='none';">
-      <span data-translate>Show all ${data.length}</span>
-    </button>`;
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;align-items:start;">${data.map(cell).join("")}</div>`;
 };
 
 /* ─────────────────────────────────────────────────────────────
