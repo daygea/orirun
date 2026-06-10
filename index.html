@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <script>
 (function () {
-  // Detect the iOS App Store wrapper (its WebView user agent ends in "PWAShell")
+  /// Detect the iOS App Store wrapper (its WebView user agent ends in "PWAShell")
   if (!/PWAShell/.test(navigator.userAgent)) return;
   window.IS_IOS_APP = true;
   document.documentElement.classList.add('ios-app');
