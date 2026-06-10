@@ -152,13 +152,13 @@ document.addEventListener("DOMContentLoaded", function () {
    *     label and the control are highlighted together.
    * ═══════════════════════════════════════════════════════ */
   function buildSteps() {
-    return [
+    var steps = [
 
        {
         element: ".languageBtn",
         popover: {
-          title:       "🌐 Language Support",
-          description: "Orírùn supports multiple languages." +
+          title:       "Language Support",
+          description: "Orírùn supports multiple languages. " +
                        "Switch language at any time using this selector.",
           position:    posLeft(),
           showButtons: true
@@ -245,9 +245,20 @@ document.addEventListener("DOMContentLoaded", function () {
       {
         element: "#fullname-box",
         popover: {
-          title:       "Your Name & Birth Date",
-          description: "Enter your full name and birth date to generate your Yoruba numerology birth chart — " +
-                       "revealing your Life Path, Destiny, Soul Urge, Orisha alignment, and more.",
+          title:       "Enter Your Full Name",
+          description: "Your full name is the first half of your Yorùbá numerology chart — " +
+                       "type it just as you'd like it to be read.",
+          position:    pos("left"),
+          showButtons: true
+        }
+      },
+
+      {
+        element: "#birthdate-box",
+        popover: {
+          title:       "Add Your Birth Date",
+          description: "Your birth date completes the chart. With both in place, tap " +
+                       "<em>Reveal Message</em> to generate your Life Path, Destiny, Soul Urge, and Orisha alignment.",
           position:    pos("left"),
           showButtons: true
         }
@@ -267,7 +278,7 @@ document.addEventListener("DOMContentLoaded", function () {
       {
         element: "#chatbot-toggle",
         popover: {
-          title:       "Learning Corner 💬",
+          title:       "Learning Corner",
           description: "Have questions about Ifá, Orishas, or Yoruba spirituality? " +
                        "Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. You can also type <b>Help</b> in the chat area to view the list of resources available.",
           position:    posRight2(),
@@ -278,7 +289,7 @@ document.addEventListener("DOMContentLoaded", function () {
       {
         element: "#tour-guidance-link",
         popover: {
-          title:       "🧿 Today's Guidance",
+          title:       "Today's Guidance",
           description: "Tap here at any time to receive your personalised daily guidance — " +
                        "rooted in your numerology, your Orisha alignment, and the energy of the current hour.",
           position:    pos("top"),
@@ -300,6 +311,23 @@ document.addEventListener("DOMContentLoaded", function () {
       // }
 
     ];
+
+    /* Mobile only (<576px): the two-system tabs exist just under this width.
+       Introduce them so first-time users know how to switch systems. */
+    if (window.innerWidth < 576) {
+      steps.splice(2, 0, {
+        element: ".form-tabs",
+        popover: {
+          title:       "Two Paths to Wisdom",
+          description: "Orírùn offers two systems: <strong>Ifá Wisdom</strong> for Odù divination, " +
+                       "and <strong>Numerology</strong> for your sacred numbers. Tap these tabs to switch between them anytime.",
+          position:    pos("bottom"),
+          showButtons: true
+        }
+      });
+    }
+
+    return steps;
   }
 
   /* ═══════════════════════════════════════════════════════
@@ -330,8 +358,12 @@ document.addEventListener("DOMContentLoaded", function () {
         if (window.innerWidth >= 576 || typeof window.orFormTab !== "function") return;
         var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
         var id = node && node.id ? node.id : "";
-        if (id === "fullname-box" || id === "calculator") {
+        if (id === "fullname-box" || id === "birthdate-box") {
           window.orFormTab("numerology");
+          if (typeof window.orNumMethod === "function") window.orNumMethod("namedate");
+        } else if (id === "calculator") {
+          window.orFormTab("numerology");
+          if (typeof window.orNumMethod === "function") window.orNumMethod("picknum");
         } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
           window.orFormTab("discover");
         }

@@ -357,6 +357,22 @@ if (location.protocol !== 'file:') {
                 document.querySelectorAll('.form-tab').forEach(function(b){
                   b.classList.toggle('is-active', b.getAttribute('data-tab')===which);
                 });
+                /* Switching flows starts fresh — clear the previous result so a
+                   numerology reading doesn't linger under the Ifa Wisdom form
+                   (and vice versa). Skip while the onboarding tour drives tabs. */
+                if(!document.querySelector('#driver-page-overlay')){
+                  var r=document.getElementById('divinationResult'); if(r) r.innerHTML='';
+                  var c=document.getElementById('configurationResult');
+                  if(c) c.innerHTML='<img class="moving-bg" src="public/img/bird.gif" alt="bird" />';
+                }
+              };
+              window.orNumMethod = function(which){
+                document.querySelectorAll('#numerology-section .num-pane').forEach(function(p){
+                  p.classList.toggle('pane-hidden', p.getAttribute('data-pane')!==which);
+                });
+                document.querySelectorAll('.num-subtab').forEach(function(b){
+                  b.classList.toggle('is-active', b.getAttribute('data-method')===which);
+                });
               };
             </script>
             <div class="col-sm-6 ifaDetails" id="main-content" data-tour="divination">
@@ -429,10 +445,15 @@ if (location.protocol !== 'file:') {
                 <span data-translate>Numerology</span>
               </h3>
                     <div id="result"></div>
+                    <div class="num-subtabs">
+                      <button type="button" class="num-subtab is-active" data-method="namedate" onclick="orNumMethod('namedate')" data-translate>Name & Date</button>
+                      <button type="button" class="num-subtab" data-method="picknum" onclick="orNumMethod('picknum')" data-translate>Pick a Number</button>
+                    </div>
+                    <div class="num-pane" data-pane="namedate">
                     <label><span data-translate="enterName">Enter your full name</span></label>
                     <div id="fullname-box">
                       <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
-                        placeholder="Temitope Olanbiwoninu Kadri" />
+                        placeholder="Temitope Ola Kadri" />
                     </div>
 
                     <label><span data-translate="birthDate">Select your birth date</span></label>
@@ -453,7 +474,9 @@ if (location.protocol !== 'file:') {
                           aria-label="More information">i</i>
                       </div>
                     </div>
+                    </div>
                     <div class="num-divider"><span data-translate>or</span></div>
+                    <div class="num-pane pane-hidden" data-pane="picknum">
                      <div style="display:flex;align-items:center;justify-content:center;gap:6px; margin-bottom: 10px;">
                         <p style="margin:0;font-weight:bold;">
                           <span data-translate>Pick a Number</span>
@@ -465,6 +488,7 @@ if (location.protocol !== 'file:') {
                         aria-label="More information">i</i>
                     </div>
                      <div class="calculator" id="calculator" style="margin-bottom: 10px;">    
+                    </div>
                     </div>
             </div>
         </div>

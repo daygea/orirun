@@ -204,10 +204,27 @@ function markNewBirthChart() {
   } catch {}
 }
 
-async function showGuidancePopup(lang) {
+/* True if any content modal is currently open (so we don't stack on top of it) */
+function _anotherModalOpen() {
+  var ids = ["audioModal","videoModal","termsModal","aboutModal",
+             "contributionModal","paymentModal","ifaGuideModal","successPopup"];
+  return ids.some(function (id) {
+    var el = document.getElementById(id);
+    return el && window.getComputedStyle(el).display !== "none";
+  });
+}
+
+async function showGuidancePopup(lang, _retries) {
   if (document.getElementById("guidance-overlay")) return;
   /* Do not interrupt Driver.js onboarding tour */
   if (document.querySelector("#driver-page-overlay")) return;
+  /* Do not stack on top of another open modal — wait until it is dismissed */
+  if (_anotherModalOpen()) {
+    if ((_retries || 0) < 20) {
+      setTimeout(function () { showGuidancePopup(lang, (_retries || 0) + 1); }, 3000);
+    }
+    return;
+  }
 
   const fallback =
     typeof getGuidance === "function"

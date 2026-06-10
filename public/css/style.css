@@ -2184,3 +2184,20 @@ body{
 .num-divider::before, .num-divider::after{
   content:""; flex:1; height:1px; background:var(--of-line);
 }
+
+/* ── Numerology sub-toggle — two methods within the Numerology tab (small screens) ── */
+.num-subtabs{ display:none; }
+@media (max-width:575px){
+  .num-subtabs{
+    display:flex; gap:6px; width:100%; margin:0 0 14px; padding:4px;
+    background:#eef4ee; border:1px solid var(--of-line); border-radius:10px;
+  }
+  .num-subtab{
+    flex:1; padding:9px 6px; border:none; border-radius:7px; cursor:pointer;
+    font-family:var(--font-body); font-weight:600; font-size:13px;
+    color:var(--of-ink-soft); background:transparent; transition:background .15s,color .15s;
+  }
+  .num-subtab.is-active{ background:var(--of-green); color:#fff; }
+  .num-pane.pane-hidden{ display:none !important; }
+  .num-divider{ display:none; }   /* the sub-toggle replaces the 'or' divider here */
+}

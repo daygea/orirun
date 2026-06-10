@@ -933,6 +933,25 @@ function generateCircularButtons() {
 /* ─────────────────────────────────────────────────────────────
  *  DISPLAY NUMEROLOGY MEANING
  * ───────────────────────────────────────────────────────────── */
+/* The numerology "Energy N" body is server-rendered HTML that repeats each
+   section's title inside the body (<p><strong>Title</strong></p>) directly
+   under the accordion header, which already shows it. Remove that redundant
+   restatement. Only strips a body's first <p> when its text exactly matches
+   the section header — real content paragraphs never match the title. */
+function _dedupeSectionHeadings(root) {
+  if (!root) return;
+  root.querySelectorAll("button").forEach(function (btn) {
+    var headSpan = btn.querySelector("span:not(.acc-arrow)");
+    var body     = btn.nextElementSibling;
+    if (!headSpan || !body) return;
+    var title = headSpan.textContent.trim();
+    var first = body.firstElementChild;
+    if (title && first && first.tagName === "P" && first.textContent.trim() === title) {
+      first.remove();
+    }
+  });
+}
+
 async function displayMeaning(number) {
   const resultDiv = document.getElementById("result");
   const configEl  = document.getElementById("configurationResult");
@@ -965,6 +984,8 @@ async function displayMeaning(number) {
         This content is inspired by collective scholarly works and community-preserved teachings,
         shared for educational purposes only.
       </p>`;
+
+    _dedupeSectionHeadings(resultEl);
 
     configEl.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" />`;
 
