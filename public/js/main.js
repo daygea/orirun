@@ -1,4 +1,28 @@
 /* ─────────────────────────────────────────────────────────────
+ *  App-vs-web detection — reveal the App Store / Google Play badges
+ *  only in a real browser (hidden inside the installed app). Lives in
+ *  this external file so it runs regardless of inline-script handling.
+ * ───────────────────────────────────────────────────────────── */
+(function () {
+  function insideApp() {
+    try { if (sessionStorage.getItem("or_app") === "1") return true; } catch (e) {}
+    var ua = navigator.userAgent || "", hit = false;
+    if (window.matchMedia && (matchMedia("(display-mode: standalone)").matches ||
+        matchMedia("(display-mode: fullscreen)").matches ||
+        matchMedia("(display-mode: minimal-ui)").matches)) hit = true;   /* installed PWA / Android TWA */
+    if (!hit && window.navigator.standalone === true) hit = true;        /* iOS home-screen PWA */
+    try { if (!hit && new URL(location.href).searchParams.get("source") === "pwa") hit = true; } catch (e) {}
+    if (!hit) {                                                          /* iOS WKWebView wrapper */
+      var iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (iOS && !/Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua) && !/EdgiOS/.test(ua)) hit = true;
+    }
+    if (hit) { try { sessionStorage.setItem("or_app", "1"); } catch (e) {} }
+    return hit;
+  }
+  if (!insideApp()) document.documentElement.classList.add("or-web");
+})();
+
+/* ─────────────────────────────────────────────────────────────
  *  Safari / iOS fallback for requestIdleCallback
  * ───────────────────────────────────────────────────────────── */
 if (!window.requestIdleCallback) {

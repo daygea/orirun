@@ -3,7 +3,7 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 
 // 🔁 Bump BUILD on EVERY deploy so returning users fetch the new files
 // instead of the previously cached ones.
-const BUILD           = "2026-06-08z";
+const BUILD           = "2026-06-10b";
 const APP_SHELL_CACHE = "orirun-shell-v2";
 const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";

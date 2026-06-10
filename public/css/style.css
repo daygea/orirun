@@ -2201,3 +2201,21 @@ body{
   .num-pane.pane-hidden{ display:none !important; }
   .num-divider{ display:none; }   /* the sub-toggle replaces the 'or' divider here */
 }
+
+/* ── App download badges — visible on the web, hidden inside the installed app ── */
+.app-download{ display:none; margin:6px auto 16px; text-align:center; }
+html.or-web .app-download{ display:block; }
+@media (display-mode: standalone){ .app-download{ display:none !important; } }  /* extra guard */
+.app-download__title{ margin:0 0 10px; font-weight:700; font-size:15px; color:var(--of-ink); }
+.app-download__badges{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.store-badge{
+  display:inline-flex; align-items:center; gap:9px;
+  background:#000; color:#fff; text-decoration:none;
+  padding:8px 16px; border-radius:11px; min-width:150px;
+  transition:opacity .15s;
+}
+.store-badge:hover{ opacity:.88; }
+.store-badge svg{ width:22px; height:22px; flex-shrink:0; fill:#fff; }
+.store-badge span{ display:flex; flex-direction:column; line-height:1.15; text-align:left; }
+.store-badge small{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; opacity:.92; }
+.store-badge strong{ font-size:15px; font-weight:600; }
