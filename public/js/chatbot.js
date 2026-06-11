@@ -287,7 +287,7 @@ async function sendMessage(userInput, options = {}) {
 
 function checkIfaKnowledgeBase(userMessage) {
   for (let key in ifaKnowledgeBase) {
-    if (userMessage.includes(key)) {
+    if (userMessage.includes(key.toLowerCase().trim())) {
       const entry = ifaKnowledgeBase[key];
       if (!entry || !entry.text) return null;
       let text = entry.text;
