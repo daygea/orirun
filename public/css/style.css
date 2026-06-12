@@ -2269,3 +2269,19 @@ html.or-web .app-download{ display:block; }
 .store-badge span{ display:flex; flex-direction:column; line-height:1.15; text-align:left; }
 .store-badge small{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; opacity:.92; }
 .store-badge strong{ font-size:15px; font-weight:600; }
+/* ==================================================================
+   iOS App Store wrapper (WKWebView) — kill the website-like
+   rubber-band / overscroll "stretch" so it feels native.
+   Scoped to html.ios-app ONLY, so the website and the Android
+   (Play Store TWA) build keep their normal scrolling untouched.
+   overscroll-behavior is honoured by iOS 16+ WebKit; for older
+   iOS the definitive fix is webView.scrollView.bounces = false
+   in the native wrapper (see notes).
+   ================================================================== */
+html.ios-app,
+html.ios-app body {
+  overscroll-behavior: none;          /* no bounce/chaining at the edges */
+}
+html.ios-app body {
+  overflow-x: hidden;                 /* no sideways stretch */
+}
