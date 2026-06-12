@@ -89,6 +89,11 @@ if (location.protocol !== 'file:') {
 <link rel="preload" as="font" type="font/woff2" href="public/fonts/SourceSans3-Bold.woff2" crossorigin>
 <link rel="sitemap" type="application/xml" title="Sitemap" href="public/sitemap.xml">
 
+<!-- Claude-style serif: Source Serif 4 (free Source Sans 3 sibling, full Yorùbá coverage) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
 <!-- Preloads -->
 <link rel="preload" href="public/css/bootstrap.css" as="style" onload="this.rel='stylesheet'">
 <link rel="preload" href="public/css/style.css" as="style" onload="this.rel='stylesheet'">
@@ -564,7 +569,7 @@ if (location.protocol !== 'file:') {
                   <div id="pageNumbers"></div>
                   <button id="nextPageBtn" class="btn btn-sm app-btn btn-default" data-translate>Next ➡</button>
               </div>
-              <div class="text-center"><span id="pageInfo" style="margin: 0 10px; font-weight:bold; display: none;"></span></div>
+              <div class="text-center"><span id="pageInfo" style="margin:0 10px;"></span></div>
         </div>
         </main>
         <footer class="footer" style="margin-top: 0;">

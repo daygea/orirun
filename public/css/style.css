@@ -30,7 +30,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
-    font-family: Courier, monospace;
+    font-family: var(--font-body);
     font-weight: bold;
  }
 
@@ -187,12 +187,56 @@
 
 
 .history-card {
+  position: relative;
   background: #ffffff;
+  border: 1px solid var(--of-line, rgba(20,40,30,.12));
+  border-left: 4px solid var(--of-green, #0f7b3d);
   border-radius: 12px;
   padding: 14px 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  margin-bottom: 0;
+  box-shadow: 0 2px 10px rgba(12,61,36,0.06);
+  transition: transform .2s ease, box-shadow .2s ease;
 }
+.history-card.numerology { border-left-color: var(--of-gold, #b8860b); }
+
+.history-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: #0a5a2c; background: #e8f5e9;
+  padding: 3px 9px; border-radius: 20px; margin-bottom: 9px;
+}
+.history-badge.numerology { color: #8a6d0b; background: #fbf3dc; }
+
+.history-card .h-index { color: var(--of-muted, #94a09a); font-weight: 700; }
+.history-card .h-title {
+  font-size: 15px; font-weight: 700; line-height: 1.4;
+  color: var(--of-green-ink, #0c3d24); margin: 0 0 7px;
+}
+.history-card .h-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  font-size: 12px; color: var(--of-ink-soft, #6b7770); margin-bottom: 3px;
+}
+.history-card .h-chip {
+  background: #f1f7f1; border: 1px solid #e0efe0; border-radius: 6px;
+  padding: 1px 8px; font-size: 11px; color: #2c4a38; white-space: nowrap;
+}
+.history-note .note-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--of-ink-soft, #6b7770); margin-bottom: 5px;
+}
+.history-empty {
+  text-align: center; color: var(--of-ink-soft, #6b7770);
+  padding: 32px 16px; border: 1px dashed var(--of-line, rgba(20,40,30,.15));
+  border-radius: 12px; background: #fafdfa; font-size: 14px; line-height: 1.5;
+}
+#myHistoryContainer > h2 {
+  font-size: 20px; font-weight: 700; color: var(--of-green-ink, #0c3d24);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+  border-bottom: 1px solid var(--of-line, rgba(20,40,30,.12));
+  padding-bottom: 10px; margin-bottom: 16px;
+}
+#myHistoryContainer > h2 a { color: var(--of-green, #0f7b3d); font-weight: 600; }
 
 .history-note {
   margin-top: 10px;
@@ -217,8 +261,8 @@
 
 .history-note textarea:focus {
   outline: none;
-  border-color: #444;
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
+  border-color: var(--of-green, #0f7b3d);
+  box-shadow: 0 0 0 3px rgba(15,123,61,0.12);
   background: #fff;
 }
 
@@ -253,23 +297,34 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
-  margin: 30px 0;     
-  position: static;    
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 22px 0 6px;
+  position: static;
   background: none;
 }
 
-#historyPagination button {
+/* numbered buttons use .page-btn below; prev/next get matching outline pills */
+#historyPagination #prevPageBtn,
+#historyPagination #nextPageBtn {
+  border: 1px solid var(--of-green, #0f7b3d);
+  background: #fff;
+  color: var(--of-green, #0f7b3d);
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #f0f0f0;
-  transition: all 0.2s;
+  transition: background .15s, color .15s, opacity .15s;
 }
-
-#historyPagination button:hover {
-  background: #e0e0e0;
+#historyPagination #prevPageBtn:hover:not(:disabled),
+#historyPagination #nextPageBtn:hover:not(:disabled) {
+  background: var(--of-green, #0f7b3d);
+  color: #fff;
+}
+#historyPagination #prevPageBtn:disabled,
+#historyPagination #nextPageBtn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
 }
 
 .history-container {
@@ -305,27 +360,44 @@
 
 #pageNumbers {
   display: flex;
-  /*gap: 6px;*/
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .page-btn{
-  border:none;
-  background:#eee;
-  padding:6px 10px;
+  border:1px solid #e0efe0;
+  background:#f1f7f1;
+  color:#2c4a38;
+  padding:6px 11px;
   margin:2px;
   cursor:pointer;
-  border-radius:4px;
+  border-radius:8px;
+  font-weight:600;
+  transition:background .15s, color .15s;
 }
 
+.page-btn:hover{ background:#e3f1e3; }
+
 .page-btn.active{
-  background:#333;
-  color:green;
+  background:var(--of-green,#0f7b3d);
+  color:#fff;
+  border-color:var(--of-green,#0f7b3d);
   font-weight:bold;
 }
 
 .page-ellipsis{
-  padding:6px 6px;
-  opacity:0.6;
+  padding:6px 4px;
+  opacity:0.55;
+  align-self:center;
+  color:var(--of-ink-soft,#6b7770);
+}
+
+#pageInfo{
+  font-weight:600 !important;
+  font-size:12px;
+  color:var(--of-ink-soft,#6b7770);
 }
 
 button:disabled{
@@ -340,34 +412,11 @@ button:disabled{
   overflow: visible;    
 }
 
-.history-card {
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 14px 16px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-}
+.history-card { display: flex; flex-direction: column; }
 
 .history-card:hover {
-  transform: translateY(-3px);
-}
-
-.history-card h4 {
-  margin: 0 0 5px 0;
-  font-weight: bold;
-}
-
-.history-card p {
-  margin: 3px 0;
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
-
-.history-card .timestamp {
-  font-size: 0.8rem;
-  color: #666;
-  margin-top: 5px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(12,61,36,0.10);
 }
 
 #chatbot-container {
@@ -1327,7 +1376,7 @@ input:checked + .slider:before {
   background: #ffffff;
   border-radius: 6px;
   cursor: pointer;
-  font-family: Courier, monospace;
+  font-family: var(--font-body);
   font-weight: bold;
   font-size: 13px;
   color: #1b4332;
@@ -1421,7 +1470,7 @@ input:checked + .slider:before {
   transition: right 0.4s ease-in-out;
   z-index: 9999;
   padding: 10px 15px;
-  font-family: 'Poppins', sans-serif;
+  font-family: var(--font-body);
 }
 
 .kb-sidebar.active {
@@ -1785,7 +1834,7 @@ input:checked + .slider:before {
 
 /* ==================================================================
    ORÍRÙN — UI refresh (v3.1) — cleaner & minimal
-   One type family (Source Sans 3), flat hairline surfaces, calm footer.
+   One type family (Source Serif 4 — Claude-style serif), flat hairline surfaces, calm footer.
    Fixes: numerology monospace, loud footer, chat-bubble overlap.
    ================================================================== */
 :root{
@@ -1794,11 +1843,12 @@ input:checked + .slider:before {
   --of-gold-soft:#d9b44a;
   --of-ink:#26302a; --of-ink-soft:#6b7770; --of-muted:#94a09a;
   --of-line:rgba(20,40,30,.12);
-  --font-body:'Source Sans 3',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  --font-body:'Source Serif 4','Source Sans 3',ui-serif,Georgia,Cambria,'Times New Roman',Times,serif;
 }
 
 /* one clean family; calmer weights */
 body{ font-family:var(--font-body); font-weight:400; color:var(--of-ink); -webkit-font-smoothing:antialiased; }
+button, input, select, textarea, optgroup{ font-family:var(--font-body); }
 h1,h2,h3,h4,h5,h6{ font-family:var(--font-body); font-weight:700; letter-spacing:0; color:var(--of-green-ink); }
 p{ line-height:1.65; }
 

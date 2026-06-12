@@ -1102,7 +1102,7 @@ function extractPinnacles(data, age) {
  * ───────────────────────────────────────────────────────────── */
 function parseEnergyAccordion(text) {
   /* Split on lines that start with a number emoji or bold number heading */
-  const sectionRegex = /(?=(?:1️⃣|2️⃣|3️⃣|4️⃣|5️⃣|6️⃣|\*\*[1-6][.:])\s)/g;
+  const sectionRegex = /(?=(?:[1-9]️⃣|\*\*[1-9][.:])\s)/g;
   const rawSections  = text.split(sectionRegex).filter(s => s.trim());
 
   if (rawSections.length < 2) {
@@ -1117,8 +1117,8 @@ function parseEnergyAccordion(text) {
     /* Extract the heading from the first line */
     const lines   = section.trim().split("\n");
     const heading = lines[0]
-      .replace(/^[1-6]️⃣\s*/, "")          // remove emoji number
-      .replace(/^\*\*[1-6][.:]\s*/, "")     // remove **1.
+      .replace(/^[1-9]️⃣\s*/, "")          // remove emoji number
+      .replace(/^\*\*[1-9][.:]\s*/, "")     // remove **1.
       .replace(/\*\*/g, "")                  // remove bold markers
       .trim();
     const body    = lines.slice(1).join("\n").trim();
@@ -1179,55 +1179,68 @@ If there is conflict, always prioritize CORE IDENTITY.
 STRICT RULES
 ------------------------
 
-- Use exactly 4 sections.
-- Each section = 2 sentences ONLY.
-- Each sentence < 18 words.
+- Use exactly 8 sections, with the titles and order given below.
+- Each section = 3 to 4 sentences.
+- Each sentence < 20 words.
 - Speak directly using "you".
-- No filler. No repetition.
-
-PERSONALIZATION:
-- Each section must include a real-life behavior or pattern.
-- Speak with certainty. Avoid "you may", "you tend to".
+- Every section must name a real, specific behaviour or lived pattern — something the person would recognise in themselves.
+- Speak with certainty. Avoid "you may", "you tend to", "perhaps".
 
 ANTI-GENERIC:
-- If it can describe many people, do not include it.
+- If a sentence could describe almost anyone, rewrite it until it could not.
 
 NUMBER USAGE:
 - Do NOT mention numbers (e.g., 3, 7, 8).
 - Speak only in meaning, not calculation.
 
+COSMIC LAYER:
+- Use zodiac, Orisha, and planetary hour only lightly, as support. Never lead with them.
+
 STYLE:
-- Short. Sharp. Observational.
-- No motivational tone.
-- No modern psychology.
+- Grounded, observational, certain — the voice of an elder, not a coach.
+- No motivational filler. No modern psychology.
 
 PROHIBITED:
 - No rituals, sacrifices, or ebo.
 
 ------------------------
-STRUCTURE
+STRUCTURE (use these exact titles, in this order)
 ------------------------
 
 1️⃣ Nature of Òrì
-- Reveal core identity using Life Path, Destiny, Soul Urge
-- Show one internal contradiction
-- Show one repeated behavior
+- Core identity from Life Path, Destiny, and Soul Urge.
+- Name the central drive, one inner contradiction, and one behaviour it repeats.
 
-2️⃣ Present Season
-- Use current timing
-- Show tension between pressure and opportunity
-- Tie it to identity
+2️⃣ The Hidden Desire
+- From Soul Urge: what the spirit privately longs for.
+- Show how this quiet hunger shapes choices others never see.
 
-3️⃣ Movement of Time
-- Combine year, month, week, day into one flow
-- State clearly: act, wait, adjust, or observe
+3️⃣ The Face You Show
+- From Personality: how people first read you, before they truly know you.
+- Reveal where this outer self differs from who you are within.
 
-4️⃣ Guidance of Òrì
-- Give direct, practical behavior guidance
-- Focus on habits, decisions, mindset
+4️⃣ Your Inborn Gift
+- From Birthday Gift and Reality: the strength carried since birth.
+- Show how it appears in ordinary, everyday moments.
+
+5️⃣ Path & Work
+- From Destiny and Reality: how this life is meant to build and contribute.
+- Name the kind of work that fits this Ase, and what quietly drains it.
+
+6️⃣ Love & Bonds
+- How you give and receive closeness.
+- Name what you need from others, and the tension that keeps returning in your bonds.
+
+7️⃣ Present Season
+- From Pinnacle, Challenge, and current timing: the lesson of this chapter.
+- State the tension between pressure and opportunity, then say plainly: act, wait, adjust, or observe.
+
+8️⃣ Guidance of Òrì
+- Direct, practical guidance for habits, decisions, and mindset now.
+- Stay grounded and clear to the end — never motivational.
 
 FINAL LINE:
-- One short sentence exposing a real pattern they have lived through.
+- After the eight sections, add one short sentence on its own, exposing a real pattern this person has already lived through.
 
 Do not rush. Speak as one who has seen this life before.
 `.trim();
@@ -1361,7 +1374,7 @@ const performBirthChart = async () => {
     ── */
 
 function parseEnergyAccordion(text) {
-  const sectionRegex = /(?=(?:1️⃣|2️⃣|3️⃣|4️⃣|5️⃣|6️⃣|\*\*[1-6][.:])\s)/g;
+  const sectionRegex = /(?=(?:[1-9]️⃣|\*\*[1-9][.:])\s)/g;
   const rawSections  = text.split(sectionRegex).filter(s => s.trim());
 
   if (rawSections.length < 2) {
@@ -1376,8 +1389,8 @@ function parseEnergyAccordion(text) {
 
     /* Extract heading — strip emoji number and bold markers */
     const heading = lines[0]
-      .replace(/^[1-6]️⃣\s*/, "")
-      .replace(/^\*\*[1-6][.:]\s*/, "")
+      .replace(/^[1-9]️⃣\s*/, "")
+      .replace(/^\*\*[1-9][.:]\s*/, "")
       .replace(/\*\*/g, "")
       .trim();
 
@@ -1410,12 +1423,15 @@ function parseEnergyAccordion(text) {
     const parts = [];
 
     /* 🧿 Voice of Òrì — PRIMARY EXPERIENCE */
-    parts.push(_acc("🧿 The Voice of Òrì", `
+    const _oriName = (fullName || "").trim().split(/\s+/)[0] || "";
+    const oriFirst = _oriName ? _oriName.charAt(0).toUpperCase() + _oriName.slice(1) : "";
+    parts.push(_acc(`🧿 ${oriFirst ? oriFirst + " — " : ""}The Voice of Your Òrì`, `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <small style="opacity:0.6;">Spiritual Insight</small>
-        <button onclick="toggleEnergyBreakdown()" 
-          style="font-size:12px;border:none;background:#e8f5e9;padding:6px 10px;border-radius:6px;cursor:pointer;">
-          View Energy Breakdown
+        <small style="opacity:0.6;" data-translate>${oriFirst ? oriFirst + "\u2019s personal reading from name & birth date" : "Your personal reading from name & birth date"}</small>
+        <button id="energy-toggle-btn" onclick="toggleEnergyBreakdown(this)"
+          style="font-size:12px;border:1px solid #c8e6c9;background:#e8f5e9;color:#1b4332;padding:6px 12px;border-radius:20px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:background .2s;">
+          <span class="etoggle-label" data-translate>View Energy Breakdown</span>
+          <span class="etoggle-caret" style="display:inline-block;transition:transform .25s;">▾</span>
         </button>
       </div>
 
@@ -1424,26 +1440,13 @@ function parseEnergyAccordion(text) {
         <em>Your reading is being prepared...</em>
       </div>
 
-      <div id="energy-breakdown" style="display:none;margin-top:10px;padding:12px;border:1px dashed #c8e6c9;border-radius:6px;font-size:13px;line-height:1.6;"></div>
+      <div id="energy-breakdown" style="display:none;margin-top:12px;padding:14px;background:#f7fcf7;border:1px solid #e0efe0;border-radius:10px;font-size:13px;line-height:1.6;"></div>
     `, true));
 
 
-    /* ⏳ Planetary Hour — SIMPLIFIED & SUPPORTIVE */
-    if (planetaryHourData) {
-      parts.push(_acc("⏳ Current Hour Influence", `
-        <p>
-          <strong data-translate>${planetaryHourData.orisha}</strong>
-          <em style="font-size:0.85em;opacity:0.6">(${planetaryHourData.planet})</em>
-        </p>
-        <p style="opacity:0.85;" data-translate>${planetaryHourData.energy}</p>
-      `, false));
-    } else if (locationDenied) {
-      parts.push(`
-        <p style="color:var(--of-ink-soft)">
-          <em data-translate>Current hour influence unavailable (location access denied).</em>
-        </p>
-      `);
-    }
+    /* ⏳ Current Hour Influence is now rendered as a NESTED section inside
+       the Voice of Òrì accordion (appended in the .then() below),
+       so it matches the other sections instead of standing alone. */
 
 
     /* Disclaimer */
@@ -1500,30 +1503,45 @@ function parseEnergyAccordion(text) {
       // slot.innerHTML = parseEnergyAccordion(aiInterpretation);
       slot.innerHTML = parseEnergyAccordion(aiInterpretation);
 
+      /* ⏳ Current Hour Influence — appended as a nested section, same style as the rest */
+      const _hourBody = planetaryHourData
+        ? `<p style="margin:0 0 6px;"><strong data-translate>${planetaryHourData.orisha}</strong> <em style="font-size:0.85em;opacity:0.6">(${planetaryHourData.planet})</em></p><p style="margin:0;opacity:0.85;" data-translate>${planetaryHourData.energy}</p>`
+        : (locationDenied
+            ? `<p style="margin:0;color:var(--of-ink-soft)"><em data-translate>Current hour influence unavailable (location access denied).</em></p>`
+            : "");
+      if (_hourBody) {
+        const _hid = "ori-hour-" + Date.now();
+        slot.insertAdjacentHTML("beforeend",
+          `<div style="border:1px solid #c8e6c9;border-radius:8px;margin-bottom:6px;overflow:hidden;background:#fafff9;">`
+          + `<button class="acc-header" onclick="var b=document.getElementById('${_hid}');var a=this.querySelector('.acc-arrow');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';a.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(135deg,#f5fbf5,#edf7ed);border:none;cursor:pointer;font-size:13px;font-weight:bold;color:#1b4332;text-align:left;gap:8px;">`
+          + `<span data-translate>⏳ Current Hour Influence</span>`
+          + `<span class="acc-arrow" style="transition:transform 0.25s;transform:rotate(0deg);font-size:11px;flex-shrink:0;">▼</span>`
+          + `</button>`
+          + `<div id="${_hid}" style="display:none;padding:12px 14px;line-height:1.65;font-size:14px;">${_hourBody}</div>`
+          + `</div>`);
+      }
+
       /* Populate Energy Breakdown */
       const breakdown = document.getElementById("energy-breakdown");
       if (breakdown) {
-        breakdown.innerHTML = `
-          <strong>Core Identity</strong><br>
-          Life Path: ${data.vibrations?.lifepath?.number} – ${data.vibrations?.lifepath?.label}<br>
-          Destiny: ${data.destiny?.number} – ${data.destiny?.label}<br>
-          Soul Urge: ${data.soulUrge?.number} – ${data.soulUrge?.label}<br><br>
-
-          <strong>Expression Layer</strong><br>
-          Personality: ${data.quiescent?.number} – ${data.quiescent?.label}<br>
-          Birthday Gift: ${data.birthdayGift?.number} – ${data.birthdayGift?.label}<br>
-          Reality: ${data.vibrations?.reality?.number} – ${data.vibrations?.reality?.label}<br><br>
-
-          <strong>Current Cycle</strong><br>
-          Pinnacle: ${currentPinnacleNumber}<br>
-          Challenge: ${currentChallengeNumber}<br><br>
-
-          <strong>Time Flow</strong><br>
-          Year: ${data.vibrations?.year?.number}<br>
-          Month: ${data.vibrations?.month?.number}<br>
-          Week: ${data.vibrations?.week?.number}<br>
-          Day: ${data.vibrations?.day?.number}
-        `;
+        breakdown.innerHTML =
+          `<div style="font-size:12px;color:var(--of-ink-soft);margin-bottom:10px;" data-translate>These are the numbers behind your reading. Tap Read more on any to understand its energy.</div>`
+          + _energyGroup("Core Identity",
+              _energyRow("Life Path", data.vibrations?.lifepath?.number, data.vibrations?.lifepath?.label, "lifepath")
+            + _energyRow("Destiny",   data.destiny?.number,              data.destiny?.label,              "destiny")
+            + _energyRow("Soul Urge", data.soulUrge?.number,             data.soulUrge?.label,             "soulurge"))
+          + _energyGroup("Expression Layer",
+              _energyRow("Personality",   data.quiescent?.number,           data.quiescent?.label,           "personality")
+            + _energyRow("Birthday Gift", data.birthdayGift?.number,        data.birthdayGift?.label,        "birthdaygift")
+            + _energyRow("Reality",       data.vibrations?.reality?.number, data.vibrations?.reality?.label, "reality"))
+          + _energyGroup("Current Cycle",
+              _energyRow("Pinnacle",  currentPinnacleNumber,  "", "pinnacle")
+            + _energyRow("Challenge", currentChallengeNumber, "", "challenge"))
+          + _energyGroup("Time Flow",
+              _energyRow("Personal Year",  data.vibrations?.year?.number,  "", "year")
+            + _energyRow("Personal Month", data.vibrations?.month?.number, "", "month")
+            + _energyRow("Personal Week",  data.vibrations?.week?.number,  "", "week")
+            + _energyRow("Personal Day",   data.vibrations?.day?.number,   "", "day"));
       }
       window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
     }).catch(() => {
@@ -1540,10 +1558,81 @@ function parseEnergyAccordion(text) {
   }
 };
 
-function toggleEnergyBreakdown() {
+/* ── Energy Breakdown: position meanings + number essences for "Read more" ── */
+const ENERGY_POSITION_MEANING = {
+  lifepath:     "Your Life Path is the main road of this lifetime \u2014 the central lessons and direction you grow into.",
+  destiny:      "Your Destiny (Expression) shows the talents and purpose you are meant to develop and give.",
+  soulurge:     "Your Soul Urge is the inner motivation \u2014 what your heart privately longs for beneath everything.",
+  personality:  "Your Personality is the face others meet first, before they truly know you.",
+  birthdaygift: "Your Birthday Gift is a natural talent you were born holding, often used without effort.",
+  reality:      "Your Reality number points to what your life is quietly building toward in its later maturity.",
+  pinnacle:     "Your Pinnacle marks the opportunity and theme of the chapter you are living now.",
+  challenge:    "Your Challenge names the recurring lesson you are being asked to master in this season.",
+  year:         "Your Personal Year sets the overall tone and lesson colouring this whole year.",
+  month:        "Your Personal Month shades the current month within the year's larger theme.",
+  week:         "Your Personal Week gives the near-term rhythm of these few days.",
+  day:          "Your Personal Day is the energy of today itself."
+};
+const ENERGY_NUMBER_ESSENCE = {
+  "1":"leadership, independence, and new beginnings.",
+  "2":"partnership, sensitivity, and quiet diplomacy.",
+  "3":"expression, creativity, and joy.",
+  "4":"structure, discipline, and steady building.",
+  "5":"freedom, change, and restless curiosity.",
+  "6":"responsibility, care, and devotion to others.",
+  "7":"introspection, wisdom, and the search for truth.",
+  "8":"ambition, power, and material mastery.",
+  "9":"compassion, completion, and service to the whole.",
+  "11":"heightened intuition, vision, and spiritual insight (a master number).",
+  "22":"the master builder \u2014 turning great vision into solid, lasting form.",
+  "33":"the master teacher \u2014 healing through devoted, selfless love."
+};
+function energyMeaning(posKey, num) {
+  const pos = ENERGY_POSITION_MEANING[posKey] || "";
+  const ess = ENERGY_NUMBER_ESSENCE[String(num)] || "";
+  return ess ? `${pos} Here it carries the energy of ${ess}` : pos;
+}
+function _energyRow(name, num, label, posKey) {
+  const rid = "egy-" + posKey + "-" + Math.random().toString(36).slice(2, 7);
+  const meaning = energyMeaning(posKey, num);
+  const badge = (num || num === 0) ? num : "\u2013";
+  return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid #eef4ee;">`
+    + `<div style="flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#0f7b3d,#0a5a2c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${badge}</div>`
+    + `<div style="flex:1 1 auto;min-width:0;">`
+    +   `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">`
+    +     `<span style="font-weight:600;color:#1b4332;" data-translate>${name}</span>`
+    +     (label ? `<span style="font-size:12px;color:var(--of-ink-soft);text-align:right;" data-translate>${label}</span>` : "")
+    +   `</div>`
+    +   (meaning
+        ? `<button onclick="var m=document.getElementById('${rid}');var o=m.style.display==='none';m.style.display=o?'block':'none';this.textContent=o?'Show less':'Read more';" style="margin-top:4px;background:none;border:none;padding:0;color:var(--of-green);font-size:12px;font-weight:600;cursor:pointer;" data-translate>Read more</button>`
+          + `<div id="${rid}" style="display:none;margin-top:6px;font-size:13px;line-height:1.55;color:var(--of-ink);" data-translate>${meaning}</div>`
+        : "")
+    + `</div>`
+    + `</div>`;
+}
+function _energyGroup(title, rows) {
+  return `<div style="background:#fff;border:1px solid #d9ebd9;border-radius:10px;padding:4px 14px 12px;margin-bottom:10px;">`
+    + `<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0a5a2c;background:#e8f5e9;padding:4px 10px;border-radius:20px;margin:12px 0 2px;" data-translate>${title}</div>`
+    + rows
+    + `</div>`;
+}
+function toggleEnergyBreakdown(btn) {
   const el = document.getElementById("energy-breakdown");
   if (!el) return;
-  el.style.display = el.style.display === "none" ? "block" : "none";
+  const opening = (el.style.display === "none" || !el.style.display);
+  el.style.display = opening ? "block" : "none";
+
+  const b = btn || document.getElementById("energy-toggle-btn");
+  if (b) {
+    const lbl = b.querySelector(".etoggle-label");
+    const car = b.querySelector(".etoggle-caret");
+    if (lbl) lbl.textContent = opening ? "Hide Energy Breakdown" : "View Energy Breakdown";
+    if (car) car.style.transform = opening ? "rotate(180deg)" : "rotate(0deg)";
+    b.style.background = opening ? "#d7eddf" : "#e8f5e9";
+  }
+  if (opening) {
+    requestAnimationFrame(function () { el.scrollIntoView({ behavior: "smooth", block: "nearest" }); });
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1763,6 +1852,8 @@ function renderHistoryPage() {
   const start = (historyPage - 1) * historyPageSize;
   const end   = start + historyPageSize;
 
+  const fmtTs = (ts) => new Date(ts).toLocaleString("en-US",{hour:"numeric",minute:"2-digit",hour12:true,year:"numeric",month:"short",day:"numeric"});
+
   const cardsHTML = fullHistory.slice(start, end).map((log, i) => {
     const base  = log.data ? { ...log.data } : { ...log };
     const entry = {
@@ -1780,54 +1871,55 @@ function renderHistoryPage() {
 
     const noteBlock = `
       <div class="history-note">
+        <label class="note-label" data-translate>Your reflection</label>
         <textarea data-translate-attr="placeholder" placeholder="Write your personal reflection…"
           onblur="saveNote('${entryId}', this.value)">${note}</textarea>
         <small class="note-hint" data-translate>Saved automatically</small>
       </div>`;
 
     if (entry.type === "Birth Details" || entry.type === "birthDetails") {
+      const energies = [
+        entry.daily   != null ? `<span class="h-chip">Day ${entry.daily}</span>`     : "",
+        entry.weekly  != null ? `<span class="h-chip">Week ${entry.weekly}</span>`   : "",
+        entry.monthly != null ? `<span class="h-chip">Month ${entry.monthly}</span>` : "",
+        entry.yearly  != null ? `<span class="h-chip">Year ${entry.yearly}</span>`   : ""
+      ].join("");
       return `
-        <div class="history-card">
-          <h6>
-            <strong>${globalIndex}.</strong>
-            <span data-translate>
-              ${entry.fullName} (${entry.age} years old) born on
-              ${new Date(entry.birthdate).toDateString()}
-              with lifepath(${entry.lifepathNo}) - ${entry.lifepath}.
-            </span><br/>
-            <small data-translate>
-              Accessed on ${new Date(entry.timestamp).toLocaleString("en-US",{
-                hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true,
-                year:"numeric",month:"short",day:"numeric"
-              })}
-              • Energies (Day/Week/Month/Year) as
-              ${entry.daily}/${entry.weekly}/${entry.monthly}/${entry.yearly}
-            </small>
-          </h6>
+        <div class="history-card numerology">
+          <span class="history-badge numerology" data-translate>Numerology</span>
+          <div class="h-title"><span class="h-index">${globalIndex}.</span>
+            <span data-translate>${entry.fullName} — Life Path ${entry.lifepathNo} (${entry.lifepath})</span>
+          </div>
+          <div class="h-meta"><span data-translate>${entry.age} years • born ${new Date(entry.birthdate).toDateString()}</span></div>
+          <div class="h-meta"><span data-translate>Accessed</span>&nbsp;${fmtTs(entry.timestamp)}</div>
+          ${energies ? `<div class="h-meta" style="margin-top:5px;">${energies}</div>` : ""}
           ${noteBlock}
         </div>`;
     }
 
     return `
       <div class="history-card">
-        <h6>
-          <strong>${globalIndex}.</strong>
-          ${entry.mainCast} (${entry.orientation} ${entry.specificOrientation})
-          (${entry.solution} ${entry.solutionDetails})<br/>
-          <small><span data-translate>Accessed on</span> ${new Date(entry.timestamp).toLocaleString("en-US",{
-            hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true,
-            year:"numeric",month:"short",day:"numeric"
-          })}</small>
-        </h6>
+        <span class="history-badge" data-translate>Ifá Wisdom</span>
+        <div class="h-title"><span class="h-index">${globalIndex}.</span>
+          <span data-translate>${entry.mainCast}</span>
+        </div>
+        <div class="h-meta">
+          <span class="h-chip" data-translate>${entry.orientation} ${entry.specificOrientation}</span>
+          <span class="h-chip" data-translate>${entry.solution} ${entry.solutionDetails}</span>
+        </div>
+        <div class="h-meta"><span data-translate>Accessed</span>&nbsp;${fmtTs(entry.timestamp)}</div>
         ${noteBlock}
       </div>`;
   }).join("");
 
-  historyListEl.innerHTML = cardsHTML;
+  historyListEl.innerHTML = fullHistory.length === 0
+    ? `<div class="history-empty" data-translate>No saved readings yet. Your divinations and numerology readings will appear here.</div>`
+    : cardsHTML;
 
   const showingStart = fullHistory.length === 0 ? 0 : start + 1;
   pageInfoEl.textContent =
     `Showing ${showingStart}-${Math.min(end, fullHistory.length)} of ${fullHistory.length}`;
+  pageInfoEl.style.display = fullHistory.length ? "inline-block" : "none";
 
   renderPageNumbers(totalPages);
   paginationEl.style.display = totalPages <= 1 ? "none" : "flex";
