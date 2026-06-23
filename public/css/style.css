@@ -2285,3 +2285,66 @@ html.ios-app body {
 html.ios-app body {
   overflow-x: hidden;                 /* no sideways stretch */
 }
+/* ==================================================================
+   ORÍRÙN — v3.3 — typographic craft for the serif (Source Serif 4)
+   Earlier layers were tuned for a sans. A serif reads as deliberate,
+   hand-set type only with lighter heading weights, tighter leading,
+   optical tracking, and quiet eyebrow labels. Grounded in the
+   subject: gold (Ọ̀ṣun/brass) hairline accents, calm green ink.
+   ================================================================== */
+
+/* Headings: lighter serif weight, tighter leading, optical tracking */
+h1,h2,h3,h4,h5,h6{
+  font-weight:600;
+  line-height:1.18;
+  letter-spacing:-0.01em;
+}
+h4,h5,h6{ letter-spacing:-0.004em; }
+
+/* Body: kerning/ligatures on, a hair more leading for serif reading */
+body{ font-feature-settings:"kern" 1,"liga" 1; text-rendering:optimizeLegibility; }
+p{ line-height:1.7; }
+
+/* Column headers become editorial: bigger serif title + squared gold rule */
+#main-content > h3,
+#numerology-section > h3{
+  font-size:clamp(19px,4.8vw,23px); font-weight:600; letter-spacing:-0.015em;
+  color:var(--of-green-ink); margin-bottom:18px;
+}
+#main-content > h3::after,
+#numerology-section > h3::after{
+  width:32px; height:2px; background:var(--of-gold); opacity:.95;
+  margin-top:10px; border-radius:0;
+}
+
+/* Form labels → quiet uppercase eyebrows (a hand-set form convention) */
+#main-content label, #numerology-section label{
+  text-transform:uppercase; letter-spacing:.09em;
+  font-size:11px; font-weight:600; color:var(--of-ink-soft);
+  display:block; margin-bottom:6px;
+}
+
+/* Inputs: regular weight reads cleaner under serif labels */
+.form-control, #fullname,
+input#birthdate[type="date"], input#birthdate[type="text"]{
+  font-weight:400; font-size:15.5px;
+}
+
+/* Buttons: serif looks intentional a touch smaller + lightly tracked */
+.app-btn, #divination-btn, #determine-btn{
+  font-weight:600; letter-spacing:.015em; font-size:14.5px;
+}
+
+/* True serif italic for emphasis in readings (not faux-slanted) */
+p em, .dv-card__body em, .dv-hero__body em, #ori-voice-slot em{ font-style:italic; }
+
+/* Quality floor: visible keyboard focus + reduced-motion respect */
+a:focus-visible, button:focus-visible,
+.app-btn:focus-visible, [tabindex]:focus-visible,
+.form-control:focus-visible, select:focus-visible{
+  outline:2px solid var(--of-gold); outline-offset:2px;
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; animation-iteration-count:1 !important;
+     transition-duration:.001ms !important; scroll-behavior:auto !important; }
+}
