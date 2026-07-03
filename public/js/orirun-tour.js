@@ -343,7 +343,16 @@ document.addEventListener("DOMContentLoaded", function () {
     return new Driver({
       animate:            true,
       opacity:            0.78,
+      /* driver.js paints a solid #ffffff "stage" rectangle behind every
+         highlighted element by default — the white glitches. Transparent
+         stage + our own CSS ring instead. */
+      stageBackground:    "transparent",
       padding:            isMobile ? 6 : 12,
+      // The white rectangle beside each step was Driver's solid-fill
+      // "stage" div (#driver-highlighted-element-stage, background:#fff)
+      // mispositioning over wrapped/tab-hidden fields. Make it transparent
+      // so the spotlight is a pure overlay cutout — no white box.
+      stageBackground:    "transparent",
       showButtons:        true,
       doneBtnText:        labels.doneBtnText  || "✅ Done",
       closeBtnText:       labels.closeBtnText || "✕",

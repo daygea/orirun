@@ -3,7 +3,9 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 
 // 🔁 Bump BUILD on EVERY deploy so returning users fetch the new files
 // instead of the previously cached ones.
-const BUILD           = "2026-07-03a";
+// CI stamps this on every push to main (date-shortsha). Manual deploys
+// can still edit it by hand; the workflow overwrites it either way.
+const BUILD           = "2026-07-03-a";
 const APP_SHELL_CACHE = "orirun-shell-v2";
 const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";
@@ -17,6 +19,10 @@ workbox.precaching.precacheAndRoute([
   { url: "./public/manifest.json",     revision: BUILD },
   { url: OFFLINE_PAGE,                 revision: BUILD },
   { url: "./public/css/style.css",     revision: BUILD },
+  { url: "./public/css/a11y-global.css",     revision: BUILD },
+  { url: "./public/css/orirun-identity.css", revision: BUILD },
+  { url: "./public/js/a11y.js",              revision: BUILD },
+  { url: "./public/js/results-layout.js",    revision: BUILD },
   { url: "./public/js/main.js",        revision: BUILD },
   { url: "./public/js/translation.js", revision: BUILD },
   { url: "./public/js/chatbot.js",     revision: BUILD },

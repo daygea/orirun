@@ -463,25 +463,48 @@ function getOduSummary(mainCast, orientation = null) {
  * ───────────────────────────────────────────────────────────── */
 let isAdminAuthenticated = false;
 let adminToken = null;
-let tapCount = 0;
-let tapTimeout;
+/* ── Staff entrance ─────────────────────────────────────────────
+   The nine-tap bird ritual is retired. Staff sign-in now opens from
+   the quiet "Staff" link in the footer, or directly via the #staff
+   URL hash (bookmarkable: orirun.com/#staff). The bird stays as pure
+   decoration. Same sign-in machinery underneath — loginAdmin() and
+   the role flow are untouched. */
+function openStaffSignin() {
+  const container = document.getElementById("adminPasswordContainer");
+  if (!container) return;
+  container.style.display = "block";
+  container.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => document.getElementById("adminPassword")?.focus(), 250);
+}
+window.openStaffSignin = openStaffSignin;
+
+window.closeStaffSignin = function () {
+  const container = document.getElementById("adminPasswordContainer");
+  if (container) container.style.display = "none";
+  const input = document.getElementById("adminPassword");
+  if (input) input.value = "";
+  if (location.hash === "#staff") history.replaceState(null, "", location.pathname + location.search);
+};
 
 document.addEventListener("click", function (event) {
-  const hiddenTapArea     = document.getElementById("hiddenTapArea");
-  const passwordContainer = document.getElementById("adminPasswordContainer");
-  const logsContainer     = document.getElementById("logsContainer");
-  if (!hiddenTapArea || !hiddenTapArea.contains(event.target)) return;
+  const link = event.target.closest && event.target.closest("#staffLink");
+  if (!link) return;
+  event.preventDefault();
+  openStaffSignin();
+});
 
-  tapCount++;
-  if (tapCount === 9) {
-    if (passwordContainer) { passwordContainer.style.display = "block"; passwordContainer.style.zIndex = "1"; }
-    if (logsContainer)     { logsContainer.style.display = "block"; }
-    hiddenTapArea.style.pointerEvents = "none";
-    hiddenTapArea.style.zIndex = "0";
-    tapCount = 0;
+function _staffHashCheck() {
+  if (location.hash === "#staff") openStaffSignin();
+}
+window.addEventListener("hashchange", _staffHashCheck);
+document.addEventListener("DOMContentLoaded", _staffHashCheck);
+
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Escape") return;
+  const container = document.getElementById("adminPasswordContainer");
+  if (container && container.style.display !== "none" && container.style.display !== "") {
+    window.closeStaffSignin();
   }
-  clearTimeout(tapTimeout);
-  tapTimeout = setTimeout(() => { tapCount = 0; }, 3000);
 });
 
 /* ─────────────────────────────────────────────────────────────
@@ -635,14 +658,7 @@ const performUserDivination = async (
             <div class="dv-hero__tags">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
           </div>
           <div class="dv-hero__body">
-            ${(`${rawMessage} ${solutionInfo}`).replace(/<[^>]+>/g, "").length > 300
-              ? `<div class="dv-interp-wrap">
-                   <p class="dv-interp" data-translate>${rawMessage} ${solutionInfo}</p>
-                   <button type="button" class="dv-readmore" onclick="this.closest('.dv-interp-wrap').classList.toggle('is-open');">
-                     <span class="label-more" data-translate>Read full interpretation</span><span class="label-less" data-translate>Show less</span> <span class="arr">▾</span>
-                   </button>
-                 </div>`
-              : `<p data-translate>${rawMessage} ${solutionInfo}</p>`}
+            <p data-translate>${rawMessage} ${solutionInfo}</p>
           </div>
         </div>
       `);

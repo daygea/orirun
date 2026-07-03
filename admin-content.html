@@ -212,19 +212,45 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 .log-pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:12px 0}
 .log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none}
 .log-detail pre{font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin-top:8px}
-@media (max-width:900px){ nav.area-nav{margin-left:6px} }
 
-/* ── Responsive ── */
+/* ── Responsive ─────────────────────────────────────────────────
+   Tablet (≤900px): single column; the collection rail becomes a
+   horizontal chip strip; the header wraps. Phone (≤560px): tighter
+   paddings, stacked stat cards, full-width actions, 44px targets. */
 @media (max-width:900px){
-  .shell{grid-template-columns:1fr;grid-template-rows:56px auto auto 1fr}
-  nav{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px}
-  nav h2{display:none}
-  .col-item{white-space:nowrap;margin:0 4px 0 0;flex-shrink:0}
+  .shell{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr;height:auto;min-height:100vh}
+  header{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 12px;gap:6px;position:sticky;top:0;z-index:60}
+  nav.area-nav{order:3;width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav.area-nav::-webkit-scrollbar{display:none}
+  nav.area-nav button{flex:0 0 auto;min-height:40px}
+  .shell > nav{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px;-webkit-overflow-scrolling:touch}
+  .shell > nav h2{display:none}
+  .col-item{white-space:nowrap;margin:0 6px 0 0;flex-shrink:0;min-height:40px;display:flex;align-items:center}
   .col-item .meta{display:none}
-  .items{max-height:200px;border-right:none;border-bottom:1px solid var(--line)}
-  .provenance{flex-wrap:wrap;gap:8px}
-  .prov-node{border-radius:99px!important;border-left:1px solid var(--line)!important}
+  .items{max-height:220px;border-right:none;border-bottom:1px solid var(--line)}
+  .ops{padding:14px 14px 40px}
+  .editor-head{flex-wrap:wrap;gap:8px;padding:12px 14px}
+  .provenance{flex-wrap:wrap;gap:8px;margin:12px 14px 0}
+  .prov-node{border-radius:99px!important;border-left:1px solid var(--line)!important;min-height:36px}
   .prov-meta{width:100%;margin:4px 0 0}
+  .editor-body{padding:10px 14px}
+  .editor-body textarea{min-height:44vh;font-size:16px} /* 16px stops iOS zoom-on-focus */
+  .editor-actions{padding:10px 14px;position:sticky;bottom:0;background:var(--paper,#faf8f0);border-top:1px solid var(--line);z-index:50}
+  .editor-actions button{min-height:44px}
+  .logs{font-size:12.5px}
+  .logs th,.logs td{padding:7px 8px;white-space:nowrap}
+}
+@media (max-width:560px){
+  .brand{font-size:15px}
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:9px}
+  .stat-grid .stat{padding:10px}
+  .ops{padding:10px 10px 60px}
+  .ops h1{font-size:19px}
+  .editor-actions{flex-wrap:wrap}
+  .editor-actions button{flex:1 1 45%}
+  .audit-row{flex-wrap:wrap}
+  .audit-row .who{margin-left:0;width:100%}
+  input,select,button,textarea{font-size:16px}
 }
 </style>
 </head>

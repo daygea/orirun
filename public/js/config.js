@@ -80,25 +80,25 @@ window.addEventListener("keydown", function (event) {
 /* ─────────────────────────────────────────────────────────────
  *  CLIPBOARD / RIGHT-CLICK PROTECTION
  * ───────────────────────────────────────────────────────────── */
-document.addEventListener("contextmenu", function (e) {
-  const allowed = e.target.closest(".allow-copy, .allow-paste");
-  if (!allowed) e.preventDefault();
-});
+// document.addEventListener("contextmenu", function (e) {
+//   const allowed = e.target.closest(".allow-copy, .allow-paste");
+//   if (!allowed) e.preventDefault();
+// });
 
-document.addEventListener("copy", function (e) {
-  const allowed = e.target.closest(".allow-copy");
-  if (!allowed) e.preventDefault();
-});
+// document.addEventListener("copy", function (e) {
+//   const allowed = e.target.closest(".allow-copy");
+//   if (!allowed) e.preventDefault();
+// });
 
-document.addEventListener("cut", function (e) {
-  const allowed = e.target.closest(".allow-copy");
-  if (!allowed) e.preventDefault();
-});
+// document.addEventListener("cut", function (e) {
+//   const allowed = e.target.closest(".allow-copy");
+//   if (!allowed) e.preventDefault();
+// });
 
-document.addEventListener("paste", function (e) {
-  const allowed = e.target.closest(".allow-paste");
-  if (!allowed) e.preventDefault();
-});
+// document.addEventListener("paste", function (e) {
+//   const allowed = e.target.closest(".allow-paste");
+//   if (!allowed) e.preventDefault();
+// });
 
 /* ─────────────────────────────────────────────────────────────
  *  DEVTOOLS KEY BLOCKING  (F12 / Ctrl+Shift+I/J/C / Ctrl+U)

@@ -123,9 +123,9 @@ select.form-control, textarea.form-control,
 /* ── 8. Long-form reading comfort ─────────────────────────────────
    Reading measure: interpretation prose is capped at a comfortable
    line length inside wide cards without changing the card layout. */
-.dv-card__body p, .dv-hero__body p, #extraAse p, .ase-verse p {
+/*.dv-card__body p, .dv-hero__body p, #extraAse p, .ase-verse p {
   max-width: 68ch;
-}
+}*/
 
 /* ── 9. Reduced transparency preference ──────────────────────────── */
 @media (prefers-reduced-transparency: reduce) {
