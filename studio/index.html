@@ -171,6 +171,40 @@ dialog::backdrop{background:rgba(14,90,49,.28)}
 .modal-in textarea{min-height:120px;resize:vertical}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 
+/* ── Operations areas (Dashboard / Logs) ── */
+.area-nav{display:flex;gap:4px;margin-left:18px}
+.area-tab{padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600;color:var(--efun);opacity:.75}
+.area-tab:hover{opacity:1;background:rgba(255,255,255,.10)}
+.area-tab.is-active{opacity:1;background:rgba(255,255,255,.16)}
+.ops{grid-column:2/-1;display:none;flex-direction:column;overflow-y:auto;padding:20px 24px;background:var(--efun)}
+.ops h2{font-family:var(--serif);color:var(--igbo);font-size:20px;margin-bottom:14px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.stat-card{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--leaf);border-radius:12px;padding:14px 16px}
+.stat-card .n{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--igbo)}
+.stat-card .l{font-size:12px;color:var(--ink-soft);font-weight:600}
+.panel{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+.panel h3{font-family:var(--serif);font-size:15px;color:var(--igbo);margin-bottom:10px}
+.bar-row{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:12.5px}
+.bar-row .bl{width:130px;flex:0 0 auto;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-row .bt{flex:1;height:16px;background:var(--efun-deep);border-radius:8px;overflow:hidden}
+.bar-row .bf{height:100%;background:linear-gradient(90deg,var(--leaf),var(--igbo));border-radius:8px}
+.bar-row .bn{width:44px;flex:0 0 auto;text-align:right;font-weight:700;color:var(--igbo)}
+.log-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.log-pill{padding:7px 14px;border-radius:99px;border:1px solid var(--line);background:var(--white);font-size:13px;font-weight:600;color:var(--ink)}
+.log-pill.is-active{background:var(--igbo);border-color:var(--igbo);color:#fff}
+.log-tools{display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.log-tools input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);font-size:13px}
+.log-count{font-size:12px;color:var(--ink-soft)}
+table.logs{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:12.5px}
+table.logs th{background:var(--efun-deep);text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft)}
+table.logs td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:top;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.logs tr.row{cursor:pointer}
+table.logs tr.row:hover td{background:var(--leaf-soft)}
+.log-pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:12px 0}
+.log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none}
+.log-detail pre{font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin-top:8px}
+@media (max-width:900px){ .area-nav{margin-left:6px} .ops{grid-column:1/-1} }
+
 /* ── Responsive ── */
 @media (max-width:900px){
   .shell{grid-template-columns:1fr;grid-template-rows:56px auto auto 1fr}
@@ -189,9 +223,14 @@ dialog::backdrop{background:rgba(14,90,49,.28)}
 <div class="shell">
   <header>
     <div>
-      <div class="brand">Orírùn <span>· Content Studio</span></div>
-      <div class="sub">Every word the app speaks, editable here</div>
+      <div class="brand">Orírùn <span>· Studio</span></div>
+      <div class="sub">Content, operations, and the pulse of the app</div>
     </div>
+    <nav class="area-nav" aria-label="Studio areas">
+      <button class="area-tab is-active" data-area="content" onclick="showArea('content')">Content</button>
+      <button class="area-tab" data-area="dashboard" onclick="showArea('dashboard')">Dashboard</button>
+      <button class="area-tab" data-area="logs" onclick="showArea('logs')">Logs</button>
+    </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
       <span id="whoami" style="opacity:.85"></span>
@@ -212,6 +251,39 @@ dialog::backdrop{background:rgba(14,90,49,.28)}
     </div>
     <div class="item-scroll" id="itemList"></div>
     <div class="count-note" id="countNote"></div>
+  </section>
+
+  <section class="ops" id="area-dashboard" aria-label="Dashboard">
+    <h2>Dashboard</h2>
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="panel"><h3>Activity — last 14 days</h3><div id="trendBars"></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      <div class="panel"><h3>Top Odù</h3><div id="topOdu"></div></div>
+      <div class="panel"><h3>Feedback</h3><div id="feedbackPanel"></div></div>
+    </div>
+    <div class="panel"><h3>Latest feedback</h3><div id="latestFeedback" style="font-size:13px"></div></div>
+  </section>
+
+  <section class="ops" id="area-logs" aria-label="Logs">
+    <h2>Logs</h2>
+    <div class="log-pills" id="logPills"></div>
+    <div class="log-tools">
+      <input type="search" id="logSearch" placeholder="Search this log…" aria-label="Search logs">
+      <span class="log-count" id="logCount"></span>
+    </div>
+    <div style="overflow-x:auto"><table class="logs"><thead id="logHead"></thead><tbody id="logBody"></tbody></table></div>
+    <div class="log-pager">
+      <button class="btn btn-ghost" id="logPrev">← Prev</button>
+      <span class="log-count" id="logPage"></span>
+      <button class="btn btn-ghost" id="logNext">Next →</button>
+    </div>
+    <div class="log-detail" id="logDetail">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong style="color:var(--igbo)">Entry detail</strong>
+        <button class="btn btn-ghost" onclick="document.getElementById('logDetail').style.display='none'">Close</button>
+      </div>
+      <pre id="logDetailBody"></pre>
+    </div>
   </section>
 
   <main>
@@ -353,6 +425,9 @@ async function loadCollections() {
   }
 }
 function showAuth() {
+  // The sign-in card lives in the Content area; if a 401 arrives while
+  // in Dashboard or Logs, switch back so the card is actually visible.
+  if (typeof showArea === "function") showArea("content");
   $("emptyState").style.display = "none";
   $("editorWrap").style.display = "none";
   $("authState").style.display = "flex";
@@ -544,6 +619,149 @@ async function loadAudit() {
     }
   } catch {}
 }
+
+/* ── Operations: area switching, Dashboard, Logs ──────────── */
+const AREAS = ["content", "dashboard", "logs"];
+window.showArea = function (area) {
+  document.querySelectorAll(".area-tab").forEach((t) =>
+    t.classList.toggle("is-active", t.dataset.area === area));
+  // content area = the original three grid panes (nav + items + main)
+  ["nav", ".items", "main"].forEach((sel) => {
+    const el = document.querySelector(sel);
+    if (el) el.style.display = area === "content" ? "" : "none";
+  });
+  document.getElementById("area-dashboard").style.display = area === "dashboard" ? "flex" : "none";
+  document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
+  if (area === "dashboard") loadDashboard();
+  if (area === "logs" && !logState.loadedOnce) loadLogs(logState.type);
+};
+
+/* ── Dashboard ── */
+async function loadDashboard() {
+  const grid = $("statGrid");
+  grid.innerHTML = '<div class="stat-card"><div class="l">Loading…</div></div>';
+  try {
+    const res = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return showAuth();
+    const d = await res.json();
+    const stats = [
+      ["Divinations", d.divinationCount], ["Chats", d.chatCount],
+      ["Feedback", d.feedbackCount],
+      ["Satisfaction", (d.feedbackOverview?.satisfactionRate ?? "–") + (typeof d.feedbackOverview?.satisfactionRate === "number" ? "%" : "")],
+    ];
+    grid.innerHTML = stats.map(([l, n]) =>
+      `<div class="stat-card"><div class="n">${n ?? 0}</div><div class="l">${l}</div></div>`).join("");
+
+    // last 14 days from trends.daily
+    const daily = d.trends?.daily || {};
+    const days = [];
+    for (let i = 13; i >= 0; i--) {
+      const dt = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+      days.push([dt, daily[dt] || 0]);
+    }
+    const max = Math.max(1, ...days.map(([, n]) => n));
+    $("trendBars").innerHTML = days.map(([dt, n]) =>
+      `<div class="bar-row"><span class="bl">${dt.slice(5)}</span><span class="bt"><span class="bf" style="width:${Math.round(n / max * 100)}%"></span></span><span class="bn">${n}</span></div>`).join("");
+
+    const top = d.topOdu || [];
+    const tmax = Math.max(1, ...top.map((o) => o.count));
+    $("topOdu").innerHTML = top.length ? top.map((o) =>
+      `<div class="bar-row"><span class="bl">${o.name}</span><span class="bt"><span class="bf" style="width:${Math.round(o.count / tmax * 100)}%"></span></span><span class="bn">${o.count}</span></div>`).join("")
+      : '<span class="log-count">No Odù data yet.</span>';
+
+    const fb = d.feedbackOverview || {};
+    const types = Object.entries(fb.byType || {});
+    $("feedbackPanel").innerHTML =
+      `<div class="bar-row"><span class="bl">Total</span><span class="bn" style="width:auto">${fb.total ?? 0}</span></div>` +
+      (types.length ? types.map(([k, v]) =>
+        `<div class="bar-row"><span class="bl">${k}</span><span class="bt"><span class="bf" style="width:${Math.round(v / Math.max(1, fb.total) * 100)}%"></span></span><span class="bn">${v}</span></div>`).join("") : "");
+
+    $("latestFeedback").innerHTML = (d.latestFeedbacks || []).map((f) =>
+      `<div style="padding:8px 0;border-top:1px dashed var(--line)"><strong>${f.name || f.type || "—"}</strong> <span class="log-count">${f.timestamp ? new Date(f.timestamp).toLocaleString() : ""}</span><br>${(f.message || f.feedback || f.text || "").toString().slice(0, 220)}</div>`).join("")
+      || '<span class="log-count">No feedback yet.</span>';
+  } catch (err) {
+    grid.innerHTML = `<div class="stat-card"><div class="l">Could not load analytics: ${err.message}</div></div>`;
+  }
+}
+
+/* ── Logs ── */
+const LOG_TYPES = ["divination", "chat", "feedback", "payment", "contribution"];
+const logState = { type: "divination", rows: [], filtered: [], page: 1, per: 50, loadedOnce: false };
+
+$("logPills").innerHTML = LOG_TYPES.map((t) =>
+  `<button class="log-pill${t === "divination" ? " is-active" : ""}" data-log="${t}" onclick="loadLogs('${t}')">${t[0].toUpperCase() + t.slice(1)}</button>`).join("");
+
+window.loadLogs = async function (type) {
+  logState.type = type; logState.loadedOnce = true;
+  document.querySelectorAll(".log-pill").forEach((p) => p.classList.toggle("is-active", p.dataset.log === type));
+  $("logBody").innerHTML = '<tr><td>Loading…</td></tr>'; $("logHead").innerHTML = ""; $("logDetail").style.display = "none";
+  try {
+    const res = await fetch(API_BASE + "/api/" + type + "/logs", { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return showAuth();
+    const data = await res.json();
+    const rows = Array.isArray(data) ? data : data.logs || data.contributions || [];
+    rows.sort((a, b) => new Date(b.timestamp || b.createdAt || 0) - new Date(a.timestamp || a.createdAt || 0));
+    logState.rows = rows; logState.page = 1;
+    $("logSearch").value = "";
+    renderLogs();
+  } catch (err) {
+    $("logBody").innerHTML = `<tr><td>Failed to load ${type} logs: ${err.message}</td></tr>`;
+  }
+};
+
+function logColumns(rows) {
+  const preferred = ["timestamp", "createdAt", "name", "fullname", "contributorName", "email", "type", "category", "title", "oduName", "reference", "amount", "status", "message", "feedback", "text"];
+  const keys = new Set();
+  rows.slice(0, 40).forEach((r) => Object.keys(flat(r)).forEach((k) => keys.add(k)));
+  const cols = preferred.filter((p) => keys.has(p));
+  [...keys].forEach((k) => { if (cols.length < 6 && !cols.includes(k) && k !== "_id" && k !== "__v") cols.push(k); });
+  return cols.slice(0, 6);
+}
+function flat(o) {
+  const out = {};
+  Object.entries(o || {}).forEach(([k, v]) => {
+    if (v && typeof v === "object" && !Array.isArray(v) && k === "data") {
+      Object.entries(v).forEach(([k2, v2]) => { if (!(k2 in out)) out[k2] = v2; });
+    } else out[k] = v;
+  });
+  return out;
+}
+function cellText(v) {
+  if (v == null) return "";
+  if (typeof v === "object") return JSON.stringify(v).slice(0, 120);
+  const s = String(v);
+  return /\d{4}-\d{2}-\d{2}T/.test(s) ? new Date(s).toLocaleString() : s.slice(0, 140);
+}
+
+window.renderLogs = function () {
+  const q = $("logSearch").value.trim().toLowerCase();
+  logState.filtered = q
+    ? logState.rows.filter((r) => JSON.stringify(r).toLowerCase().includes(q))
+    : logState.rows;
+  const cols = logColumns(logState.filtered.length ? logState.filtered : logState.rows);
+  const start = (logState.page - 1) * logState.per;
+  const pageRows = logState.filtered.slice(start, start + logState.per);
+  $("logHead").innerHTML = "<tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr>";
+  $("logBody").innerHTML = pageRows.length ? pageRows.map((r, i) => {
+    const f = flat(r);
+    return `<tr class="row" onclick="showLogDetail(${start + i})">` + cols.map((c) => `<td>${cellText(f[c])}</td>`).join("") + "</tr>";
+  }).join("") : '<tr><td colspan="6">Nothing here.</td></tr>';
+  const pages = Math.max(1, Math.ceil(logState.filtered.length / logState.per));
+  $("logPage").textContent = `Page ${logState.page} of ${pages}`;
+  $("logCount").textContent = `${logState.filtered.length} entries`;
+  $("logPrev").disabled = logState.page <= 1;
+  $("logNext").disabled = logState.page >= pages;
+};
+window.showLogDetail = function (idx) {
+  const row = logState.filtered[idx];
+  if (!row) return;
+  $("logDetailBody").textContent = JSON.stringify(row, null, 2);
+  $("logDetail").style.display = "block";
+  $("logDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+$("logSearch").addEventListener("input", () => { logState.page = 1; renderLogs(); });
+$("logPrev").onclick = () => { logState.page--; renderLogs(); };
+$("logNext").onclick = () => { logState.page++; renderLogs(); };
 
 /* ── Session ───────────────────────────────────────────────── */
 async function whoAmI() {
