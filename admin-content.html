@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Orírùn · Content Studio</title>
+<link rel="icon" href="public/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Orírùn Content Studio
+   Palette — Ẹfun chalk workspace, Igbó green structure,
+   Osun camwood for destructive acts, brass for provenance.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --efun:#F7F5EF;        /* chalk workspace */
+  --efun-deep:#EFEBE0;   /* panel wells */
+  --igbo:#0E5A31;        /* deep forest green — structure */
+  --leaf:#1D7A46;        /* interactive green */
+  --leaf-soft:#E3EFE7;   /* selected/hover wash */
+  --osun:#A63A22;        /* camwood — delete/restore */
+  --brass:#B98A2F;       /* provenance, versions */
+  --brass-soft:#F4EBD7;
+  --ink:#1E2B23;         /* primary text */
+  --ink-soft:#5A6B60;    /* secondary text */
+  --line:#DCD6C8;        /* hairlines */
+  --white:#FFFFFF;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --serif:'Source Serif 4',Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans);font-size:14px;color:var(--ink);
+  background:var(--efun);line-height:1.55;
+}
+::selection{background:var(--leaf-soft)}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
+  outline:2px solid var(--leaf);outline-offset:2px;border-radius:4px;
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ── Shell ── */
+.shell{display:grid;grid-template-columns:250px 300px 1fr;grid-template-rows:56px 1fr;height:100vh}
+header{
+  grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;
+  background:var(--igbo);color:var(--efun);
+}
+header .brand{font-family:var(--serif);font-size:19px;font-weight:700;letter-spacing:.01em}
+header .brand span{color:var(--brass);font-weight:400}
+header .sub{font-size:12px;opacity:.75}
+header .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px}
+.db-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;
+  background:rgba(255,255,255,.12);font-weight:600}
+.db-badge .dot{width:8px;height:8px;border-radius:50%;background:#7ED9A2}
+.db-badge.off .dot{background:#E8A48F}
+
+/* ── Collections rail ── */
+nav{background:var(--white);border-right:1px solid var(--line);overflow-y:auto;padding:14px 10px}
+nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--ink-soft);padding:4px 10px 10px}
+.col-item{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:var(--radius);
+  margin-bottom:2px;transition:background .12s}
+.col-item:hover{background:var(--efun-deep)}
+.col-item.active{background:var(--leaf-soft)}
+.col-item .name{font-weight:600;font-size:13px}
+.col-item .meta{display:flex;gap:6px;align-items:center;margin-top:3px;font-size:11px;color:var(--ink-soft)}
+.pill{padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:.03em}
+.pill.db{background:var(--leaf-soft);color:var(--igbo)}
+.pill.file{background:var(--brass-soft);color:var(--brass)}
+.pill.err{background:#F7E3DE;color:var(--osun)}
+
+/* ── Item list ── */
+.items{background:var(--efun);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.items .tools{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
+.items input[type=search]{
+  flex:1;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--white);font-size:13px;color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:var(--radius);
+  font-size:13px;font-weight:600;transition:filter .12s,background .12s}
+.btn:hover{filter:brightness(1.06)}
+.btn-green{background:var(--leaf);color:#fff}
+.btn-ghost{background:var(--white);border:1px solid var(--line);color:var(--ink)}
+.btn-osun{background:var(--white);border:1px solid #E4C4BB;color:var(--osun)}
+.btn-osun:hover{background:#FBF1EE}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.item-scroll{overflow-y:auto;flex:1;padding:8px}
+.item-row{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:8px;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.item-row:hover{background:var(--efun-deep)}
+.item-row.active{background:var(--leaf-soft);font-weight:700;color:var(--igbo)}
+.count-note{padding:8px 14px;font-size:11px;color:var(--ink-soft)}
+
+/* ── Editor ── */
+main{display:flex;flex-direction:column;min-height:0;background:var(--efun)}
+.editor-head{padding:16px 22px 0}
+.editor-head h1{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--igbo);
+  word-break:break-word}
+.editor-head .sub{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* Signature: provenance strip — File → Database → Live memory */
+.provenance{display:flex;align-items:center;gap:0;margin:14px 22px 0;user-select:none}
+.prov-node{display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--line);
+  background:var(--white);font-size:12px;color:var(--ink-soft);position:relative}
+.prov-node:first-child{border-radius:99px 0 0 99px}
+.prov-node:last-child{border-radius:0 99px 99px 0}
+.prov-node+.prov-node{border-left:none}
+.prov-node .lamp{width:9px;height:9px;border-radius:50%;background:var(--line);flex-shrink:0}
+.prov-node.lit{color:var(--igbo);font-weight:700;background:var(--leaf-soft)}
+.prov-node.lit .lamp{background:var(--leaf);box-shadow:0 0 0 3px rgba(29,122,70,.18)}
+.prov-node.brass{color:var(--brass);font-weight:700;background:var(--brass-soft)}
+.prov-node.brass .lamp{background:var(--brass)}
+.prov-meta{margin-left:auto;font-size:11.5px;color:var(--ink-soft);display:flex;gap:14px}
+.prov-meta b{color:var(--ink)}
+
+.editor-body{flex:1;display:flex;flex-direction:column;padding:14px 22px 0;min-height:0}
+textarea#editor{
+  flex:1;width:100%;resize:none;padding:16px;border:1px solid var(--line);
+  border-radius:var(--radius);background:var(--white);color:var(--ink);
+  font-family:var(--mono);font-size:12.5px;line-height:1.6;tab-size:2;min-height:200px}
+textarea#editor.invalid{border-color:var(--osun);box-shadow:0 0 0 3px rgba(166,58,34,.12)}
+.editor-actions{display:flex;gap:8px;align-items:center;padding:12px 22px;flex-wrap:wrap}
+.json-state{font-size:12px;font-weight:600}
+.json-state.ok{color:var(--leaf)} .json-state.bad{color:var(--osun)}
+.spacer{flex:1}
+
+/* Audit drawer */
+.audit{border-top:1px solid var(--line);background:var(--white)}
+.audit summary{padding:10px 22px;font-size:12px;font-weight:700;color:var(--ink-soft);
+  cursor:pointer;list-style:none;text-transform:uppercase;letter-spacing:.1em}
+.audit summary::before{content:"◆ ";color:var(--brass)}
+.audit-list{max-height:180px;overflow-y:auto;padding:0 22px 14px}
+.audit-row{display:flex;gap:10px;padding:6px 0;border-top:1px dashed var(--line);font-size:12px}
+.audit-row .act{font-weight:700;min-width:74px}
+.audit-row .act.create{color:var(--leaf)} .audit-row .act.update{color:var(--brass)}
+.audit-row .act.delete,.audit-row .act.restore-file{color:var(--osun)}
+.audit-row .key{font-family:var(--mono)}
+.audit-row .who{margin-left:auto;color:var(--ink-soft)}
+
+/* Empty / auth states */
+.center-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px;color:var(--ink-soft)}
+.center-state .mark{font-family:var(--serif);font-size:44px;color:var(--igbo);line-height:1;
+  letter-spacing:.35em;margin-bottom:14px}
+.center-state h3{font-family:var(--serif);color:var(--ink);font-size:19px;margin-bottom:6px}
+.center-state p{max-width:420px;font-size:13px}
+
+/* Toast */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--igbo);color:var(--efun);padding:10px 20px;border-radius:99px;
+  font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:50}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--osun)}
+
+/* Modal (new item) */
+dialog{border:none;border-radius:14px;padding:0;max-width:520px;width:92vw;
+  box-shadow:0 24px 60px rgba(20,40,28,.25)}
+dialog::backdrop{background:rgba(14,90,49,.28)}
+.modal-in{padding:22px}
+.modal-in h3{font-family:var(--serif);color:var(--igbo);margin-bottom:12px}
+.modal-in label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin:10px 0 4px}
+.modal-in input,.modal-in textarea{width:100%;padding:9px 12px;border:1px solid var(--line);
+  border-radius:8px;font-family:var(--mono);font-size:13px}
+.modal-in textarea{min-height:120px;resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ── Responsive ── */
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;grid-template-rows:56px auto auto 1fr}
+  nav{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px}
+  nav h2{display:none}
+  .col-item{white-space:nowrap;margin:0 4px 0 0;flex-shrink:0}
+  .col-item .meta{display:none}
+  .items{max-height:200px;border-right:none;border-bottom:1px solid var(--line)}
+  .provenance{flex-wrap:wrap;gap:8px}
+  .prov-node{border-radius:99px!important;border-left:1px solid var(--line)!important}
+  .prov-meta{width:100%;margin:4px 0 0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <div class="brand">Orírùn <span>· Content Studio</span></div>
+      <div class="sub">Every word the app speaks, editable here</div>
+    </div>
+    <div class="right">
+      <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
+      <span id="whoami" style="opacity:.85"></span>
+      <button class="btn btn-ghost" id="refreshBtn" title="Reload collections">↻ Refresh</button>
+      <button class="btn btn-ghost" id="logoutBtn" style="display:none">Sign out</button>
+    </div>
+  </header>
+
+  <nav aria-label="Content collections">
+    <h2>Collections</h2>
+    <div id="colList"></div>
+  </nav>
+
+  <section class="items" aria-label="Items">
+    <div class="tools">
+      <input type="search" id="search" placeholder="Search items…" aria-label="Search items">
+      <button class="btn btn-green" id="newBtn" title="Create a new item">+ New</button>
+    </div>
+    <div class="item-scroll" id="itemList"></div>
+    <div class="count-note" id="countNote"></div>
+  </section>
+
+  <main>
+    <div id="editorWrap" style="display:none;flex:1;flex-direction:column;min-height:0">
+      <div class="editor-head">
+        <h1 id="itemTitle">—</h1>
+        <div class="sub" id="itemSub"></div>
+      </div>
+
+      <!-- Signature: the data's journey, live -->
+      <div class="provenance" id="provStrip" title="Where this collection is served from right now">
+        <div class="prov-node" id="provFile"><span class="lamp"></span>File fallback</div>
+        <div class="prov-node" id="provDb"><span class="lamp"></span>Database</div>
+        <div class="prov-node" id="provMem"><span class="lamp"></span>Live memory</div>
+        <div class="prov-meta">
+          <span>version <b id="provVersion">–</b></span>
+          <span>updated <b id="provUpdated">–</b></span>
+        </div>
+      </div>
+
+      <div class="editor-body">
+        <textarea id="editor" spellcheck="false" aria-label="Item JSON editor"></textarea>
+      </div>
+      <div class="editor-actions">
+        <span class="json-state ok" id="jsonState">Valid JSON</span>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" id="exportBtn">Export collection</button>
+        <button class="btn btn-ghost" id="snapshotBtn" title="Write the current live data over the fallback file (for committing to git)">Snapshot → file</button>
+        <button class="btn btn-osun" id="restoreBtn">Restore from file</button>
+        <button class="btn btn-osun" id="deleteBtn">Delete item</button>
+        <button class="btn btn-green" id="saveBtn">Save changes</button>
+      </div>
+      <details class="audit">
+        <summary>Audit trail</summary>
+        <div class="audit-list" id="auditList"></div>
+      </details>
+    </div>
+
+    <div class="center-state" id="emptyState">
+      <div class="mark">‖ ‖<br>‖ ‖</div>
+      <h3>Choose a collection</h3>
+      <p>Pick a collection on the left, then an item, to read and edit exactly what the app serves. Changes go to the database first, then to the file fallback — and go live instantly.</p>
+    </div>
+
+    <div class="center-state" id="authState" style="display:none">
+      <div class="mark">‖ ‖<br>‖ ‖</div>
+      <h3>Sign in to the Studio</h3>
+      <p>Talking to <code id="apiBaseShow"></code>. Sessions last 2 hours.</p>
+      <form id="loginForm" style="width:min(340px,90vw);margin-top:16px;text-align:left" autocomplete="on">
+        <label for="loginUser" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Username</label>
+        <input id="loginUser" autocomplete="username" placeholder="superadmin"
+          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
+        <label for="loginPass" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password"
+          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+        <div id="loginError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
+        <button type="submit" class="btn btn-green" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px">Leave username empty to use the old password-only sign-in while it remains enabled.</p>
+      </form>
+    </div>
+  </main>
+</div>
+
+<dialog id="newModal">
+  <div class="modal-in">
+    <h3>New item</h3>
+    <label for="newKey" id="newKeyLabel">Key</label>
+    <input id="newKey" placeholder="e.g. Ogbe Otura">
+    <label for="newValue">Value (JSON)</label>
+    <textarea id="newValue" placeholder='{ "Message": "…" }'></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('newModal').close()">Cancel</button>
+      <button class="btn btn-green" id="createBtn">Create item</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ── Configuration ─────────────────────────────────────────── */
+// API base resolution:
+// 1. Explicit override:  localStorage.setItem("orirun_admin_api", "http://localhost:10000")
+// 2. Served over http(s) (e.g. <backend>/studio) -> same origin, cookies just work
+// 3. Opened as a file:// page -> production backend (note: file:// pages cannot
+//    reliably hold session cookies; prefer opening <backend>/studio instead)
+const API_BASE = localStorage.getItem("orirun_admin_api")
+  || (location.protocol.startsWith("http") ? location.origin : "https://ancestra-nhhh.onrender.com");
+document.getElementById("apiBaseShow").textContent = API_BASE;
+const api = (p, opts = {}) =>
+  fetch(API_BASE + "/api/admin" + p, { credentials: "include",
+    headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, ...opts });
+
+/* ── State ─────────────────────────────────────────────────── */
+let collections = [];
+let activeCol = null;      // registry entry
+let colPayload = null;     // { keys, data?, truncated }
+let activeKey = null;
+let itemDirty = false;
+
+/* ── Helpers ───────────────────────────────────────────────── */
+const $ = (id) => document.getElementById(id);
+function toast(msg, isErr) {
+  const t = $("toast");
+  t.textContent = msg; t.className = "show" + (isErr ? " err" : "");
+  clearTimeout(t._h); t._h = setTimeout(() => (t.className = ""), 2600);
+}
+function fmtDate(d) {
+  if (!d) return "never";
+  const dt = new Date(d);
+  return dt.toLocaleDateString(undefined, { day: "numeric", month: "short" }) +
+    " " + dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+function confirmAct(msg) { return window.confirm(msg); }
+
+/* ── Collections ───────────────────────────────────────────── */
+async function loadCollections() {
+  try {
+    const res = await api("/content");
+    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 404) throw new Error("backend reached at " + API_BASE + ", but the content routes are not deployed there yet");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const body = await res.json();
+    collections = body.collections;
+    $("authState").style.display = "none";
+    renderCollections();
+    const anyDb = collections.some((c) => String(c.source).includes("db"));
+    $("dbBadge").className = "db-badge" + (anyDb ? "" : " off");
+    $("dbBadgeText").textContent = anyDb ? "database live" : "file fallback";
+  } catch (err) {
+    $("dbBadge").className = "db-badge off";
+    $("dbBadgeText").textContent = "unreachable";
+    toast("Could not reach the backend: " + err.message, true);
+  }
+}
+function showAuth() {
+  $("emptyState").style.display = "none";
+  $("editorWrap").style.display = "none";
+  $("authState").style.display = "flex";
+}
+function renderCollections() {
+  const wrap = $("colList"); wrap.innerHTML = "";
+  for (const c of collections) {
+    const btn = document.createElement("button");
+    btn.className = "col-item" + (activeCol?.key === c.key ? " active" : "");
+    const src = String(c.source || "");
+    const pill = src.includes("db") ? "db" : src === "error" ? "err" : "file";
+    btn.innerHTML = `<div class="name">${c.label}</div>
+      <div class="meta"><span class="pill ${pill}">${pill === "db" ? "DB" : pill === "err" ? "ERR" : "FILE"}</span>
+      <span>${c.count} items · v${c.version}</span></div>`;
+    btn.onclick = () => selectCollection(c);
+    wrap.appendChild(btn);
+  }
+}
+
+/* ── Items ─────────────────────────────────────────────────── */
+async function selectCollection(c) {
+  if (itemDirty && !confirmAct("Discard unsaved changes?")) return;
+  activeCol = c; activeKey = null; itemDirty = false;
+  renderCollections();
+  $("editorWrap").style.display = "none";
+  $("emptyState").style.display = "flex";
+  $("search").value = "";
+  try {
+    const res = await api(`/content/${c.key}`);
+    if (res.status === 401 || res.status === 403) return showAuth();
+    colPayload = await res.json();
+    renderItems();
+  } catch (err) { toast("Failed to load items: " + err.message, true); }
+}
+function renderItems() {
+  const q = $("search").value.trim().toLowerCase();
+  const wrap = $("itemList"); wrap.innerHTML = "";
+  if (!colPayload) return;
+  const keys = colPayload.keys.filter((k) => !q || k.toLowerCase().includes(q));
+  for (const k of keys.slice(0, 400)) {
+    const b = document.createElement("button");
+    b.className = "item-row" + (k === activeKey ? " active" : "");
+    b.textContent = k;
+    b.onclick = () => selectItem(k);
+    wrap.appendChild(b);
+  }
+  $("countNote").textContent =
+    `${keys.length} of ${colPayload.keys.length} items` + (keys.length > 400 ? " · showing first 400" : "");
+}
+$("search").addEventListener("input", renderItems);
+
+/* ── Editor ────────────────────────────────────────────────── */
+async function selectItem(key) {
+  if (itemDirty && !confirmAct("Discard unsaved changes?")) return;
+  activeKey = key; itemDirty = false;
+  renderItems();
+  try {
+    const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(key)}`);
+    if (!res.ok) throw new Error((await res.json()).error || "HTTP " + res.status);
+    const body = await res.json();
+    $("emptyState").style.display = "none";
+    $("editorWrap").style.display = "flex";
+    $("itemTitle").textContent = key;
+    $("itemSub").textContent = `${activeCol.label} · ${activeCol.kind === "array" ? `array item ("${activeCol.idField}")` : "map entry"}`;
+    $("editor").value = JSON.stringify(body.data, null, 2);
+    $("editor").classList.remove("invalid");
+    $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    paintProvenance();
+    loadAudit();
+  } catch (err) { toast(err.message, true); }
+}
+function paintProvenance() {
+  const src = String(activeCol.source || "");
+  const dbLit = src.includes("db");
+  $("provFile").className = "prov-node" + (!dbLit ? " brass" : "");
+  $("provDb").className = "prov-node" + (dbLit ? " lit" : "");
+  $("provMem").className = "prov-node lit";
+  $("provVersion").textContent = activeCol.version ?? "–";
+  $("provUpdated").textContent = fmtDate(activeCol.updatedAt);
+}
+$("editor").addEventListener("input", () => {
+  itemDirty = true;
+  try { JSON.parse($("editor").value);
+    $("editor").classList.remove("invalid");
+    $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+  } catch (e) {
+    $("editor").classList.add("invalid");
+    $("jsonState").textContent = "Invalid JSON — fix before saving"; $("jsonState").className = "json-state bad";
+  }
+});
+
+/* ── Actions ───────────────────────────────────────────────── */
+$("saveBtn").onclick = async () => {
+  let value;
+  try { value = JSON.parse($("editor").value); }
+  catch { return toast("The editor holds invalid JSON.", true); }
+  try {
+    const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(activeKey)}`, {
+      method: "PUT", body: JSON.stringify({ value }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    itemDirty = false;
+    toast(body.dbOk ? "Saved — live in the app now" : "Live in memory, but the database write failed — this edit is volatile until the DB returns", !body.dbOk);
+    await loadCollections();
+    activeCol = collections.find((c) => c.key === activeCol.key) || activeCol;
+    paintProvenance(); loadAudit();
+  } catch (err) { toast("Save failed: " + err.message, true); }
+};
+
+$("deleteBtn").onclick = async () => {
+  if (!confirmAct(`Delete "${activeKey}" from ${activeCol.label}? The audit trail keeps a copy.`)) return;
+  try {
+    const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(activeKey)}`, { method: "DELETE" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    toast("Item deleted");
+    itemDirty = false;
+    await selectCollection(collections.find((c) => c.key === activeCol.key) || activeCol);
+  } catch (err) { toast("Delete failed: " + err.message, true); }
+};
+
+$("restoreBtn").onclick = async () => {
+  if (!confirmAct(`Restore ALL of "${activeCol.label}" from its file fallback? Database edits to this collection will be overwritten (the audit trail records this act).`)) return;
+  try {
+    const res = await api(`/content/${activeCol.key}/restore-file`, { method: "POST" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    toast(`Restored ${body.count} items from file`);
+    await loadCollections();
+    await selectCollection(collections.find((c) => c.key === activeCol.key) || activeCol);
+  } catch (err) { toast("Restore failed: " + err.message, true); }
+};
+
+$("snapshotBtn").onclick = async () => {
+  if (!confirmAct(`Write the CURRENT live "${activeCol.label}" over its fallback file? Do this when you want to commit edited content back to the repo.`)) return;
+  try {
+    const res = await api(`/content/${activeCol.key}/snapshot-file`, { method: "POST" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    toast(`Snapshotted ${body.count} items to the fallback file`);
+  } catch (err) { toast("Snapshot failed: " + err.message, true); }
+};
+
+$("exportBtn").onclick = () => {
+  window.open(API_BASE + `/api/admin/content/${activeCol.key}/export`, "_blank");
+};
+
+/* New item */
+$("newBtn").onclick = () => {
+  if (!activeCol) return toast("Choose a collection first", true);
+  $("newKeyLabel").textContent = activeCol.kind === "array"
+    ? `Identifier (goes into "${activeCol.idField}")` : "Key";
+  $("newKey").value = ""; $("newValue").value = "{\n  \n}";
+  $("newModal").showModal();
+};
+$("createBtn").onclick = async () => {
+  let value;
+  try { value = JSON.parse($("newValue").value); }
+  catch { return toast("New item value must be valid JSON", true); }
+  try {
+    const res = await api(`/content/${activeCol.key}/items`, {
+      method: "POST", body: JSON.stringify({ key: $("newKey").value.trim(), value }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error);
+    $("newModal").close();
+    toast("Item created");
+    await selectCollection(collections.find((c) => c.key === activeCol.key) || activeCol);
+    selectItem(body.itemKey);
+  } catch (err) { toast("Create failed: " + err.message, true); }
+};
+
+/* Audit */
+async function loadAudit() {
+  try {
+    const res = await api(`/content/${activeCol.key}/audit?limit=30`);
+    if (!res.ok) return;
+    const body = await res.json();
+    const wrap = $("auditList"); wrap.innerHTML = "";
+    if (!body.entries.length) { wrap.innerHTML = '<div class="audit-row">No changes recorded yet.</div>'; return; }
+    for (const e of body.entries) {
+      const row = document.createElement("div");
+      row.className = "audit-row";
+      row.innerHTML = `<span class="act ${e.action}">${e.action}</span>
+        <span class="key">${e.itemKey || "(whole collection)"}</span>
+        <span class="who">${e.actor} · ${fmtDate(e.at)}</span>`;
+      wrap.appendChild(row);
+    }
+  } catch {}
+}
+
+/* ── Session ───────────────────────────────────────────────── */
+async function whoAmI() {
+  try {
+    const res = await fetch(API_BASE + "/api/auth/me", { credentials: "include" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+async function refreshSessionChip() {
+  const me = await whoAmI();
+  if (me?.authenticated) {
+    $("whoami").textContent = (me.username || me.role) + " · " + me.role;
+    $("logoutBtn").style.display = "";
+  } else {
+    $("whoami").textContent = "";
+    $("logoutBtn").style.display = "none";
+  }
+  return me;
+}
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("loginError").textContent = "";
+  $("loginBtn").disabled = true;
+  try {
+    const body = { password: $("loginPass").value };
+    const u = $("loginUser").value.trim();
+    if (u) body.username = u;
+    const res = await fetch(API_BASE + "/api/auth/login", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Sign-in failed");
+    if (data.role !== "superadmin") throw new Error("This console needs a superadmin account.");
+    $("loginPass").value = "";
+    toast("Signed in as " + (data.username || data.role));
+    await refreshSessionChip();
+    await loadCollections();
+  } catch (err) {
+    $("loginError").textContent = err.message;
+  } finally { $("loginBtn").disabled = false; }
+});
+$("logoutBtn").onclick = async () => {
+  await fetch(API_BASE + "/api/auth/logout", { method: "POST", credentials: "include" });
+  toast("Signed out");
+  activeCol = null; activeKey = null;
+  $("editorWrap").style.display = "none";
+  $("emptyState").style.display = "none";
+  await refreshSessionChip();
+  showAuth();
+};
+
+$("refreshBtn").onclick = loadCollections;
+refreshSessionChip();
+window.addEventListener("beforeunload", (e) => { if (itemDirty) e.preventDefault(); });
+
+if (location.protocol === "file:") {
+  toast("Opened as a file — sessions may not stick. Open " + API_BASE + "/studio instead.", true);
+}
+loadCollections();
+</script>
+</body>
+</html>
