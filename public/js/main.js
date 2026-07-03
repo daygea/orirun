@@ -1162,6 +1162,11 @@ EXPRESSION LAYER
 - Personality: ${payload.personality}
 - Birthday Gift: ${payload.birthdayGift}
 - Reality: ${payload.reality}
+- Maturity: ${payload.maturity}
+
+KARMIC THREADS (WEAVE IN QUIETLY WHERE RELEVANT)
+- Karmic Debt: ${payload.karmicDebts}
+- If a debt is present, let its lesson colour the Present Season and Guidance sections. Never name it as a number or a "debt" — speak only of the lesson being repaid.
 
 TIMING LAYER (CONTEXT ONLY)
 - Pinnacle: ${payload.pinnacleNumber}
@@ -1278,6 +1283,17 @@ Do not rush. Speak as one who has seen this life before.
  *  BIRTH CHART — MAIN ENTRY POINT
  * ───────────────────────────────────────────────────────────── */
 
+/* Cusp refinement: when the Sun changed signs on the person's birthday,
+   the exact time decides the sign. Set by the cusp notice, consumed on
+   the next run, then shown as confirmation. */
+let refinedBirthtime = null;
+window.refineWithBirthtime = function () {
+  const t = document.getElementById("orirun-cusp-time")?.value;
+  if (!t) return;
+  refinedBirthtime = t;
+  performBirthChart();
+};
+
 const performBirthChart = async () => {
   const fullName  = document.getElementById("fullname").value.trim();
   const birthdate = document.getElementById("birthdate").value;
@@ -1309,7 +1325,11 @@ const performBirthChart = async () => {
       fetch("/api/numerology/", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullname: fullName, birthdate })
+        body: JSON.stringify(
+          refinedBirthtime
+            ? { fullname: fullName, birthdate, birthtime: refinedBirthtime }
+            : { fullname: fullName, birthdate }
+        )
       }),
       getLocationAndPlanetaryHour()
     ]);
@@ -1449,6 +1469,28 @@ function parseEnergyAccordion(text) {
        so it matches the other sections instead of standing alone. */
 
 
+    /* 🌗 Cusp notice — shown only when the Sun changed signs on this
+       birthday. The sign above was computed from the Sun's true position;
+       a birth time makes it certain. */
+    const _sc = data.signComputation;
+    if (_sc?.cusp && !refinedBirthtime) {
+      parts.push(`
+        <div style="border:1px solid #e8dcb8;background:#fdfaf0;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+          <div style="font-weight:700;color:#8a6d1f;font-size:13.5px;margin-bottom:6px;" data-translate>🌗 You were born on a cusp day</div>
+          <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:var(--of-ink);" data-translate>The Sun changed signs on your birthday. Your sign of <strong>${astro?.name || ""}</strong> was read from the Sun's true position in the sky${typeof _sc.degreeInSign === "number" ? ` (${_sc.degreeInSign}\u00B0 into the sign)` : ""} — add your birth time to make it certain.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input id="orirun-cusp-time" type="time" style="padding:7px 10px;border:1px solid #d9ebd9;border-radius:8px;font-size:13px;">
+            <button onclick="refineWithBirthtime()" style="padding:8px 14px;border:none;border-radius:8px;background:#0f7b3d;color:#fff;font-size:13px;font-weight:600;cursor:pointer;" data-translate>Refine my reading</button>
+          </div>
+        </div>`);
+    } else if (_sc?.cusp === false && refinedBirthtime) {
+      parts.push(`
+        <p style="font-size:12px;color:var(--of-ink-soft);text-align:center;margin:4px 0 10px;" data-translate>Sign confirmed with your birth time \u2713</p>`);
+      refinedBirthtime = null;
+    } else if (refinedBirthtime) {
+      refinedBirthtime = null;
+    }
+
     /* Disclaimer */
     parts.push(`
       <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;margin-top:12px;" data-translate>
@@ -1468,6 +1510,11 @@ function parseEnergyAccordion(text) {
     getEnergyInterpretation({
       fullName, birthdate, age,
       birthdayGift:      data.birthdayGift?.number                  || 0,
+      karmicDebts:       [
+        data.lifePath?.karmicDebt ? `${data.lifePath.karmicDebt.number} (carried by the Life Path)` : null,
+        data.destiny?.karmicDebt  ? `${data.destiny.karmicDebt.number} (carried by the Destiny name)` : null,
+      ].filter(Boolean).join("; ") || "none",
+      maturity:          data.maturity?.number                       || 0,
       lifepath:          data.vibrations?.lifepath?.number           || 0,
       destiny:           data.destiny?.number                        || 0,
       soulUrge:          data.soulUrge?.number                       || 0,
@@ -1521,6 +1568,33 @@ function parseEnergyAccordion(text) {
           + `</div>`);
       }
 
+      /* 🌌 The Sky Right Now — real planetary positions from the backend
+         ephemeris, wearing the Orisha layer. Fails silently. */
+      fetch("/api/sky/now").then(r => r.ok ? r.json() : null).then((sky) => {
+        if (!sky || !Array.isArray(sky.planets) || !slot) return;
+        const rows = sky.planets
+          .filter(p => p.wisdom || ["Sun","Moon","Mercury","Venus","Mars","Jupiter","Saturn"].includes(p.planet))
+          .map(p =>
+            `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid #eef4ee;font-size:13.5px;">`
+            + `<span style="width:22px;text-align:center;font-size:15px;">${p.symbol || ""}</span>`
+            + `<span style="flex:1;min-width:0;"><strong data-translate>${p.orisha || p.planet}</strong> <em style="font-size:0.85em;opacity:0.6;">(${p.planet})</em></span>`
+            + `<span style="color:var(--of-ink-soft);" data-translate>${p.sign}</span>`
+            + (p.retrograde ? `<span style="font-size:10.5px;font-weight:700;color:#8a6d1f;background:#f6eed7;padding:2px 7px;border-radius:10px;" data-translate>retrograde</span>` : "")
+            + `</div>`
+          ).join("");
+        const _skid = "ori-sky-" + Date.now();
+        slot.insertAdjacentHTML("beforeend",
+          `<div style="border:1px solid #c8e6c9;border-radius:8px;margin-bottom:6px;overflow:hidden;background:#fafff9;">`
+          + `<button class="acc-header" onclick="var b=document.getElementById('${_skid}');var a=this.querySelector('.acc-arrow');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';a.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(135deg,#f5fbf5,#edf7ed);border:none;cursor:pointer;font-size:13px;font-weight:bold;color:#1b4332;text-align:left;gap:8px;">`
+          + `<span data-translate>🌌 The Sky Right Now</span>`
+          + `<span class="acc-arrow" style="transition:transform 0.25s;transform:rotate(0deg);font-size:11px;flex-shrink:0;">▼</span>`
+          + `</button>`
+          + `<div id="${_skid}" style="display:none;padding:12px 14px;">`
+          + `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-bottom:4px;" data-translate>True positions of the wandering lights at this moment.</div>`
+          + rows
+          + `</div></div>`);
+      }).catch(() => {});
+
       /* Populate Energy Breakdown */
       const breakdown = document.getElementById("energy-breakdown");
       if (breakdown) {
@@ -1541,7 +1615,8 @@ function parseEnergyAccordion(text) {
               _energyRow("Personal Year",  data.vibrations?.year?.number,  "", "year")
             + _energyRow("Personal Month", data.vibrations?.month?.number, "", "month")
             + _energyRow("Personal Week",  data.vibrations?.week?.number,  "", "week")
-            + _energyRow("Personal Day",   data.vibrations?.day?.number,   "", "day"));
+            + _energyRow("Personal Day",   data.vibrations?.day?.number,   "", "day"))
+          + _karmicGroup(data);
       }
       window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
     }).catch(() => {
@@ -1610,6 +1685,36 @@ function _energyRow(name, num, label, posKey) {
     + `</div>`
     + `</div>`;
 }
+/* ── Karmic Threads — rendered only when a debt is present.
+     Debt numbers (13/14/16/19) have no entry in the standard meanings,
+     so the meaning text comes directly from the reading response. ── */
+function _karmicGroup(data) {
+  const threads = [
+    data.lifePath?.karmicDebt ? { src: "Carried by your Life Path", d: data.lifePath.karmicDebt } : null,
+    data.destiny?.karmicDebt  ? { src: "Carried by your Destiny name", d: data.destiny.karmicDebt } : null,
+  ].filter(Boolean);
+  if (!threads.length) return "";
+  const rows = threads.map((t) => {
+    const rid = "egy-karmic-" + Math.random().toString(36).slice(2, 7);
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid #f2e9d4;">`
+      + `<div style="flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#b98a2f,#8a6d1f);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">${t.d.number}</div>`
+      + `<div style="flex:1 1 auto;min-width:0;">`
+      +   `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">`
+      +     `<span style="font-weight:600;color:#6d5518;" data-translate>Karmic Debt ${t.d.number}</span>`
+      +     `<span style="font-size:12px;color:var(--of-ink-soft);text-align:right;" data-translate>${t.src}</span>`
+      +   `</div>`
+      +   (t.d.meaning
+          ? `<button onclick="var m=document.getElementById('${rid}');var o=m.style.display==='none';m.style.display=o?'block':'none';this.textContent=o?'Show less':'Read more';" style="margin-top:4px;background:none;border:none;padding:0;color:#8a6d1f;font-size:12px;font-weight:600;cursor:pointer;" data-translate>Read more</button>`
+            + `<div id="${rid}" style="display:none;margin-top:6px;font-size:13px;line-height:1.55;color:var(--of-ink);" data-translate>${t.d.meaning}</div>`
+          : "")
+      + `</div></div>`;
+  }).join("");
+  return `<div style="background:#fffdf6;border:1px solid #ecdfbb;border-radius:10px;padding:4px 14px 12px;margin-bottom:10px;">`
+    + `<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a6d1f;background:#f6eed7;padding:4px 10px;border-radius:20px;margin:12px 0 2px;" data-translate>Karmic Threads</div>`
+    + `<div style="font-size:12px;color:var(--of-ink-soft);margin:6px 0 2px;" data-translate>A lesson carried into this life, repaid through how you live it.</div>`
+    + rows + `</div>`;
+}
+
 function _energyGroup(title, rows) {
   return `<div style="background:#fff;border:1px solid #d9ebd9;border-radius:10px;padding:4px 14px 12px;margin-bottom:10px;">`
     + `<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0a5a2c;background:#e8f5e9;padding:4px 10px;border-radius:20px;margin:12px 0 2px;" data-translate>${title}</div>`
