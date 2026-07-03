@@ -720,18 +720,18 @@ const performUserDivination = async (
       ));
 
       /* ── Action bar: new reading + share ── */
-      parts.push(`
-        <div class="dv-actions">
-          <button type="button" class="dv-actions__btn dv-actions__btn--ghost"
-            onclick="var f=document.getElementById('main-content');if(f)f.scrollIntoView({behavior:'smooth'});">
-            <span data-translate>New reading</span>
-          </button>
-          <button type="button" class="dv-actions__btn dv-actions__btn--solid"
-            onclick="try{if(navigator.share){navigator.share({title:'Orírùn',text:'Ifá reading: ${mainCast} (${orientationText})',url:location.href}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(location.href);}}catch(e){}">
-            <span data-translate>Share</span>
-          </button>
-        </div>
-      `);
+      // parts.push(`
+      //   <div class="dv-actions">
+      //     <button type="button" class="dv-actions__btn dv-actions__btn--ghost"
+      //       onclick="var f=document.getElementById('main-content');if(f)f.scrollIntoView({behavior:'smooth'});">
+      //       <span data-translate>New reading</span>
+      //     </button>
+      //     <button type="button" class="dv-actions__btn dv-actions__btn--solid"
+      //       onclick="try{if(navigator.share){navigator.share({title:'Orírùn',text:'Ifá reading: ${mainCast} (${orientationText})',url:location.href}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(location.href);}}catch(e){}">
+      //       <span data-translate>Share</span>
+      //     </button>
+      //   </div>
+      // `);
 
       if (credit) {
         parts.push(`

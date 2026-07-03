@@ -42,7 +42,7 @@ body {
 /* ── SIGNATURE 1: the stroke marks ────────────────────────────────
    Section headings close with a three-stroke odù motif — drawn, not
    imaged, so it scales and recolors with the theme. */
-#main-content > h3::after,
+/*#main-content > h3::after,
 #numerology-section > h3::after {
   content: "";
   display: block;
@@ -55,7 +55,7 @@ body {
     linear-gradient(var(--or-leaf), var(--or-leaf)) 30px 50% / 4px 16px no-repeat;
   border-radius: 0;
   opacity: 0.9;
-}
+}*/
 
 /* Accordion headers carry a double-stroke marker on the left —
    the ‖ of the odù as a wayfinding mark. */
