@@ -264,7 +264,10 @@ async function wakeServer(targetUrl) {
   // Reuse in-flight promise so concurrent callers share one loop
   if (wakingServer) return wakingServer;
 
-  wakingServer = new Promise(async (resolve) => {
+  // Async executors swallow thrown errors silently; use a plain async
+  // function that resolves the outer promise instead.
+  wakingServer = new Promise((resolve) => {
+    (async () => {
     const maxAttempts = 6;
 
     for (let i = 0; i < maxAttempts; i++) {
@@ -285,6 +288,7 @@ async function wakeServer(targetUrl) {
 
     wakingServer = null;
     resolve(false);
+    })();
   });
 
   return wakingServer;

@@ -303,7 +303,7 @@ let currentSearch = "";
 
 function highlightMatch(text, searchTerm) {
     if (!searchTerm) return text;
-    const regex = new RegExp(`(${searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+    const regex = new RegExp(`(${searchTerm.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<mark>$1</mark>');
 }
 

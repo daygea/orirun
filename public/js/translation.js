@@ -680,6 +680,27 @@ function _ensureStatusEl() {
     '<span>Translating…</span>';
   document.body.appendChild(_statusEl);
 }
+function _noteFreshAI() {
+  if (!window.__trFreshAI) return;
+  window.__trFreshAI = false;
+  let note = document.getElementById("translation-fresh-note");
+  if (!note) {
+    note = document.createElement("div");
+    note.id = "translation-fresh-note";
+    note.setAttribute("role", "status");
+    note.style.cssText =
+      "position:fixed; bottom:88px; left:50%; transform:translateX(-50%); z-index:9999;" +
+      "max-width:min(92vw,420px); padding:8px 16px; border-radius:999px; text-align:center;" +
+      "background:#0e5a32; color:#eef4ea; font-size:12px; font-weight:600;" +
+      "box-shadow:0 6px 18px rgba(11,61,34,.28); opacity:0; transition:opacity .25s;";
+    note.textContent = "Some phrases were translated for the first time and saved for review.";
+    document.body.appendChild(note);
+  }
+  note.style.opacity = "1";
+  clearTimeout(note._t);
+  note._t = setTimeout(() => { note.style.opacity = "0"; }, 4200);
+}
+
 function _beginActivity() {
   _activeTranslations++;
   if (_activeTranslations === 1) {
@@ -702,6 +723,7 @@ function _endActivity() {
       languageSelect.style.opacity = "";
     }
   }
+  if (_activeTranslations === 0) _noteFreshAI();
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -934,9 +956,13 @@ async function _translateRoots(rootEls, targetLang) {
           body: JSON.stringify({ texts: chunk, targetLang: apiLang }),
         }, 25000);
         if (res.ok) {
-          const { translated } = await res.json();
+          const { translated, source } = await res.json();
           // only trust a response that lines up exactly with what we sent
           if (Array.isArray(translated) && translated.length === chunk.length) arr = translated;
+          // Translation memory: the caveat is now conditional. It applies
+          // only when strings NOBODY has translated before were machine-
+          // translated this run (they are saved for curation immediately).
+          if (source && source.ai > 0) window.__trFreshAI = true;
         }
       } catch (err) { console.error("Batch chunk failed:", err); }
 

@@ -1,0 +1,215 @@
+/* ==================================================================
+   ORÍRÙN — Identity layer (orirun-identity.css)
+   Load LAST, after a11y-global.css. Additive and reversible.
+
+   Concept: ỌPỌ́N EDGE & ODÙ STROKE
+   The interface as a carved divination tray. Two signatures carry
+   the whole identity:
+
+   1. THE STROKE — the I / ‖ marks of the odù themselves become the
+      app's graphic system: heading marks, accordion markers, and
+      dividers. No other product in the world can own this mark.
+   2. THE CARVED RIM — surfaces read as carved wood edges: a double
+      boundary (outer hairline + inner inset ring) on warm chalk,
+      replacing generic card borders.
+
+   Everything else is restraint: the v3.x craft layer's calm serif
+   voice stays; this layer gives it a face.
+   ================================================================== */
+
+:root {
+  --or-forest: #0b3d22;        /* deepest green — carved shadow */
+  --or-forest-2: #0e5a32;      /* homage band green (existing) */
+  --or-leaf: #0f7b3d;          /* brand green (existing --of-green) */
+  --or-efun: #f6f3ec;          /* chalk field */
+  --or-surface: #fffef9;       /* warm card face, off the pure white */
+  --or-brass: #b8860b;         /* sacred marker (existing --of-gold) */
+  --or-brass-soft: #d9b44a;
+  --or-rim: rgba(20, 40, 30, 0.16);
+  --or-rim-inner: rgba(20, 40, 30, 0.07);
+}
+
+/* ── The field: chalk, with the photograph as a faint memory ──────
+   The scrim shifts from flat white to efun tones so every card sits
+   on a warm, cohesive ground instead of a washed photo. */
+body {
+  background-image:
+    linear-gradient(rgba(246, 243, 236, 0.86), rgba(246, 243, 236, 0.93)),
+    url('../img/background.jpg') !important;
+  background-attachment: fixed;
+}
+
+/* ── SIGNATURE 1: the stroke marks ────────────────────────────────
+   Section headings close with a three-stroke odù motif — drawn, not
+   imaged, so it scales and recolors with the theme. */
+#main-content > h3::after,
+#numerology-section > h3::after {
+  content: "";
+  display: block;
+  width: 34px;
+  height: 16px;
+  margin: 10px auto 0;
+  background:
+    linear-gradient(var(--or-leaf), var(--or-leaf)) 0 50% / 4px 16px no-repeat,
+    linear-gradient(var(--or-leaf), var(--or-leaf)) 15px 50% / 4px 16px no-repeat,
+    linear-gradient(var(--or-leaf), var(--or-leaf)) 30px 50% / 4px 16px no-repeat;
+  border-radius: 0;
+  opacity: 0.9;
+}
+
+/* Accordion headers carry a double-stroke marker on the left —
+   the ‖ of the odù as a wayfinding mark. */
+.acc-header {
+  position: relative;
+  padding-left: 26px !important;
+}
+.acc-header::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 15px;
+  background:
+    linear-gradient(var(--or-leaf), var(--or-leaf)) 0 50% / 3px 15px no-repeat,
+    linear-gradient(var(--or-leaf), var(--or-leaf)) 5px 50% / 3px 15px no-repeat;
+  opacity: 0.75;
+}
+
+/* Dividers pick up brass strokes at their center */
+.num-divider { color: var(--or-brass); }
+.num-divider::before,
+.num-divider::after { background: rgba(184, 134, 11, 0.35); }
+
+/* ── SIGNATURE 2: the carved rim ──────────────────────────────────
+   Panels, result cards, and modals share one surface treatment:
+   warm chalk face, hairline outer edge, and a fine inner ring —
+   the double edge of a carved ọpọ́n. */
+#main-content.ifaDetails,
+#numerology-section.numerology,
+.dv-hero,
+.dv-card,
+.modal-content,
+.history-card,
+.guidance-popup {
+  background: var(--or-surface) !important;
+  border: 1px solid var(--or-rim) !important;
+  border-radius: 16px !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 0 0 2px var(--or-rim-inner),
+    0 8px 26px rgba(20, 45, 30, 0.08) !important;
+}
+#main-content.ifaDetails,
+#numerology-section.numerology {
+  border-top: 3px solid var(--or-leaf) !important;
+}
+.dv-hero {
+  border-top: 3px solid var(--or-brass) !important; /* the reading is sacred: brass, not green */
+}
+
+/* ── The homage band: the most sacred text in the app ─────────────
+   Deep forest, a breath more presence, and a brass hairline above —
+   the band reads as an inscription, not a notification. */
+.text-center p:has(> span[data-translate="header"]) {
+  background: linear-gradient(180deg, var(--or-forest-2), var(--or-forest)) !important;
+  border-top: 2px solid var(--or-brass-soft) !important;
+  border-radius: 0 0 14px 14px !important;
+  color: #f2f6ee !important;
+  letter-spacing: 0.35px !important;
+  box-shadow: 0 6px 18px rgba(11, 61, 34, 0.22) !important;
+}
+
+/* ── Primary actions: carved depth without gloss ────────────────── */
+#divination-btn, #determine-btn {
+  background: linear-gradient(180deg, var(--or-leaf), #0c6a34) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 3px 10px rgba(15, 123, 61, 0.28) !important;
+}
+#divination-btn:hover, #determine-btn:hover {
+  background: linear-gradient(180deg, #108944, #0b5e2e) !important;
+}
+#divination-btn:active, #determine-btn:active {
+  transform: translateY(1px) !important;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* ── The opele row: give the cast marks presence ────────────────── */
+.odu-line-container img.odu-line {
+  filter: drop-shadow(0 2px 3px rgba(11, 61, 34, 0.25));
+}
+
+/* ── Chat presence: an ikin in brass ────────────────────────────── */
+#chatbot-toggle {
+  box-shadow:
+    0 0 0 2px var(--or-brass-soft),
+    0 0 0 5px rgba(217, 180, 74, 0.25),
+    0 8px 20px rgba(15, 123, 61, 0.35) !important;
+}
+
+/* ── History cards keep their type accent atop the carved rim ───── */
+.history-card { border-left-width: 4px !important; }
+.history-card.numerology { border-left-color: var(--or-brass) !important; }
+
+/* ── Footer: a quiet closing line with center strokes ───────────── */
+.col-12.text-center {
+  position: relative;
+  border-top: 1px solid var(--or-rim);
+  margin-top: 28px;
+}
+.col-12.text-center::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 23px;
+  height: 15px;
+  background:
+    var(--or-efun);
+  box-shadow: 0 0 0 6px var(--or-efun);
+}
+.col-12.text-center::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 23px;
+  height: 14px;
+  background:
+    linear-gradient(var(--or-brass), var(--or-brass)) 0 50% / 3px 14px no-repeat,
+    linear-gradient(var(--or-brass), var(--or-brass)) 10px 50% / 3px 14px no-repeat,
+    linear-gradient(var(--or-brass), var(--or-brass)) 20px 50% / 3px 14px no-repeat;
+  opacity: 0.8;
+}
+
+/* ── Scroll furniture: slim, forest ─────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 61, 34, 0.28);
+  border-radius: 8px;
+  border: 2px solid var(--or-efun);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(11, 61, 34, 0.45); }
+
+/* ── Motion: one welcome, no fidgeting ──────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  #main-content.ifaDetails, #numerology-section.numerology {
+    animation: or-rise 0.45s ease-out both;
+  }
+  @keyframes or-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* ── Small screens: rims tighten, strokes stay ──────────────────── */
+@media (max-width: 600px) {
+  #main-content.ifaDetails, #numerology-section.numerology,
+  .dv-hero, .dv-card { border-radius: 13px !important; }
+  .acc-header { padding-left: 24px !important; }
+}

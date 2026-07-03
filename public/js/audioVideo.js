@@ -115,7 +115,7 @@ function resolveEmbedUrl(url) {
     // ==========================
     // Google Drive
     // ==========================
-    const drive = url.match(/\/d\/([^\/]+)/);
+    const drive = url.match(/\/d\/([^/]+)/);
     if (drive) {
         return `https://drive.google.com/file/d/${drive[1]}/preview`;
     }
