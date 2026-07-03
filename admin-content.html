@@ -271,6 +271,17 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <div class="panel"><h3>Feedback</h3><div id="feedbackPanel"></div></div>
     </div>
     <div class="panel"><h3>Latest feedback</h3><div id="latestFeedback" style="font-size:13px"></div></div>
+    <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>Backups · content safety net</span>
+        <span style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="runBackup(false)">Snapshot now</button>
+          <button class="btn btn-ghost" onclick="runBackup(true)">Snapshot + email</button>
+        </span>
+      </h3>
+      <div class="log-count" id="backupNote" style="margin-bottom:8px"></div>
+      <div id="backupList" style="font-size:13px"></div>
+    </div>
   </section>
 
   <section class="ops" id="area-logs" aria-label="Logs">
@@ -671,7 +682,7 @@ window.showArea = function (area) {
   });
   document.getElementById("area-dashboard").style.display = area === "dashboard" ? "flex" : "none";
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
-  if (area === "dashboard") loadDashboard();
+  if (area === "dashboard") { loadDashboard(); loadBackups(); }
   if (area === "logs" && !logState.loadedOnce) loadLogs(logState.type);
 };
 
@@ -726,6 +737,57 @@ async function loadDashboard() {
     grid.innerHTML = `<div class="stat-card"><div class="l">Could not load analytics: ${err.message}</div></div>`;
   }
 }
+
+/* ── Backups ── */
+async function loadBackups() {
+  const wrap = $("backupList");
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups", { credentials: "include" });
+    if (!res.ok) { wrap.innerHTML = '<span class="log-count">Backups unavailable.</span>'; return; }
+    const d = await res.json();
+    $("backupNote").textContent = `Daily automatic snapshots · keeping the last ${d.retention} · Sunday snapshots are emailed offsite.`;
+    wrap.innerHTML = d.snapshots.length ? d.snapshots.map((b) => {
+      const when = new Date(b.takenAt).toLocaleString();
+      const kb = ((b.stats?.gzBytes || 0) / 1024).toFixed(0);
+      return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);flex-wrap:wrap">
+        <strong style="color:var(--igbo)">${when}</strong>
+        <span class="log-count">${b.trigger} · ${b.stats?.totalItems ?? "?"} items · ${kb} KB</span>
+        <span style="flex:1"></span>
+        <a class="btn btn-ghost" href="${API_BASE}/api/admin/backups/${b._id}/export" target="_blank" rel="noopener">Download</a>
+        <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${when.replace(/'/g, "")}')">Restore…</button>
+      </div>`;
+    }).join("") : '<span class="log-count">No snapshots yet — the first runs within an hour of boot, or take one now.</span>';
+  } catch (err) { wrap.innerHTML = '<span class="log-count">Could not load backups: ' + err.message + "</span>"; }
+}
+window.runBackup = async function (withEmail) {
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups/run", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: !!withEmail }),
+    });
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error);
+    toast(withEmail
+      ? (b.email?.emailed ? "Snapshot taken and emailed offsite" : "Snapshot taken; email failed: " + (b.email?.reason || ""))
+      : "Snapshot taken", withEmail && !b.email?.emailed);
+    loadBackups();
+  } catch (err) { toast("Backup failed: " + err.message, true); }
+};
+window.restoreBackup = async function (id, when) {
+  if (!confirmAct(`Restore ALL collections to the snapshot from ${when}?\n\nThe current state is snapshotted first (pre-restore), so this action is itself reversible.`)) return;
+  if (!confirmAct("Second confirmation: this replaces the LIVE content of every collection. Proceed?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups/" + id + "/restore", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" }, body: "{}",
+    });
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error);
+    toast("Restored " + Object.keys(b.restored).length + " collections from " + when);
+    loadBackups(); loadCollections();
+  } catch (err) { toast("Restore failed: " + err.message, true); }
+};
 
 /* ── Logs ── */
 const LOG_TYPES = ["divination", "chat", "feedback", "payment", "contribution"];
