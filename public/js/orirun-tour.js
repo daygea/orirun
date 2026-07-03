@@ -389,6 +389,9 @@ document.addEventListener("DOMContentLoaded", function () {
    *  4. START TOUR
    * ═══════════════════════════════════════════════════════ */
   async function startTour() {
+    // Lazy: Driver.js loads only when the tour actually starts.
+    try { await ensureLib("driver"); }
+    catch (e) { console.warn("Tour library failed to load:", e); return; }
     /* Purge any leftover Driver DOM from previous runs */
     [
       "#driver-page-overlay",

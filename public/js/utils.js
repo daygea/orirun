@@ -738,6 +738,10 @@ function printDivinationResult() {
 }
 
 async function downloadDivinationPDF() {
+    // Lazy: ~560 KB of PDF machinery loads only when someone actually
+    // downloads — not on every visit.
+    try { await ensureLibs(["jspdf", "html2canvas"]); }
+    catch (e) { alert("Could not load the PDF engine. Check your connection and try again."); return; }
     const { jsPDF } = window.jspdf;
     const divinationResult = document.getElementById("divinationResult").innerHTML;
 

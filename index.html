@@ -1002,14 +1002,13 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
     </div>
-<script src="public/js/bootstrap.js" defer></script>
 <script src="public/js/crypto-js.min.js" defer></script>
-<script src="public/js/axios.min.js" defer></script>
 <script src="public/js/config.js" defer></script>
-<script src="public/js/jspdf.js" defer></script>
 <script src="public/js/purify.js" defer></script>
-<script src="public/js/jspdfautotable.js" defer></script>
-<script src="public/js/html2canvas.js" defer></script>
+<!-- ~1 KB loader: jsPDF/html2canvas/Chart.js/Driver.js now load on first
+     use instead of on every visit (≈1 MB off the critical path). bootstrap.js
+     and axios were removed outright — nothing referenced them. -->
+<script src="public/js/lazy-libs.js" defer></script>
 <script src="public/js/utils.js" defer></script>
 <script src="public/js/feedback.js" defer></script>
 <script src="public/js/knowledgeBase.js" defer></script>
@@ -1019,7 +1018,6 @@ if (location.protocol !== 'file:') {
 <script src="public/js/chatbot.js" defer></script>
 <script src="public/js/audioVideo.js" defer></script>
 <script src="public/js/translation.js" defer></script>
-<script src="public/js/chart.js" defer></script>
 <script src="public/js/analytics.js" defer></script>
 <script src="public/js/dailyGuidance.js" defer></script>
 <script>
@@ -1037,7 +1035,6 @@ if (location.protocol !== 'file:') {
       }
     });
 </script>
-<script src="public/js/driver.js" defer></script>
 <script src="public/js/orirun-tour.js" defer></script>
 </body>
 </html>

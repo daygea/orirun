@@ -136,6 +136,34 @@ async function getAIResponse() {
   // replies in the selected language even if the conversation history is in
   // another language (and even if the backend hasn't added it yet).
   const _msgs = chatHistory.slice(-10);
+
+  // GROUNDING: the retrieval pass leaves the most relevant curated entries
+  // in _kbCandidates. The model answers FROM Orírùn's own knowledge where
+  // it applies, and is forbidden from inventing verses either way.
+  const _grounding = Array.isArray(_kbCandidates) ? _kbCandidates : [];
+  if (_grounding.length) {
+    const ctx = _grounding
+      .map((g, i) => `[${i + 1}] ${String(g.text).slice(0, 700)}`)
+      .join("\n\n");
+    _msgs.unshift({
+      role: "system",
+      content:
+        "You are Orírùn's Ifá assistant, specialising in Ifá divination and Yorùbá spirituality.\n\n" +
+        "CURATED ORÍRÙN KNOWLEDGE (primary source):\n\n" + ctx + "\n\n" +
+        "Ground your answer in the curated knowledge above wherever it covers the question, " +
+        "staying faithful to its meaning and terms. If it does not cover the question, say so " +
+        "in one short phrase and answer from general Ifá tradition. Never invent odù verses, " +
+        "quotations, or attributions.",
+    });
+  } else {
+    _msgs.unshift({
+      role: "system",
+      content:
+        "You are Orírùn's Ifá assistant, specialising in Ifá divination and Yorùbá spirituality. " +
+        "This question falls outside Orírùn's curated knowledge base: answer from general Ifá " +
+        "tradition, be plain about uncertainty, and never invent odù verses, quotations, or attributions.",
+    });
+  }
   if (_langName && !/^english$/i.test(_langName)) {
     _msgs.unshift({
       role: "system",
@@ -285,17 +313,87 @@ async function sendMessage(userInput, options = {}) {
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+/* ── Knowledge retrieval v2 ──────────────────────────────────────
+   The old matcher required the user's message to CONTAIN an entire
+   key phrase verbatim ("bi ase pin aye ni igba iwase"), so most of
+   the curated corpus was unreachable and questions fell through to
+   the AI with no grounding at all. Now:
+   • Diacritic folding — "Ọ̀rúnmìlà" and "orunmila" match the same key.
+   • Word-boundary token scoring — "ase" no longer hides in "please".
+   • A confident, clearly-best hit answers in the curated voice,
+     verbatim, media included.
+   • Weak or ambiguous hits are handed to the AI as GROUNDING, so the
+     model synthesizes from Orírùn's own knowledge instead of memory. */
+let _kbIndex = null;
+let _kbCandidates = [];
+
+function normalizeYo(str) {
+  return String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")   // strips tone marks and dot-below
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const _KB_STOP = new Set(["the","a","an","of","in","on","is","are","was","what",
+  "who","how","why","when","which","and","or","to","for","do","does","did","me",
+  "my","i","you","your","it","its","tell","about","please","can","could","would"]);
+
+function _kbTokens(str) {
+  return normalizeYo(str).split(" ").filter((t) => t && !_KB_STOP.has(t));
+}
+
+function _buildKbIndex() {
+  _kbIndex = Object.keys(ifaKnowledgeBase).map((key) => {
+    const phrases = key.split(",").map((p) => normalizeYo(p)).filter(Boolean);
+    const tokens = new Set(phrases.flatMap((p) => p.split(" ")).filter((t) => t && !_KB_STOP.has(t)));
+    return { key, phrases, tokens };
+  });
+}
+
+function _kbEntryPayload(key) {
+  const entry = ifaKnowledgeBase[key];
+  if (!entry || !entry.text) return null;
+  let text = entry.text;
+  if (Array.isArray(text)) text = text[Math.floor(Math.random() * text.length)];
+  return { key, text, media: entry.media || [] };
+}
+
 function checkIfaKnowledgeBase(userMessage) {
-  for (let key in ifaKnowledgeBase) {
-    if (userMessage.includes(key.toLowerCase().trim())) {
-      const entry = ifaKnowledgeBase[key];
-      if (!entry || !entry.text) return null;
-      let text = entry.text;
-      if (Array.isArray(text)) text = text[Math.floor(Math.random() * text.length)];
-      return { text, media: entry.media || [] };
-    }
+  _kbCandidates = [];
+  if (!ifaKnowledgeBase || !Object.keys(ifaKnowledgeBase).length) return null;
+  if (!_kbIndex || _kbIndex.length !== Object.keys(ifaKnowledgeBase).length) _buildKbIndex();
+
+  const inputNorm = " " + normalizeYo(userMessage) + " ";
+  const inputTokens = _kbTokens(userMessage);
+
+  const scored = _kbIndex
+    .map((item) => {
+      let score = 0;
+      for (const p of item.phrases) {
+        if (p && inputNorm.includes(" " + p + " ")) {
+          score += Math.min(8, 2 + p.split(" ").length * 2); // whole keyword phrase present
+        }
+      }
+      for (const t of inputTokens) if (item.tokens.has(t)) score += 1;
+      return { item, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  // Grounding for the AI path: the top three relevant curated entries.
+  _kbCandidates = scored.slice(0, 3).map((x) => _kbEntryPayload(x.item.key)).filter(Boolean);
+  if (!scored.length) return null;
+
+  const top = scored[0], second = scored[1];
+  // Confident direct answer: a real phrase/keyword hit, clearly ahead of
+  // the runner-up → serve the curated text verbatim, media and all.
+  if (top.score >= 4 && (!second || top.score >= second.score * 2)) {
+    return _kbEntryPayload(top.item.key);
   }
-  return null;
+  return null; // ambiguous or weak → let the AI synthesize FROM the candidates
 }
 
 const pageSize = 5;

@@ -422,6 +422,7 @@ async function _shareDailyGuidance() {
   document.body.appendChild(capture);
 
   try {
+    await ensureLib("html2canvas"); // lazy: loads on first share, not at boot
     const canvas = await html2canvas(capture, {
       backgroundColor: "#f0f7f0",
       scale:           2,

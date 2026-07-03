@@ -1,6 +1,9 @@
 let currentTrendView = "daily"; // default
 
 async function showAnalytics() {
+  // Lazy: Chart.js (208 KB) loads only when the admin dashboard opens.
+  try { await ensureLib("chart"); }
+  catch (e) { console.error("Chart.js failed to load:", e); }
   if(isAdminAuthenticated){
   try {
     const preloader = document.getElementById("preloader");
