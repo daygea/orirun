@@ -97,6 +97,8 @@ if (location.protocol !== 'file:') {
 <!-- Preloads -->
 <link rel="preload" href="public/css/bootstrap.css" as="style" onload="this.rel='stylesheet'">
 <link rel="preload" href="public/css/style.css" as="style" onload="this.rel='stylesheet'">
+<link rel="preload" href="public/css/a11y-global.css" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="public/css/a11y-global.css"></noscript>
 <noscript>
   <link rel="stylesheet" href="public/css/bootstrap.css">
   <link rel="stylesheet" href="public/css/style.css">
@@ -1010,6 +1012,7 @@ if (location.protocol !== 'file:') {
 <script src="public/js/feedback.js" defer></script>
 <script src="public/js/knowledgeBase.js" defer></script>
 <script src="public/js/main.js" defer></script>
+<script src="public/js/a11y.js" defer></script>
 <script src="public/js/sync.js" defer></script>
 <script src="public/js/chatbot.js" defer></script>
 <script src="public/js/audioVideo.js" defer></script>

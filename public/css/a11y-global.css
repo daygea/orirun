@@ -1,0 +1,133 @@
+/* ==================================================================
+   ORÍRÙN — Global Standards layer (a11y-global.css)
+   Load LAST, after style.css. Additive and reversible: remove the
+   <link> and the app returns to its previous behaviour.
+
+   This layer deliberately does NOT restyle the app — the v3.x craft
+   layer owns the visual language. It closes the gaps between that
+   design and global accessibility standards (WCAG 2.2 AA):
+
+   1. Text selection restored — users can copy and share their reading.
+   2. Contrast corrections — every text token measured ≥ 4.5:1 on white.
+   3. iOS zoom fix — inputs at 16px so focusing a field no longer
+      auto-zooms the viewport on iPhones.
+   4. Touch targets — primary actions meet the 44px minimum.
+   5. Skip link — keyboard users can jump past the header.
+   6. Forced-colors (Windows High Contrast) survival.
+   ================================================================== */
+
+/* ── 1. Text selection ─────────────────────────────────────────────
+   body{user-select:none} (style.css:23) made every reading, verse,
+   and result uncopyable — a standards failure and a sharing killer.
+   Restore selection globally; keep it off only where selection is
+   noise: buttons, tabs, decorative imagery, and drag targets. */
+body,
+#divinationResult, #result, #divinationResultContainer,
+.dv-card__body, .dv-hero__body, .ase-verse, #extraAse,
+#chatbot-messages, .history-card, .odu-detail__v {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+button, .app-btn, .form-tab, .acc-header, .calculator button,
+.moving-bg, .socials, #chatbot-toggle, .languageBtn,
+.dv-actions__btn, .historyBtn, img {
+  -webkit-user-select: none;
+  user-select: none;
+}
+::selection { background: rgba(15, 123, 61, 0.18); color: inherit; }
+
+/* ── 2. Contrast corrections (measured, not guessed) ───────────────
+   --of-muted #94a09a on white = 2.71:1 → FAILS AA. It is used for
+   real text (.h-index, .num-divider at 11.5px). Retuned to #6a756e
+   = 4.79:1. Gold #b8860b as text = 3.25:1 (large-only); where gold
+   text appears at small sizes, --of-gold-text (#8a6a10 = 5.06:1)
+   is provided. Status colours were pure green/red keywords. */
+:root {
+  --of-muted: #6a756e;              /* was #94a09a — now AA */
+  --of-gold-text: #8a6a10;          /* gold, legible at any size */
+  --of-success: #0a7a3a;            /* 5.44:1 */
+  --of-error: #b3261e;              /* 6.54:1 */
+}
+.status.success { color: var(--of-success); }
+.status.error { color: var(--of-error); }
+
+/* ── 3. iOS focus-zoom fix ─────────────────────────────────────────
+   Mobile Safari zooms the page when a focused input's font-size is
+   below 16px. The craft layer set 15px, so every tap on the name or
+   birthdate field jolted the viewport. 16px stops that, and reads
+   better on every platform. */
+.form-control, #fullname,
+input#birthdate[type="date"], input#birthdate[type="text"],
+select.form-control, textarea.form-control,
+#chatbot-input, #contributionText, #contributorName {
+  font-size: 16px;
+}
+
+/* ── 4. Touch targets — 44px minimum on primary actions ──────────
+   (WCAG 2.5.8 / platform HIG). Scoped to the actions people actually
+   tap in flow; dense secondary controls like the number picker keep
+   their grid but gain padding. */
+#divination-btn, #determine-btn, .app-btn,
+.dv-actions__btn, .historyBtn, .form-tab,
+#chatbot-input-container button,
+.guidance-popup button,
+.admin-dashboard .admin {
+  min-height: 44px;
+}
+.guidance-popup button { padding: 10px 20px; }
+#historyPagination button { min-width: 44px; min-height: 40px; }
+
+/* ── 5. Skip link (target: #app-main, injected by a11y.js) ───────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  background: var(--of-green, #0f7b3d);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 0 0 10px 0;
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-link:focus-visible {
+  left: 0;
+  outline: 2px solid var(--of-gold, #b8860b);
+  outline-offset: 2px;
+}
+
+/* ── 6. Focus visibility on dark/green surfaces ───────────────────
+   The existing gold outline (style.css:2342) is fine on white but
+   thin on the green homage/header surfaces. Thicken there. */
+#chatbot-header button:focus-visible,
+.socials a:focus-visible {
+  outline: 3px solid var(--of-gold-soft, #d9b44a);
+  outline-offset: 2px;
+}
+
+/* ── 7. Forced colors (Windows High Contrast) ─────────────────────
+   Cards and buttons lose their backgrounds under forced-colors;
+   keep their boundaries visible so the layout still reads. */
+@media (forced-colors: active) {
+  #main-content.ifaDetails, #numerology-section.numerology,
+  .dv-card, .dv-hero, .history-card, .modal-content, .guidance-popup {
+    border: 1px solid CanvasText;
+  }
+  .app-btn, #divination-btn, #determine-btn, .dv-actions__btn {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* ── 8. Long-form reading comfort ─────────────────────────────────
+   Reading measure: interpretation prose is capped at a comfortable
+   line length inside wide cards without changing the card layout. */
+.dv-card__body p, .dv-hero__body p, #extraAse p, .ase-verse p {
+  max-width: 68ch;
+}
+
+/* ── 9. Reduced transparency preference ──────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+  #new-preloader { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
