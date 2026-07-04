@@ -265,6 +265,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab is-active" data-area="content" onclick="showArea('content')">Content</button>
       <button class="area-tab" data-area="dashboard" onclick="showArea('dashboard')">Dashboard</button>
       <button class="area-tab" data-area="logs" onclick="showArea('logs')">Logs</button>
+      <button class="area-tab" data-area="verses" onclick="showArea('verses')">Verses</button>
     </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
@@ -330,6 +331,17 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
       <pre id="logDetailBody"></pre>
     </div>
+  </section>
+
+  <section class="ops" id="area-verses" aria-label="Babaláwo contributions">
+    <h2>Babaláwo Contributions · verse review</h2>
+    <p style="font-size:13px;opacity:.8;margin:-4px 0 12px;max-width:70ch">
+      Verses and teachings submitted by babaláwos and ìyánífá. Promote a submission to a
+      <strong>draft verse</strong>, then verify it in the Content Studio's <em>eseIfa</em> collection —
+      where a named elder signs it off. Nothing appears to app users until that verification.
+    </p>
+    <div class="log-count" id="contribNote" style="margin-bottom:10px"></div>
+    <div id="contribList" style="display:flex;flex-direction:column;gap:12px"></div>
   </section>
 
   <main>
@@ -708,9 +720,104 @@ window.showArea = function (area) {
   });
   document.getElementById("area-dashboard").style.display = area === "dashboard" ? "flex" : "none";
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
+  document.getElementById("area-verses").style.display = area === "verses" ? "flex" : "none";
   if (area === "dashboard") { loadDashboard(); loadBackups(); }
   if (area === "logs" && !logState.loadedOnce) loadLogs(logState.type);
+  if (area === "verses") loadContributions();
 };
+
+/* ── Babaláwo contribution review queue ──────────────────────── */
+async function loadContributions() {
+  const list = $("contribList");
+  const note = $("contribNote");
+  list.innerHTML = '<div style="opacity:.6">Loading…</div>';
+  try {
+    const res = await api("/verses/pending-contributions");
+    if (res.status === 401 || res.status === 403) return showAuth();
+    const d = await res.json();
+    const rows = d.contributions || [];
+    const pending = rows.filter((r) => r.status === "pending").length;
+    note.textContent = rows.length + " total · " + pending + " awaiting review";
+    if (!rows.length) { list.innerHTML = '<div style="opacity:.6">No babaláwo contributions yet.</div>'; return; }
+    list.innerHTML = "";
+    for (const c of rows) {
+      const card = document.createElement("div");
+      card.className = "panel";
+      const statusColor = c.status === "pending" ? "#b8860b" : c.status === "promoted" ? "#0f7b3d" : "#8a8a8a";
+      const lines = String(c.text || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+      card.innerHTML =
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">' +
+          '<strong style="font-size:15px">' + escapeHtml(c.name || "Anonymous") +
+            (c.contributorTitle ? ' <span style="opacity:.7;font-weight:400">· ' + escapeHtml(c.contributorTitle) + '</span>' : '') +
+          '</strong>' +
+          '<span style="font-size:12px;font-weight:600;color:' + statusColor + '">' + escapeHtml(c.status) + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;margin:6px 0;opacity:.85">' +
+          '<strong>Odù:</strong> ' + escapeHtml(c.odu || "—") +
+          (c.lineage ? ' &nbsp;·&nbsp; <strong>Ilé:</strong> ' + escapeHtml(c.lineage) : '') +
+          (c.town ? ' &nbsp;·&nbsp; <strong>Town:</strong> ' + escapeHtml(c.town) : '') +
+        '</div>' +
+        '<div style="font-size:14px;line-height:1.6;background:#faf8f0;border-left:3px solid #b8860b;border-radius:6px;padding:10px 12px;margin:8px 0">' +
+          lines.map((l) => '<div>' + escapeHtml(l) + '</div>').join("") +
+        '</div>' +
+        '<div style="font-size:12px;opacity:.7;margin-bottom:8px">Consent to credit: ' + (c.consent ? "yes" : "no") +
+          ' &nbsp;·&nbsp; ' + fmtDate(c.timestamp) +
+          (c.promotedVerseId ? ' &nbsp;·&nbsp; verse: <code>' + escapeHtml(c.promotedVerseId) + '</code>' : '') + '</div>';
+
+      if (c.status === "pending") {
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+        const promote = document.createElement("button");
+        promote.className = "btn btn-green";
+        promote.textContent = "Promote to draft verse →";
+        promote.onclick = () => promoteContribution(c.id, promote);
+        const decline = document.createElement("button");
+        decline.className = "btn btn-ghost";
+        decline.textContent = "Set aside";
+        decline.onclick = () => declineContribution(c.id, decline);
+        actions.appendChild(promote); actions.appendChild(decline);
+        card.appendChild(actions);
+      }
+      list.appendChild(card);
+    }
+  } catch (err) {
+    list.innerHTML = '<div style="color:#c0392b">Failed to load: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+async function promoteContribution(id, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Promoting…"; }
+  try {
+    const res = await api("/verses/promote-stored/" + encodeURIComponent(id), { method: "POST" });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Promotion failed");
+    toast("Promoted to draft verse: " + d.id);
+    loadContributions();
+  } catch (err) {
+    toast(err.message, true);
+    if (btn) { btn.disabled = false; btn.textContent = "Promote to draft verse →"; }
+  }
+}
+
+async function declineContribution(id, btn) {
+  if (btn) { btn.disabled = true; }
+  try {
+    const res = await api("/verses/decline-contribution/" + encodeURIComponent(id), { method: "POST" });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Failed");
+    toast("Set aside.");
+    loadContributions();
+  } catch (err) {
+    toast(err.message, true);
+    if (btn) { btn.disabled = false; }
+  }
+}
+
+function escapeHtml(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 /* ── Dashboard ── */
 async function loadDashboard() {

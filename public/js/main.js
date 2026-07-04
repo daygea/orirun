@@ -740,6 +740,7 @@ const performUserDivination = async (
             <p data-translate>Special appreciation is extended to all Babalawo, for their publicly
               shared teachings and insights, as well as to Dunad Solutions Limited and the Aminat
               Olanbiwoninu Kadri Foundation for their invaluable support.</p>
+            <p style="font-size:0.92em;line-height:1.55;" data-translate>Are you a babaláwo or ìyánífá? <a href="#" onclick="openBabalawoContribution(); return false;" style="color:var(--primary,#0f7b3d);font-weight:600;text-decoration:underline;">Contribute a verse or teaching</a> — credited to you by name once a verifying elder has reviewed it.</p>
             <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;" data-translate>
               This content is inspired by collective Ifá traditions, scholarly works, and community-preserved
               teachings, shared for educational purposes only.
