@@ -129,16 +129,49 @@
     if (!bannerEl) return;
     bannerEl.style.transform = "translateY(-100%)";
   }
+  // Is a Service Worker actually in control? Only then can we truthfully
+  // promise that previously-opened readings work offline. Over file://,
+  // or before the SW activates, this is false and we don't over-promise.
+  function swAvailable() {
+    return typeof navigator !== "undefined" &&
+           "serviceWorker" in navigator &&
+           !!navigator.serviceWorker.controller;
+  }
+
+  // ── Real connectivity, inferred from actual request outcomes ──
+  // navigator.onLine is unreliable (it reports "online" for a router with
+  // no internet, and these logs show it flapping). So we track a "reachable"
+  // state that a successful API call sets true and a network-failed call
+  // sets false. The online/offline events are only hints that trigger a
+  // re-evaluation — they never decide the banner on their own.
+  var reachable = null;   // null = unknown yet
+  function markReachable() {
+    var was = reachable;
+    reachable = true;
+    if (was !== true) { updateBanner(); flushQueue(); }
+    else if (readQueue().length) flushQueue();
+  }
+  function markUnreachable() {
+    reachable = false;
+    updateBanner();
+  }
+
   function updateBanner() {
     var queued = readQueue().length;
-    if (navigator.onLine === false) {
+    // Treat as offline only when we've actually SEEN a failure, or the
+    // browser is certain it's offline. Unknown (null) shows nothing.
+    var offline = reachable === false || navigator.onLine === false;
+    if (offline) {
+      var tail = swAvailable()
+        ? " Readings you've already opened still work."
+        : "";                                   // don't promise cache we don't have
       showBanner(
         queued
-          ? "You're offline — " + queued + " item" + (queued > 1 ? "s" : "") + " will sync when you reconnect."
-          : "You're offline — readings you've opened still work.",
+          ? "You're offline — " + queued + " item" + (queued > 1 ? "s" : "") + " will sync when you reconnect." + tail
+          : "You're offline." + (tail || " Some features need a connection."),
         "#8a6a10"
       );
-    } else if (queued) {
+    } else if (queued && reachable === true) {
       showBanner("Back online — syncing " + queued + " item" + (queued > 1 ? "s" : "") + "…", "#0f7b3d");
     } else {
       hideBanner();
@@ -146,21 +179,56 @@
   }
 
   /* ── offline-aware guard for online-only features (chat, translate) ─
-     Exposed so the chatbot/translation can ask before firing a request
-     that can't be cached, and show an honest message instead of a spinner
-     that never resolves. */
+     Driven by the same real-outcome signal, not navigator.onLine alone. */
   window.orirunIsOnline = function () {
+    if (reachable === false) return false;
     return navigator.onLine !== false;
   };
   window.orirunOfflineNotice = function (feature) {
     return (feature || "This feature") +
-      " needs an internet connection. Please reconnect and try again — " +
-      "readings you've already opened still work offline.";
+      " needs an internet connection. Please reconnect and try again" +
+      (swAvailable() ? " — readings you've already opened still work offline." : ".");
   };
 
+  /* ── Observe real fetch outcomes to drive connectivity ──────────
+     config.js has already overridden window.fetch (server failover +
+     wake). We wrap that once more, transparently, to learn whether calls
+     actually succeed. A resolved response → reachable; a network reject
+     → unreachable. This is what makes the banner clear the moment real
+     connectivity returns, and appear the moment it truly drops — instead
+     of trusting the flaky navigator.onLine flag. */
+  function wrapFetchObserver() {
+    if (typeof window.fetch !== "function" || window.__fetchObserved) return true;
+    var inner = window.fetch;
+    window.fetch = function (resource, options) {
+      var p = inner.apply(this, arguments);
+      if (p && typeof p.then === "function") {
+        p.then(function (res) {
+          // A real HTTP response (even 4xx/5xx) means the network reached
+          // the server — that's "online". Only network rejects are offline.
+          markReachable();
+          return res;
+        }, function (err) {
+          markUnreachable();
+          throw err;
+        });
+      }
+      return p;
+    };
+    window.__fetchObserved = true;
+    return true;
+  }
+
   /* ── wiring ─────────────────────────────────────────────────── */
-  window.addEventListener("online", function () { updateBanner(); flushQueue(); });
-  window.addEventListener("offline", updateBanner);
+  // online/offline events are hints only: on "online" we re-check by
+  // letting the next real request set the state; we optimistically clear
+  // a hard-offline and try to flush. On "offline" we show it immediately.
+  window.addEventListener("online", function () {
+    if (reachable === false) reachable = null;   // let a real call re-confirm
+    updateBanner();
+    flushQueue();
+  });
+  window.addEventListener("offline", function () { markUnreachable(); });
 
   function boot() {
     // capture logSilently (defined in main.js); retry briefly if load
@@ -171,6 +239,7 @@
         if (wrapLogSilently() || ++tries > 20) clearInterval(iv);
       }, 100);
     }
+    wrapFetchObserver();
     updateBanner();
     // flush anything left from a previous session, once, on startup
     setTimeout(flushQueue, 2500);
