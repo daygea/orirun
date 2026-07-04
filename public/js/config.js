@@ -185,10 +185,12 @@ const fetchWithTimeout = (url, options = {}, timeout = 12000) => {
 };
 
 const checkServer = async (url) => {
+  // Offline → no server is reachable; don't wait out the timeout.
+  if (navigator.onLine === false) return null;
   try {
     const res = await nativeFetch(`${url}/api/ping`, {
       cache: "no-store",
-      signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined
+      signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined
     });
     return res.ok ? url : null;
   } catch {
@@ -261,6 +263,11 @@ async function wakeServer(targetUrl) {
   // Local server needs no wake-up
   if (isLocalRequest((targetUrl || SERVER_URL) + "/")) return true;
 
+  // Fail fast when the browser is certain there's no connection — don't
+  // spend 30s "waking" a server we can't possibly reach. The request that
+  // follows will fail immediately and the offline UI kicks in at once.
+  if (navigator.onLine === false) return false;
+
   // Reuse in-flight promise so concurrent callers share one loop
   if (wakingServer) return wakingServer;
 
@@ -268,12 +275,19 @@ async function wakeServer(targetUrl) {
   // function that resolves the outer promise instead.
   wakingServer = new Promise((resolve) => {
     (async () => {
-    const maxAttempts = 6;
+    // Fewer attempts, each with its own short timeout so a hung ping can't
+    // stall the loop, and a shorter wait between tries. Total worst case
+    // ~3 × (3s ping + 2s wait) ≈ 15s for a genuinely cold Render server,
+    // versus the old 30s — and effectively instant when actually offline.
+    const maxAttempts = 3;
 
     for (let i = 0; i < maxAttempts; i++) {
+      // If the connection drops mid-loop, stop immediately.
+      if (navigator.onLine === false) break;
       try {
         const res = await nativeFetch(`${SERVER_URL}/api/ping`, {
-          cache: "no-store"
+          cache: "no-store",
+          signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined
         });
         if (res.ok) {
           console.log("🟢 Server awake");
@@ -282,8 +296,10 @@ async function wakeServer(targetUrl) {
         }
       } catch {}
 
-      console.log("⏳ Waking server...");
-      await new Promise(r => setTimeout(r, 5000));
+      if (i < maxAttempts - 1) {
+        console.log("⏳ Waking server...");
+        await new Promise(r => setTimeout(r, 2000));
+      }
     }
 
     wakingServer = null;
@@ -310,11 +326,13 @@ window.fetch = async function (resource, options = {}) {
   try {
     return await fetchWithTimeout(resource, options, 12000);
   } catch (err) {
-    // If it truly fails, now treat it as offline
-    if (!local) {
+    // When the browser knows it's offline, don't run the slow recovery
+    // path (server re-check + 2s wait + retry) — there's nothing to switch
+    // to. Fail now so the caller can show the offline state immediately.
+    if (!local && navigator.onLine !== false) {
       await updateActiveServer();
       console.warn("Retrying request against:", SERVER_URL);
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise(r => setTimeout(r, 1000));
       return fetchWithTimeout(resource, options, 12000);
     }
     throw err;

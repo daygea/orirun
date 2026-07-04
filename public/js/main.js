@@ -903,20 +903,20 @@ window.onload = async () => {
 
   showLoading(currentLang);
 
+  // Reveal the app quickly. We wait for the server only briefly (it may be
+  // cold, flaky, or absent) — capped at 6s instead of 20s — then show the
+  // shell regardless. Dropdowns and other data populate in the background,
+  // so the user sees and can interact with the app immediately rather than
+  // staring at a spinner while the network resolves.
   await Promise.race([
     serverReady,
-    new Promise(resolve => setTimeout(resolve, 20000))
+    new Promise(resolve => setTimeout(resolve, 6000))
   ]);
 
-  try {
-    await populateDropdowns();
-  } catch (err) {
-    console.warn("⚠ Dropdown population failed:", err);
-  }
-
-  // Hide the preloader and show the app
+  // Show the app shell NOW — don't block the reveal on dropdown data.
   loadingScreen.style.display = "none";
   preloader.style.display     = "none";
+  printArea.style.display     = "block";
 
   const bdInput = document.getElementById("birthdate");
   if (bdInput) {
@@ -926,7 +926,10 @@ window.onload = async () => {
   }
 
   generateCircularButtons();
-  printArea.style.display = "block";
+
+  // Populate dropdowns in the background; failures don't hold up the UI.
+  populateDropdowns().catch((err) =>
+    console.warn("⚠ Dropdown population failed:", err));
 
 
   window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
