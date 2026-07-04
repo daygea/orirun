@@ -5,7 +5,7 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 // instead of the previously cached ones.
 // CI stamps this on every push to main (date-shortsha). Manual deploys
 // can still edit it by hand; the workflow overwrites it either way.
-const BUILD           = "2026-07-03-c";
+const BUILD           = "2026-07-04-a";
 const APP_SHELL_CACHE = "orirun-shell-v2";
 const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";
@@ -28,7 +28,8 @@ workbox.precaching.precacheAndRoute([
   { url: "./public/js/utils.js",       revision: BUILD },
   { url: "./public/js/babalawo-contribution.js", revision: BUILD },
   { url: "./public/js/orirun-tour.js", revision: BUILD },
-  { url: "./public/js/dailyGuidance.js", revision: BUILD }
+  { url: "./public/js/dailyGuidance.js", revision: BUILD },
+  { url: "./public/js/offline-resilience.js", revision: BUILD }
 ]);
 
 // ---------------------------------------------------------
@@ -76,6 +77,48 @@ workbox.routing.registerRoute(
       {
         handlerDidError: () => caches.match(FALLBACK_IMG)
       }
+    ]
+  })
+);
+
+// ---------------------------------------------------------
+// 3b. Read-only API data — NetworkFirst with cached fallback
+//     Makes divination / numerology / Odù data survive flaky or
+//     dropped connections: try the network briefly, else serve the
+//     last good response from cache. Only cache-safe GET data paths.
+// ---------------------------------------------------------
+const API_DATA_CACHE = `${RUNTIME_CACHE}-apidata`;
+const CACHEABLE_API = [
+  "/api/odu",
+  "/api/numerology",
+  "/api/verses",
+  "/api/knowledgebase",
+  "/api/ifafigures",
+  "/api/free-odus",
+  "/api/planetary",
+  "/api/secure-config",
+  "/api/paystack-key"
+];
+
+function isCacheableApi(url) {
+  let path;
+  try { path = new URL(url).pathname; } catch { return false; }
+  return CACHEABLE_API.some((p) => path === p || path.startsWith(p + "/"));
+}
+
+workbox.routing.registerRoute(
+  ({ url, request }) => request.method === "GET" && isCacheableApi(url.href),
+  new workbox.strategies.NetworkFirst({
+    cacheName: API_DATA_CACHE,
+    networkTimeoutSeconds: 6,          // weak signal → fall back to cache fast
+    plugins: [
+      new workbox.expiration.ExpirationPlugin({
+        maxEntries:    300,             // plenty of Odù + numerology entries
+        maxAgeSeconds: 30 * 24 * 60 * 60
+      }),
+      new workbox.cacheableResponse.CacheableResponsePlugin({
+        statuses: [0, 200]              // 0 = opaque cross-origin (Render host)
+      })
     ]
   })
 );

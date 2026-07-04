@@ -174,7 +174,7 @@ if (cachedServer && SERVER_CANDIDATES.includes(cachedServer)) {
  *  fetchWithTimeout
  *  AI chat requests are never aborted (OpenAI can be slow).
  * ───────────────────────────────────────────────────────────── */
-const fetchWithTimeout = (url, options = {}, timeout = 45000) => {
+const fetchWithTimeout = (url, options = {}, timeout = 12000) => {
   if (url.includes("/api/ai/chat")) {
     return nativeFetch(url, options);
   }
@@ -308,14 +308,14 @@ window.fetch = async function (resource, options = {}) {
   }
 
   try {
-    return await fetchWithTimeout(resource, options, 45000);
+    return await fetchWithTimeout(resource, options, 12000);
   } catch (err) {
     // If it truly fails, now treat it as offline
     if (!local) {
       await updateActiveServer();
       console.warn("Retrying request against:", SERVER_URL);
       await new Promise(r => setTimeout(r, 2000));
-      return fetchWithTimeout(resource, options, 45000);
+      return fetchWithTimeout(resource, options, 12000);
     }
     throw err;
   }

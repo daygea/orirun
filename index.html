@@ -73,7 +73,7 @@
 <meta name="classification" content="Spirituality">
 <meta name="theme-color" content="#2e7d32">
 
-<link rel="manifest" href="/public/manifest.json">
+<!-- <link rel="manifest" href="/public/manifest.json"> -->
 <script>
 if (location.protocol !== 'file:') {
   var link = document.createElement('link');
@@ -647,6 +647,11 @@ if (location.protocol !== 'file:') {
              onclick="showContributionModal()">
             <span data-translate>Share Insight</span>
           </a>
+          |
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="openBabalawoContribution(); return false;">
+            <span data-translate>Babaláwo Contribution</span>
+          </a>
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="orirun.restartTour()">
@@ -748,16 +753,18 @@ if (location.protocol !== 'file:') {
             <button class="app-btn customClose"
               style="font-size:14px !important;color:green;margin-top:15px;" data-translate>Close</button>
             <h3 data-translate>Share Insight</h3>
+            <p id="babalawoIntro" style="display:none;font-size:0.92em;color:var(--of-ink-soft);line-height:1.55;margin-top:-4px;" data-translate>Àṣẹ. If you are a babaláwo or ìyánífá, you may contribute a verse or teaching here. Your name and lineage travel with it, and it is credited to you once a verifying elder has reviewed it. Nothing is published under your name without that review.</p>
             <div class="mb-3">
               <label data-translate>Full Name</label>
               <input type="text" id="contributorName" data-translate-attr="placeholder"
-                placeholder="e.g. Aminat Ola Kadri"
+                placeholder="e.g. Princess Aminat Ola Kadri"
                 class="form-control allow-paste">
             </div>
             <div class="mb-3">
               <label data-translate>Select Category</label>
               <select id="contributionCategory" class="form-control">
                 <option value="General">General</option>
+                <option value="Babalawo">Babaláwo / Ìyánífá (verse or teaching)</option>
                 <option value="Ifa">Ifa</option>
                 <option value="Numerology">Numerology</option>
                 <option value="Astrology">Astrology</option>
@@ -772,6 +779,34 @@ if (location.protocol !== 'file:') {
                 <label data-translate>Link (optional)</label>
                 <input type="text" id="ifaMedia" class="form-control allow-paste">
               </div>
+            </div>
+            <!-- Babaláwo lineage fields: shown only for the Babaláwo category.
+                 These carry the provenance a verifying elder needs downstream. -->
+            <div id="babalawoFields" style="display:none;">
+              <div class="mb-3">
+                <label data-translate>Odù this verse or teaching belongs to</label>
+                <input type="text" id="babOdu" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="e.g. Èjì Ogbè, Ọ̀yẹ̀kú Méjì">
+              </div>
+              <div class="mb-3">
+                <label data-translate>Your title</label>
+                <input type="text" id="babTitle" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="e.g. Babaláwo, Ìyánífá, Àwíṣẹ">
+              </div>
+              <div class="mb-3">
+                <label data-translate>Ilé / compound or lineage (optional)</label>
+                <input type="text" id="babLineage" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="e.g. Ilé Ọ̀ṣun, Ìbàdàn lineage">
+              </div>
+              <div class="mb-3">
+                <label data-translate>Town or region (optional)</label>
+                <input type="text" id="babTown" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="e.g. Abẹ́òkúta, Nigeria">
+              </div>
+              <label style="display:flex;gap:8px;align-items:flex-start;font-size:0.9em;line-height:1.5;">
+                <input type="checkbox" id="babConsent" style="margin-top:3px;flex-shrink:0;">
+                <span data-translate>I confirm this teaching is shared for the benefit of all, and I consent to being credited by name as its contributor once a verifying elder has reviewed it.</span>
+              </label>
             </div>
             <div class="mb-3">
               <label data-translate>Contribution</label>
@@ -1010,9 +1045,11 @@ if (location.protocol !== 'file:') {
      and axios were removed outright — nothing referenced them. -->
 <script src="public/js/lazy-libs.js" defer></script>
 <script src="public/js/utils.js" defer></script>
+<script src="public/js/babalawo-contribution.js" defer></script>
 <script src="public/js/feedback.js" defer></script>
 <script src="public/js/knowledgeBase.js" defer></script>
 <script src="public/js/main.js" defer></script>
+<script src="public/js/offline-resilience.js" defer></script>
 <script src="public/js/a11y.js" defer></script>
 <script src="public/js/sync.js" defer></script>
 <script src="public/js/chatbot.js" defer></script>

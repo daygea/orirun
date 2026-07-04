@@ -202,6 +202,14 @@ async function getBotResponse(userInput) {
     if (possibleResponses.length === 1)  return possibleResponses[0];
     if (possibleResponses.length > 1)
         return `I found multiple possible answers. Can you clarify?\n\n- ${possibleResponses.join("\n- ")}`;
+    // The assistant's AI reply is a live call — it can't be served offline.
+    // If there's no cached knowledge-base match and we're offline, say so
+    // honestly instead of leaving the user on a spinner that never resolves.
+    if (typeof window.orirunIsOnline === "function" && !window.orirunIsOnline()) {
+        return (typeof window.orirunOfflineNotice === "function")
+            ? window.orirunOfflineNotice("The assistant")
+            : "The assistant needs an internet connection. Please reconnect and try again.";
+    }
     return await getAIResponse(userInput);
 }
 
