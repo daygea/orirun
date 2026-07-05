@@ -6,11 +6,15 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#2e7d32",
   "dir": "ltr",
-  "categories": ["lifestyle", "education", "spirituality"],
+  "categories": [
+    "lifestyle",
+    "education",
+    "spirituality"
+  ],
   "icons": [
     {
       "src": "public/img/icons/icon-192.png",
