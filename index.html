@@ -520,7 +520,7 @@ if (location.protocol !== 'file:') {
         </section>
         <div id="paymentModal" class="modal" role="dialog" aria-modal="true" aria-label="Payment" style="display:none;">
           <div class="modal-content">
-            <span class="close-btn" onclick="closePaymentModal()">&times;</span>
+            <span class="close-btn" role="button" tabindex="0" aria-label="Close" onclick="closePaymentModal()">&times;</span>
             <h3><span data-translate>Pay ₦1000 to Unlock</span></h3>
             <p><span data-translate>This Odu requires payment to access. Click below to proceed.</span></p>
             <button id="payButton" onclick="processPayment()"><span data-translate>Pay ₦1000</span></button>
@@ -727,7 +727,7 @@ if (location.protocol !== 'file:') {
         <!-- ── Modals ── -->
         <div id="termsModal" class="termsModal" role="dialog" aria-modal="true" aria-label="Terms and Policy" style="display:none">
           <div class="termsModal-content">
-            <button class="app-btn termsClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
+            <button class="app-btn termsClose" aria-label="Close" data-translate>Close</button>
             <div id="termsContent">
               <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
             </div>
@@ -736,7 +736,7 @@ if (location.protocol !== 'file:') {
 
         <div id="aboutModal" class="aboutModal" role="dialog" aria-modal="true" aria-label="About" style="display:none">
           <div class="aboutModal-content">
-            <button class="app-btn aboutClose" style="font-size:14px !important;color:green;margin-top:5px;" data-translate>Close</button>
+            <button class="app-btn aboutClose" aria-label="Close" data-translate>Close</button>
             <div id="aboutContent">
               <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
             </div>

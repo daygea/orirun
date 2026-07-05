@@ -40,7 +40,10 @@ document.addEventListener("DOMContentLoaded", function () {
    *     element (they are on the right edge so this is fine).
    */
   function posLeft() {
-    return "bottom";  // ← always centred below, works on every screen size
+    // The language button sits at the top-LEFT corner. Anchor the popover
+    // just below it, arrow on the right, so the card body opens rightward
+    // into the viewport and stays attached to the button on all screens.
+    return "bottom-right";
   }
 
   function posRight1() {
@@ -376,6 +379,29 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
           window.orFormTab("discover");
         }
+      },
+
+      /* Cross-device safety net: after Driver positions the popover, make
+         sure it hasn't landed off-screen (which can happen for elements at
+         the very edges — the top-left language button, right-edge chat
+         toggle, etc.). If any edge overflows, nudge the card back into the
+         viewport with an 8px margin. Runs on every step, every screen. */
+      onHighlighted: function () {
+        setTimeout(function () {
+          var pop = document.getElementById("driver-popover-item");
+          if (!pop) return;
+          var m = 8;
+          var vw = window.innerWidth, vh = window.innerHeight;
+          var r = pop.getBoundingClientRect();
+          var left = r.left, top = r.top;
+          if (r.right > vw - m) left = vw - r.width - m;
+          if (r.left < m)       left = m;
+          if (r.bottom > vh - m) top = vh - r.height - m;
+          if (r.top < m)         top = m;
+          // Only override if we actually needed to move it.
+          if (left !== r.left) { pop.style.left = Math.max(m, left) + "px"; }
+          if (top  !== r.top)  { pop.style.top  = Math.max(m, top)  + "px"; }
+        }, 30);
       },
 
       onReset: function () {

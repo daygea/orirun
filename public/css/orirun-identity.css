@@ -228,14 +228,18 @@ body.bg-ready::before { opacity: 1; }
 }
 
 /* ══════════════════════════════════════════════════════════════
-   MODAL & BUTTON POLISH (v6) — standards-aligned, on-brand
-   Refines the Share Insight (and any .custom-modal) dialog and the
-   primary/close buttons: smooth entrance, scrollable body on mobile,
-   focus-visible rings, brass keyline. Appended last so it wins.
+   UNIFIED MODAL & BUTTON POLISH (v7)
+   One consistent, standards-aligned treatment for EVERY modal in the
+   app — Share Insight, Payment, Terms, About, Audio, Video, Ifá guide,
+   onboarding. Grouped selectors cover each family's class names.
+   Appended last so it wins over legacy per-modal rules.
    ══════════════════════════════════════════════════════════════ */
 
-/* Backdrop: soft blur + fade so it feels layered, not a flat black wash */
-.custom-modal {
+/* ── Backdrops: soft blurred scrim + fade-in ── */
+.custom-modal,
+#paymentModal.modal,
+.termsModal,
+.aboutModal {
   background: rgba(20, 32, 24, 0.55) !important;
   -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
@@ -244,9 +248,11 @@ body.bg-ready::before { opacity: 1; }
 }
 @keyframes or-modal-fade { from { opacity: 0; } to { opacity: 1; } }
 
-/* Dialog card: paper surface, brass top rule, gentle rise-in, and a
-   scrollable body so a tall form never overflows the viewport on mobile. */
-.custom-modal-content {
+/* ── Dialog cards: paper surface, brass top-rule, rise-in, scrollable ── */
+.custom-modal-content,
+#paymentModal .modal-content,
+.termsModal-content,
+.aboutModal-content {
   background: #fffef9 !important;
   border: 1px solid rgba(20,40,30,.12) !important;
   border-top: 3px solid var(--or-brass, #b8860b) !important;
@@ -265,22 +271,35 @@ body.bg-ready::before { opacity: 1; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 
-.custom-modal-content h3 {
+/* Terms & About hold long scrollable text — give them more room */
+.termsModal-content,
+.aboutModal-content { max-width: 680px !important; }
+
+/* ── Headings inside modals ── */
+.custom-modal-content h3,
+#paymentModal .modal-content h3,
+.termsModal-content h1, .termsModal-content h2, .termsModal-content h3,
+.aboutModal-content h1, .aboutModal-content h2, .aboutModal-content h3 {
   font-family: 'Source Serif 4', Georgia, serif !important;
   color: #0c3d24 !important;
-  font-size: 21px !important;
   margin: 2px 0 14px !important;
 }
+.custom-modal-content h3,
+#paymentModal .modal-content h3 { font-size: 21px !important; }
 
-/* Close: from a stray text link to a proper icon button, top-right,
-   with a real hit target and hover state. */
-.custom-modal-content .customClose {
+/* ── Close buttons: consistent icon button, top-right ──
+   Covers .customClose, .termsClose, .aboutClose (text-hidden → ✕ glyph)
+   and .close-btn (the &times; span in payment). ── */
+.custom-modal-content .customClose,
+.termsModal-content .termsClose,
+.aboutModal-content .aboutClose,
+#paymentModal .modal-content .close-btn {
   position: absolute !important;
   top: 12px !important; right: 12px !important;
   width: 40px; height: 40px;
   margin: 0 !important; padding: 0 !important;
   display: flex; align-items: center; justify-content: center;
-  font-size: 0 !important;              /* hide the word, show a glyph */
+  font-size: 0 !important;
   background: transparent !important;
   border: 1px solid transparent !important;
   border-radius: 10px !important;
@@ -288,17 +307,26 @@ body.bg-ready::before { opacity: 1; }
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
-.custom-modal-content .customClose::before {
+.custom-modal-content .customClose::before,
+.termsModal-content .termsClose::before,
+.aboutModal-content .aboutClose::before,
+#paymentModal .modal-content .close-btn::before {
   content: "✕";
   font-size: 18px; line-height: 1;
 }
-.custom-modal-content .customClose:hover {
+/* .close-btn already shows a &times; glyph — hide it so ::before isn't doubled */
+#paymentModal .modal-content .close-btn { text-indent: -9999px; overflow: hidden; }
+#paymentModal .modal-content .close-btn::before { text-indent: 0; position: absolute; }
+.custom-modal-content .customClose:hover,
+.termsModal-content .termsClose:hover,
+.aboutModal-content .aboutClose:hover,
+#paymentModal .modal-content .close-btn:hover {
   background: #f1efe7 !important;
   color: #0c3d24 !important;
   border-color: rgba(20,40,30,.14) !important;
 }
 
-/* Form controls: comfortable, consistent, 16px to prevent iOS zoom */
+/* ── Form controls across modals ── */
 .custom-modal-content .form-control {
   border: 1px solid rgba(20,40,30,.18) !important;
   border-radius: 10px !important;
@@ -320,8 +348,9 @@ body.bg-ready::before { opacity: 1; }
 }
 .custom-modal-content .mb-3 { margin-bottom: 15px !important; }
 
-/* Primary submit button: solid, tactile, full-width for a clear CTA */
-.custom-modal-content .btn.btn-primary {
+/* ── Primary buttons: Share Insight Submit + Payment Pay ── */
+.custom-modal-content .btn.btn-primary,
+#paymentModal .modal-content #payButton {
   background: #0f7b3d !important;
   border: none !important;
   border-radius: 11px !important;
@@ -334,24 +363,470 @@ body.bg-ready::before { opacity: 1; }
   box-shadow: 0 4px 12px rgba(15,123,61,.24) !important;
   transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
 }
-.custom-modal-content .btn.btn-primary:hover {
+.custom-modal-content .btn.btn-primary:hover,
+#paymentModal .modal-content #payButton:hover {
   background: #0c6a34 !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(15,123,61,.30) !important;
 }
-.custom-modal-content .btn.btn-primary:active { transform: translateY(0); }
-.custom-modal-content .btn.btn-primary:disabled {
+.custom-modal-content .btn.btn-primary:active,
+#paymentModal .modal-content #payButton:active { transform: translateY(0); }
+.custom-modal-content .btn.btn-primary:disabled,
+#paymentModal .modal-content #payButton:disabled {
   opacity: .65; cursor: not-allowed; transform: none; box-shadow: none !important;
 }
 
-/* Accessible focus ring for keyboard users across modal controls */
+/* ── Secondary / cancel buttons ── */
+#paymentModal .modal-content .cancel-btn {
+  background: transparent !important;
+  border: 1px solid rgba(20,40,30,.2) !important;
+  border-radius: 11px !important;
+  color: #33463b !important;
+  font-weight: 600 !important;
+  padding: 11px 20px !important;
+  min-height: 46px;
+  width: 100%;
+  margin-top: 9px;
+  transition: background .15s ease, border-color .15s ease;
+}
+#paymentModal .modal-content .cancel-btn:hover {
+  background: #f1efe7 !important;
+  border-color: rgba(20,40,30,.32) !important;
+}
+
+/* ── Audio & Video modals: card treatment + a real close button ──
+   These are inline-styled; we override key surface props and restyle
+   the green close button to match. Kept centered and responsive. ── */
+#audioModal, #videoModal {
+  border: 1px solid rgba(20,40,30,.14) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 48px rgba(15,45,30,.28) !important;
+  background: #fffef9 !important;
+  animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
+}
+#audioModal button, #videoModal button {
+  background: #0f7b3d !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 9px !important;
+  padding: 7px 14px !important;
+  min-height: 40px;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+#audioModal button:hover, #videoModal button:hover { background: #0c6a34 !important; }
+
+/* ── Accessible focus rings across all modal controls ── */
 .custom-modal-content .form-control:focus-visible,
 .custom-modal-content .btn:focus-visible,
-.custom-modal-content .customClose:focus-visible {
+.custom-modal-content .customClose:focus-visible,
+.termsModal-content .termsClose:focus-visible,
+.aboutModal-content .aboutClose:focus-visible,
+#paymentModal .modal-content .close-btn:focus-visible,
+#paymentModal .modal-content #payButton:focus-visible,
+#paymentModal .modal-content .cancel-btn:focus-visible,
+#audioModal button:focus-visible, #videoModal button:focus-visible {
   outline: 2px solid #0f7b3d !important;
   outline-offset: 2px;
 }
 
+/* ── Mobile spacing ── */
 @media (max-width: 560px) {
-  .custom-modal-content { margin: 4vh auto !important; padding: 22px 18px 20px !important; max-height: 92vh; }
+  .custom-modal-content,
+  #paymentModal .modal-content,
+  .termsModal-content,
+  .aboutModal-content {
+    margin: 4vh auto !important;
+    padding: 22px 18px 20px !important;
+    max-height: 92vh;
+  }
+  #audioModal { width: 90% !important; left: 5% !important; }
+  #videoModal { width: 92% !important; left: 4% !important; }
+}
+
+/* ── Ifá guide & onboarding modals: bring their backdrop + card into the
+   family. They're inline-styled, so we override with id specificity. ── */
+#ifaGuideModal, #onboarding-modal {
+  background: rgba(20,32,24,.58) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: or-modal-fade .22s ease;
+}
+#ifaGuideModal > div, #onboarding-modal > div {
+  background: #fffef9 !important;
+  border: 1px solid rgba(20,40,30,.12) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 48px rgba(15,45,30,.24) !important;
+  animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
+}
+#ifaGuideModal h1, #ifaGuideModal h2, #ifaGuideModal h3,
+#onboarding-modal h1, #onboarding-modal h2, #onboarding-modal h3 {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  color: #0c3d24 !important;
+}
+/* buttons inside these modals adopt the primary green treatment */
+#onboarding-modal button:not(.customClose),
+#ifaGuideModal button:not(.customClose) {
+  background: #0f7b3d !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 11px 20px !important;
+  min-height: 46px;
+  font-weight: 600 !important;
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease;
+}
+#onboarding-modal button:not(.customClose):hover,
+#ifaGuideModal button:not(.customClose):hover {
+  background: #0c6a34 !important; transform: translateY(-1px);
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   CHAT PANEL POLISH (v8) — Learning Corner
+   Brings the docked chat widget into the identity system: paper
+   surface + brass rule, a green header to match the app, on-brand
+   message bubbles, and a tidy input/send. Keeps its docked layout.
+   ══════════════════════════════════════════════════════════════ */
+
+#chatbot-container {
+  border: 1px solid rgba(20,40,30,.14) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 44px rgba(15,45,30,.26) !important;
+  background: #fffef9 !important;
+}
+
+/* Header: solid green band, serif title, matching the app identity */
+#chatbot-header {
+  background: linear-gradient(135deg, #0f7b3d, #0c6a34) !important;
+  border-bottom: none !important;
+  color: #fff !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+}
+#chatbot-header .chatbot-title {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+}
+/* Close: tidy translucent icon button on the green band */
+#chatbot-header .chatbot-close {
+  background: rgba(255,255,255,.14) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  border-radius: 9px !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  transition: background .15s ease;
+}
+#chatbot-header .chatbot-close:hover {
+  background: rgba(255,255,255,.26) !important;
+}
+
+/* Message area: warm paper ground */
+#chatbot-messages {
+  background: #f6f3ec !important;
+}
+
+/* Bubbles: green for the user, cream card for the bot */
+.chat-message.user-message {
+  background: #0f7b3d !important;
+  color: #fff !important;
+}
+.chat-message.bot-message {
+  background: #fffef9 !important;
+  color: #1b2a1f !important;
+  border: 1px solid rgba(20,40,30,.12) !important;
+}
+
+/* Input area + textarea */
+#chatbot-input-container {
+  background: #fffef9 !important;
+  border-top: 1px solid rgba(20,40,30,.10) !important;
+}
+#chatbot-input {
+  border: 1px solid rgba(20,40,30,.18) !important;
+  border-radius: 12px !important;
+  font-size: 16px !important;               /* prevent iOS zoom */
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+#chatbot-input:focus {
+  border-color: #0f7b3d !important;
+  box-shadow: 0 0 0 3px rgba(15,123,61,.14) !important;
+  outline: none !important;
+}
+
+/* Send button: solid green circle, tactile */
+#chatbot-input-container .queryBtn,
+#send-btn {
+  background: #0f7b3d !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  width: 46px; height: 46px;
+  min-width: 46px;
+  font-size: 18px !important;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(15,123,61,.26) !important;
+  transition: background .15s ease, transform .12s ease;
+}
+#chatbot-input-container .queryBtn:hover,
+#send-btn:hover { background: #0c6a34 !important; transform: translateY(-1px); }
+#chatbot-input-container .queryBtn:active,
+#send-btn:active { transform: translateY(0); }
+
+/* Focus rings */
+#chatbot-header .chatbot-close:focus-visible,
+#chatbot-input:focus-visible,
+#send-btn:focus-visible {
+  outline: 2px solid #b8860b !important;
+  outline-offset: 2px;
+}
+
+/* Floating toggle bubble — keep it on-brand */
+#chatbot-toggle {
+  border: none !important;
+  box-shadow: 0 6px 18px rgba(15,123,61,.34) !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   TOUR POPOVER POLISH (v9) — Driver.js
+   Brings the guided-tour popovers into the identity system: paper
+   card + brass rule, serif titles, on-brand Next/Back/Done buttons.
+   ══════════════════════════════════════════════════════════════ */
+div#driver-popover-item {
+  background: #fffef9 !important;
+  border: 1px solid rgba(20,40,30,.14) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 40px rgba(15,45,30,.28) !important;
+  padding: 18px 18px 14px !important;
+  max-width: 320px !important;
+}
+div#driver-popover-item .driver-popover-title {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #0c3d24 !important;
+  margin-bottom: 7px !important;
+}
+div#driver-popover-item .driver-popover-description {
+  font-family: inherit !important;
+  font-size: 14px !important;
+  color: #2a3a30 !important;
+  line-height: 1.55 !important;
+}
+/* Tip arrows follow the paper colour */
+div#driver-popover-item .driver-popover-tip.bottom { border-color: #fffef9 transparent transparent !important; }
+div#driver-popover-item .driver-popover-tip.top    { border-color: transparent transparent #fffef9 !important; }
+div#driver-popover-item .driver-popover-tip.left   { border-color: transparent #fffef9 transparent transparent !important; }
+div#driver-popover-item .driver-popover-tip.right  { border-color: transparent transparent transparent #fffef9 !important; }
+
+/* Footer buttons: Next/Done green, Back ghost, Close subtle */
+div#driver-popover-item .driver-popover-footer { margin-top: 14px !important; }
+div#driver-popover-item .driver-popover-footer button {
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  border-radius: 9px !important;
+  padding: 7px 14px !important;
+  min-height: 38px;
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease, border-color .15s ease;
+}
+/* Next + Done (in the right-side btn group) — solid green */
+div#driver-popover-item .driver-popover-footer .driver-btn-group button,
+div#driver-popover-item .driver-popover-footer .driver-close-only-btn {
+  background: #0f7b3d !important;
+  color: #fff !important;
+  border: 1px solid #0f7b3d !important;
+}
+div#driver-popover-item .driver-popover-footer .driver-btn-group button:hover {
+  background: #0c6a34 !important; transform: translateY(-1px);
+}
+/* Back (first button in the group is usually prev) — keep it as a ghost.
+   Driver renders prev + next together; soften prev via its class. */
+div#driver-popover-item .driver-popover-footer .driver-prev-btn {
+  background: #fff !important;
+  color: #0c3d24 !important;
+  border: 1px solid rgba(20,40,30,.2) !important;
+}
+div#driver-popover-item .driver-popover-footer .driver-prev-btn:hover {
+  background: #f1efe7 !important;
+}
+/* Close (bottom-left) — subtle */
+div#driver-popover-item .driver-popover-footer .driver-close-btn {
+  background: transparent !important;
+  color: #5a6a62 !important;
+  border: 1px solid transparent !important;
+}
+div#driver-popover-item .driver-popover-footer .driver-close-btn:hover {
+  background: #f1efe7 !important; color: #0c3d24 !important;
+}
+div#driver-popover-item .driver-popover-footer button.driver-disabled {
+  opacity: .5 !important; cursor: default !important;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   SYNC MODAL POLISH (v10) — cross-device history
+   #syncModal is built in sync.js with inline styles. We override its
+   surface + controls with id specificity to match the identity system,
+   without touching the JS. Its inner card is the direct child div.
+   ══════════════════════════════════════════════════════════════ */
+#syncModal {
+  background: rgba(20,32,24,.55) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: or-modal-fade .22s ease;
+  padding: 16px;
+}
+#syncModal > div {
+  background: #fffef9 !important;
+  border: 1px solid rgba(20,40,30,.12) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 48px rgba(15,45,30,.24) !important;
+  font-family: 'Poppins', system-ui, sans-serif !important;   /* was monospace */
+  max-width: 400px !important;
+  animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
+}
+#syncModal h3 {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  color: #0c3d24 !important;
+  font-size: 19px !important;
+}
+
+/* Close → tidy icon button */
+#syncModal > div > button[onclick*="closeSyncModal"] {
+  width: 40px !important; height: 40px !important;
+  top: 12px !important; right: 12px !important;
+  display: flex !important; align-items: center; justify-content: center;
+  border-radius: 10px !important;
+  color: #5a6a62 !important; font-size: 18px !important;
+  transition: background .15s ease, color .15s ease;
+}
+#syncModal > div > button[onclick*="closeSyncModal"]:hover {
+  background: #f1efe7 !important; color: #0c3d24 !important;
+}
+
+/* Tabs (Create Key / Use Key) */
+#syncModal #syncTabSave,
+#syncModal #syncTabRestore {
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #33463b !important;
+  transition: border-color .15s ease, background .15s ease, opacity .15s ease;
+}
+/* The active tab keeps its green border (set inline); reinforce it */
+#syncModal #syncTabSave { border-color: #0f7b3d !important; }
+
+/* Textareas: readable, on-brand focus */
+#syncModal textarea {
+  border: 1px solid rgba(20,40,30,.18) !important;
+  border-radius: 10px !important;
+  font-family: 'Courier New', monospace !important;   /* keys stay monospace */
+  font-size: 13px !important;
+  background: #fff !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+#syncModal textarea:focus {
+  border-color: #0f7b3d !important;
+  box-shadow: 0 0 0 3px rgba(15,123,61,.14) !important;
+  outline: none !important;
+}
+
+/* Action buttons: Generate / Sync Now → solid green; Copy → ghost */
+#syncModal button[onclick*="doSyncRegister"],
+#syncModal button[onclick*="doSyncRestore"] {
+  background: #0f7b3d !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 11px !important;
+  font-weight: 600 !important;
+  min-height: 46px;
+  box-shadow: 0 4px 12px rgba(15,123,61,.22) !important;
+  transition: background .15s ease, transform .12s ease;
+}
+#syncModal button[onclick*="doSyncRegister"]:hover,
+#syncModal button[onclick*="doSyncRestore"]:hover {
+  background: #0c6a34 !important; transform: translateY(-1px);
+}
+#syncModal button[onclick*="clipboard"] {
+  background: #fff !important;
+  border: 1px solid rgba(20,40,30,.2) !important;
+  border-radius: 10px !important;
+  color: #33463b !important;
+  min-height: 42px;
+  transition: background .15s ease;
+}
+#syncModal button[onclick*="clipboard"]:hover { background: #f1efe7 !important; }
+
+/* Focus rings */
+#syncModal button:focus-visible,
+#syncModal textarea:focus-visible {
+  outline: 2px solid #b8860b !important; outline-offset: 2px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   DAILY GUIDANCE POPUP (v11) — align with the modal family
+   The card already gets the surface treatment above; here we add the
+   blurred backdrop + brass rule + on-brand buttons to match v7–v10.
+   ══════════════════════════════════════════════════════════════ */
+#guidance-overlay {
+  background: rgba(20,32,24,.55) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  padding: 16px;
+}
+.guidance-popup {
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1) !important;
+  max-height: 88vh; overflow-y: auto;
+}
+.guidance-popup h4 {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  color: #0c3d24 !important;
+  font-size: 18px !important;
+}
+/* Buttons: Close ghost, Share solid green */
+.guidance-popup button {
+  border-radius: 10px !important;
+  min-height: 44px !important;
+  padding: 9px 18px !important;
+  font-weight: 600 !important;
+  transition: background .15s ease, transform .12s ease, border-color .15s ease;
+}
+.guidance-popup button[onclick*="closeGuidancePopup"] {
+  background: #fff !important;
+  border: 1px solid rgba(20,40,30,.2) !important;
+  color: #33463b !important;
+}
+.guidance-popup button[onclick*="closeGuidancePopup"]:hover {
+  background: #f1efe7 !important;
+}
+.guidance-popup #dg-share-btn {
+  background: #0f7b3d !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(15,123,61,.24) !important;
+}
+.guidance-popup #dg-share-btn:hover {
+  background: #0c6a34 !important; transform: translateY(-1px) !important;
+}
+.guidance-popup button:focus-visible {
+  outline: 2px solid #b8860b !important; outline-offset: 2px;
 }
