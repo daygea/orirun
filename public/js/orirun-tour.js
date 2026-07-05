@@ -1,68 +1,362 @@
 /**
- * Orírùn — First-Time User Onboarding Tour
- * ─────────────────────────────────────────
- * Based on stable v1 code.
- * Changes made:
- *  1. wrapFieldsForTour() — wraps each label + its input/select
- *     into one div so Driver.js highlights both together.
- *     Affects: Odu Ifa, Orientation, Specific Orientation,
- *              Solution, Specific Solution, Full Name box,
- *              Pick a Number calculator.
- *  2. Tour steps updated to target the new wrapper IDs.
- *  3. Boot delay increased: waits for #divination-btn to
- *     exist, then waits a further 2.5 s before showing the
- *     modal so the page is fully settled.
+ * Orírùn — First-Time User Onboarding Tour  (self-contained, v3)
+ * ─────────────────────────────────────────────────────────────
+ * Rewritten from scratch. No external tour library (Driver.js is gone).
+ * We own the overlay, the spotlight, and the popover, so positioning is
+ * deterministic and never fights a third-party engine.
+ *
+ * How it works
+ *  • A dim layer covers the page; a "spotlight" element sits over the
+ *    current target, its huge box-shadow dimming everything around it so
+ *    the target stays bright.
+ *  • The popover is position:fixed, placed next to the target in VIEWPORT
+ *    coordinates — below if there's room, else above, always clamped fully
+ *    on-screen. Everything viewport-fixed → no document/viewport coordinate
+ *    confusion, no library to race. On scroll/resize we recompute from the
+ *    live rect.
+ *  • Mobile: before a step whose field lives under a tab, switch tabs
+ *    (orFormTab / orNumMethod) and scroll the field into view first.
+ *
+ * Public API (unchanged): window.orirun.restartTour()
  */
 
 document.addEventListener("DOMContentLoaded", function () {
 
-  /* ═══════════════════════════════════════════════════════
-   *  0. CONSTANTS & HELPERS
-   * ═══════════════════════════════════════════════════════ */
-  var TOUR_KEY  = "orirun_tour_v2";
-  var isMobile  = window.innerWidth <= 767;
-  var isTablet  = window.innerWidth >= 768 && window.innerWidth <= 1024;
-  var isDesktop = window.innerWidth >= 1025;
+  var TOUR_KEY = "orirun_tour_v2";
 
-  function pos(desktopSide) {
-    if (isMobile) return "bottom";
-    if (isTablet) return "bottom";
-    return desktopSide || "right";
+  function buildSteps() {
+    var steps = [
+      { target: ".languageBtn", title: "Language Support",
+        body: "Orírùn supports multiple languages. Switch language at any time using this selector." },
+      { target: ".historyBtn", title: "Your Divination History",
+        body: "Every reading you make is saved here on your device. You can revisit it, add personal reflections, and track your spiritual journey over time." },
+      { target: "#mainCast", title: "Choose Your Odù Ifá",
+        body: "An Odù is a sacred chapter of Ifá. There are 256 in total. Select the one that appeared in your divination — or explore any Odù you feel drawn to.",
+        tabForMobile: "discover" },
+      { target: "#orientation", title: "Set the Orientation",
+        body: "<strong>Ire</strong> — the Odù appears in a favourable alignment: blessings are available.<br/><strong>Ayewo</strong> — a cautionary alignment: something needs your attention or spiritual action.",
+        tabForMobile: "discover" },
+      { target: "#specificOrientation", title: "Specific Orientation",
+        body: "Narrow down exactly which area of life the Odù is speaking to — Longevity (Aiku), wealth (Aje), victory (Isegun), and more.",
+        tabForMobile: "discover" },
+      { target: "#solution", title: "Choose a Solution Type",
+        body: "<strong>Ebo</strong> — a prescribed offering or action to activate blessings or resolve challenges.<br/><strong>Adimu</strong> — a personal offering made directly to an Orisha.",
+        tabForMobile: "discover" },
+      { target: "#solutionDetails", title: "Specific Solution",
+        body: "Each Ebo or Adimu type carries its own sacred items and actions as revealed by the Odù — for example, <em>Akoru</em>, <em>Esha</em>, <em>Adimu Ori</em> and so on.",
+        tabForMobile: "discover" },
+      { target: "#divination-btn", title: "Reveal Wisdom",
+        body: "When all fields are set, tap <em>Reveal Wisdom</em> to receive the message. The Odù's wisdom, Orisha guidance, Ebo prescription, Taboos, and spiritual insight will appear below.",
+        tabForMobile: "discover" },
+      { target: "#fullname-box", title: "Enter Your Full Name",
+        body: "Your full name is the first half of your Yorùbá numerology chart — type it just as you'd like it to be read.",
+        tabForMobile: "numerology", methodForMobile: "namedate" },
+      { target: "#birthdate-box", title: "Add Your Birth Date",
+        body: "Your birth date completes the chart. With both in place, tap <em>Reveal Message</em> to generate your Life Path, Destiny, Soul Urge, and Orisha alignment.",
+        tabForMobile: "numerology", methodForMobile: "namedate" },
+      { target: "#calculator", title: "Pick a Sacred Number",
+        body: "Choose any number from 1–9 to instantly explore its Àṣẹ (divine energy) — its essence, personality traits, and spiritual associations within Yorùbá wisdom.",
+        tabForMobile: "numerology", methodForMobile: "picknum" },
+      { target: "#chatbot-toggle", title: "Learning Corner",
+        body: "Have questions about Ifá, Orishas, or Yorùbá spirituality? Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. You can also type <b>Help</b> in the chat to see the resources available." },
+      { target: "#tour-guidance-link", title: "Today's Guidance",
+        body: "Tap here any time to receive your personalised daily guidance — rooted in your numerology, your Orisha alignment, and the energy of the current hour." }
+    ];
+
+    if (window.innerWidth < 576) {
+      steps.splice(2, 0, {
+        target: ".form-tabs", title: "Two Paths to Wisdom",
+        body: "Orírùn offers two systems: <strong>Ifá Wisdom</strong> for Odù divination, and <strong>Numerology</strong> for your sacred numbers. Tap these tabs to switch between them anytime.",
+        tabForMobile: "discover"
+      });
+    }
+    return steps.filter(function (s) { return !!document.querySelector(s.target); });
   }
 
-  /**
-   * Position for right-edge fixed elements (#chatbot-toggle,
-   * .historyBtn).
-   *   mobile/tablet → "bottom-right": popover sits below the
-   *     element, arrow on the RIGHT side of the card, so the
-   *     card body extends leftward into the visible viewport.
-   *   desktop       → "left": popover sits to the left of the
-   *     element (they are on the right edge so this is fine).
-   */
-  function posLeft() {
-    return "bottom";  // ← always centred below, works on every screen size
+  /* i18n */
+  function tourLang() { return (typeof currentLang !== "undefined") ? currentLang : "baseline"; }
+  function tourTranslatable() {
+    var l = tourLang();
+    return l && l !== "baseline" && l !== "en" && typeof translateWithCache === "function";
+  }
+  async function tr(text) {
+    if (!text || !tourTranslatable()) return text;
+    try { return await translateWithCache(text, tourLang()); } catch (e) { return text; }
+  }
+  async function translateSteps(steps, labels) {
+    if (!tourTranslatable()) return;
+    var strings = [];
+    steps.forEach(function (s) { strings.push(s.title, s.body); });
+    strings.push(labels.next, labels.back, labels.done, labels.skip);
+    var uniq = Array.from(new Set(strings.filter(Boolean)));
+    var map = {}, i = 0;
+    async function worker() { while (i < uniq.length) { var k = i++; map[uniq[k]] = await tr(uniq[k]); } }
+    var workers = []; for (var w = 0; w < Math.min(4, uniq.length); w++) workers.push(worker());
+    await Promise.all(workers);
+    steps.forEach(function (s) { s.title = map[s.title] || s.title; s.body = map[s.body] || s.body; });
+    labels.next = map[labels.next] || labels.next;
+    labels.back = map[labels.back] || labels.back;
+    labels.done = map[labels.done] || labels.done;
+    labels.skip = map[labels.skip] || labels.skip;
   }
 
-  function posRight1() {
-    if (isMobile || isTablet) return "bottom-right";
-    return "left";
+  function injectStyles() {
+    if (document.getElementById("or-tour-styles")) return;
+    var css = document.createElement("style");
+    css.id = "or-tour-styles";
+    css.textContent = [
+      "#or-tour-dim{position:fixed;inset:0;background:rgba(20,32,24,0.62);z-index:100000;}",
+      "#or-tour-spot{position:fixed;z-index:100001;border-radius:10px;box-shadow:0 0 0 9999px rgba(20,32,24,0.62);transition:all .28s cubic-bezier(.4,0,.2,1);pointer-events:none;}",
+      "#or-tour-spot.or-hidden{width:0;height:0;left:50%;top:50%;}",
+      "#or-tour-pop{position:fixed;z-index:100002;max-width:min(340px,92vw);background:#fffef9;border:1px solid rgba(20,40,30,.14);border-top:3px solid #b8860b;border-radius:16px;box-shadow:0 20px 48px rgba(15,45,30,.34);padding:20px 20px 16px;opacity:0;transform:translateY(6px);transition:opacity .2s ease,transform .2s ease,left .25s ease,top .25s ease;}",
+      "#or-tour-pop.or-show{opacity:1;transform:translateY(0);}",
+      "#or-tour-pop h3{margin:0 0 8px;font-size:18px;color:#0c3d24;font-family:'Source Serif 4',Georgia,serif;}",
+      "#or-tour-pop .or-body{font-family:system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.6;color:#2a3a30;}",
+      "#or-tour-pop .or-progress{font-family:system-ui,sans-serif;font-size:12px;color:#8a9a90;margin-top:12px;}",
+      "#or-tour-pop .or-actions{display:flex;gap:8px;align-items:center;margin-top:12px;}",
+      "#or-tour-pop .or-actions .or-spacer{flex:1;}",
+      "#or-tour-pop button{font-family:system-ui,sans-serif;font-weight:600;font-size:13px;border-radius:9px;padding:9px 16px;min-height:40px;cursor:pointer;border:none;transition:background .15s ease,transform .12s ease;}",
+      "#or-tour-pop .or-next{background:#0f7b3d;color:#fff;box-shadow:0 3px 10px rgba(15,123,61,.24);}",
+      "#or-tour-pop .or-next:hover{background:#0c6a34;transform:translateY(-1px);}",
+      "#or-tour-pop .or-back{background:#fff;color:#0c3d24;border:1px solid rgba(20,40,30,.2);}",
+      "#or-tour-pop .or-back:hover{background:#f1efe7;}",
+      "#or-tour-pop .or-skip{background:transparent;color:#8a9a90;padding:9px 10px;min-height:auto;}",
+      "#or-tour-pop .or-skip:hover{color:#0c3d24;}",
+      "#or-tour-pop .or-arrow{position:absolute;width:14px;height:14px;background:#fffef9;transform:rotate(45deg);border:1px solid rgba(20,40,30,.14);}",
+      "#or-tour-pop .or-arrow.or-arrow-up{top:-8px;border-right:none;border-bottom:none;}",
+      "#or-tour-pop .or-arrow.or-arrow-down{bottom:-8px;border-left:none;border-top:none;}",
+      "@media (max-width:480px){#or-tour-pop{padding:18px 16px 14px;}#or-tour-pop h3{font-size:16px;}}"
+    ].join("\n");
+    document.head.appendChild(css);
   }
 
-  function posRight2() {
-    if (isMobile || isTablet) return "top-right";
-    return "top-right";
+  var _steps = [], _idx = 0, _active = false, _els = {};
+  var _labels = { next: "Next →", back: "← Back", done: "✅ Done", skip: "Skip" };
+
+  function isMobile() { return window.innerWidth < 576; }
+
+  function buildOverlay() {
+    injectStyles();
+    var dim = document.createElement("div"); dim.id = "or-tour-dim";
+    var spot = document.createElement("div"); spot.id = "or-tour-spot"; spot.className = "or-hidden";
+    var pop = document.createElement("div"); pop.id = "or-tour-pop";
+    pop.setAttribute("role", "dialog"); pop.setAttribute("aria-live", "polite");
+    document.body.appendChild(dim);
+    document.body.appendChild(spot);
+    document.body.appendChild(pop);
+    _els = { dim: dim, spot: spot, pop: pop };
+    dim.addEventListener("click", next);
   }
-  
-  function el(selector) {
-    return document.querySelector(selector);
+
+  function teardownOverlay() {
+    ["dim", "spot", "pop"].forEach(function (k) {
+      if (_els[k] && _els[k].parentNode) _els[k].parentNode.removeChild(_els[k]);
+    });
+    _els = {};
   }
+
+  function prepareStep(step) {
+    if (isMobile()) {
+      if (step.tabForMobile && typeof window.orFormTab === "function") window.orFormTab(step.tabForMobile);
+      if (step.methodForMobile && typeof window.orNumMethod === "function") window.orNumMethod(step.methodForMobile);
+    }
+  }
+
+  function position(step) {
+    var node = document.querySelector(step.target);
+    var spot = _els.spot, pop = _els.pop;
+    if (!spot || !pop) return;
+
+    if (!node) { spot.className = "or-hidden"; centerPopover(); return; }
+
+    var r = node.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight, pad = 6;
+
+    spot.className = "";
+    spot.style.left = Math.max(0, r.left - pad) + "px";
+    spot.style.top = Math.max(0, r.top - pad) + "px";
+    spot.style.width = Math.min(vw, r.width + pad * 2) + "px";
+    spot.style.height = Math.min(vh, r.height + pad * 2) + "px";
+
+    var pr = pop.getBoundingClientRect();
+    var m = 14, arrowFor = "up", top, left;
+
+    if (vh - r.bottom >= pr.height + m + 8) { top = r.bottom + m; arrowFor = "up"; }
+    else if (r.top >= pr.height + m + 8) { top = r.top - pr.height - m; arrowFor = "down"; }
+    else { top = Math.max(m, Math.min(vh - pr.height - m, (vh - pr.height) / 2)); arrowFor = "none"; }
+
+    var targetCenter = r.left + r.width / 2;
+    left = targetCenter - pr.width / 2;
+    if (left + pr.width > vw - m) left = vw - pr.width - m;
+    if (left < m) left = m;
+    if (top < m) top = m;
+
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+
+    var arrow = pop.querySelector(".or-arrow");
+    if (arrow) {
+      if (arrowFor === "none") { arrow.style.display = "none"; }
+      else {
+        arrow.style.display = "block";
+        arrow.className = "or-arrow " + (arrowFor === "up" ? "or-arrow-up" : "or-arrow-down");
+        var ax = targetCenter - left - 7;
+        ax = Math.max(14, Math.min(pr.width - 28, ax));
+        arrow.style.left = ax + "px";
+      }
+    }
+  }
+
+  function centerPopover() {
+    var pop = _els.pop; if (!pop) return;
+    var pr = pop.getBoundingClientRect();
+    pop.style.left = Math.max(12, (window.innerWidth - pr.width) / 2) + "px";
+    pop.style.top = Math.max(12, (window.innerHeight - pr.height) / 2) + "px";
+    var arrow = pop.querySelector(".or-arrow"); if (arrow) arrow.style.display = "none";
+  }
+
+  function stopProp(fn) { return function (e) { if (e) e.stopPropagation(); fn(); }; }
+
+  function renderStep() {
+    var step = _steps[_idx];
+    if (!step) return end();
+    var pop = _els.pop;
+    var isFirst = _idx === 0, isLast = _idx === _steps.length - 1;
+
+    pop.innerHTML =
+      '<div class="or-arrow or-arrow-up"></div>' +
+      '<h3></h3><div class="or-body"></div><div class="or-progress"></div>' +
+      '<div class="or-actions">' +
+        '<button class="or-skip" type="button"></button><span class="or-spacer"></span>' +
+        (isFirst ? "" : '<button class="or-back" type="button"></button>') +
+        '<button class="or-next" type="button"></button>' +
+      '</div>';
+
+    pop.querySelector("h3").textContent = step.title;
+    pop.querySelector(".or-body").innerHTML = step.body;
+    pop.querySelector(".or-progress").textContent = (_idx + 1) + " of " + _steps.length;
+    pop.querySelector(".or-skip").textContent = _labels.skip;
+    pop.querySelector(".or-next").textContent = isLast ? _labels.done : _labels.next;
+    var backBtn = pop.querySelector(".or-back");
+    if (backBtn) { backBtn.textContent = _labels.back; backBtn.addEventListener("click", stopProp(prev)); }
+    pop.querySelector(".or-next").addEventListener("click", stopProp(next));
+    pop.querySelector(".or-skip").addEventListener("click", stopProp(end));
+    pop.addEventListener("click", function (e) { e.stopPropagation(); });
+
+    prepareStep(step);
+    pop.classList.add("or-show");
+
+    var node = document.querySelector(step.target);
+    var needScroll = false;
+    if (node) {
+      var isFixed = false;
+      try { isFixed = window.getComputedStyle(node).position === "fixed"; } catch (e) {}
+      var r = node.getBoundingClientRect();
+      needScroll = !isFixed && (r.top < 60 || r.bottom > window.innerHeight - 60);
+      if (needScroll && node.scrollIntoView) {
+        try { node.scrollIntoView({ behavior: "smooth", block: "center" }); }
+        catch (e2) { try { node.scrollIntoView(); } catch (e3) {} }
+      }
+    }
+    requestAnimationFrame(function () { position(step); });
+    if (needScroll) setTimeout(function () { position(step); }, 360);
+  }
+
+  function next() { if (!_active) return; if (_idx >= _steps.length - 1) return end(); _idx++; renderStep(); }
+  function prev() { if (!_active) return; if (_idx <= 0) return; _idx--; renderStep(); }
+
+  function end() {
+    if (!_active) return;
+    _active = false;
+    try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
+    if (isMobile() && typeof window.orFormTab === "function") { try { window.orFormTab("discover"); } catch (e) {} }
+    window.removeEventListener("scroll", onReposition, true);
+    window.removeEventListener("resize", onReposition);
+    document.removeEventListener("keydown", onKey);
+    teardownOverlay();
+  }
+
+  function onReposition() { if (!_active) return; var s = _steps[_idx]; if (s) position(s); }
+  function onKey(e) {
+    if (!_active) return;
+    if (e.key === "Escape") end();
+    else if (e.key === "ArrowRight" || e.key === "Enter") next();
+    else if (e.key === "ArrowLeft") prev();
+  }
+
+  async function startTour() {
+    if (_active) return;
+    var steps = buildSteps();
+    if (!steps.length) { console.warn("Orírùn tour: no target elements found."); return; }
+    _steps = steps; _idx = 0;
+    _labels = { next: "Next →", back: "← Back", done: "✅ Done", skip: "Skip" };
+    await translateSteps(_steps, _labels);
+    buildOverlay();
+    _active = true;
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    document.addEventListener("keydown", onKey);
+    renderStep();
+    try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
+  }
+
+  function showOnboarding() {
+    injectStyles();
+    var prev = document.getElementById("or-onboard");
+    if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+    var modal = document.createElement("div");
+    modal.id = "or-onboard";
+    modal.setAttribute("role", "dialog"); modal.setAttribute("aria-modal", "true");
+    modal.style.cssText = "position:fixed;inset:0;z-index:100010;display:flex;align-items:center;justify-content:center;padding:16px;";
+    modal.innerHTML =
+      '<div class="or-ob-backdrop" style="position:absolute;inset:0;background:rgba(20,32,24,0.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);"></div>' +
+      '<div style="position:relative;background:#fffef9;border:1px solid rgba(20,40,30,.14);border-top:3px solid #b8860b;border-radius:18px;padding:clamp(24px,5vw,38px) clamp(20px,5vw,32px);max-width:420px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(15,45,30,.34);">' +
+        '<img src="public/img/logo.png" alt="Orírùn" width="270" height="115" style="height:48px;width:auto;margin-bottom:12px;" />' +
+        '<h2 style="font-family:\'Source Serif 4\',Georgia,serif;color:#0c3d24;font-size:clamp(18px,4vw,22px);margin:0 0 10px;" data-translate>Ekáàbọ̀ — Welcome to Orírùn</h2>' +
+        '<p style="font-family:system-ui,sans-serif;color:#4a5a50;font-size:clamp(13px,3vw,15px);line-height:1.6;margin:0 0 22px;" data-translate>Discover yourself through Ifá, numerology, astrology and ancestral wisdom. Take a quick tour to get the most from your experience.</p>' +
+        '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">' +
+          '<button id="or-ob-start" style="width:100%;max-width:300px;background:#0f7b3d;color:#fff;border:none;border-radius:11px;font-family:system-ui,sans-serif;font-weight:600;font-size:15px;padding:13px 24px;min-height:48px;cursor:pointer;box-shadow:0 4px 14px rgba(15,123,61,.3);display:flex;align-items:center;justify-content:center;gap:8px;">📖 <span data-translate>Take the Tour</span></button>' +
+          '<button id="or-ob-skip" style="width:100%;max-width:300px;background:transparent;color:#5a6a60;border:1px solid rgba(20,40,30,.2);border-radius:11px;font-family:system-ui,sans-serif;font-weight:600;font-size:14px;padding:11px 24px;min-height:44px;cursor:pointer;" data-translate>Skip for now</button>' +
+        '</div>' +
+        '<p style="font-family:system-ui,sans-serif;margin-top:16px;font-size:11px;color:#a5b0a8;font-style:italic;" data-translate>You can restart this tour any time from the footer.</p>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    if (tourTranslatable() && typeof window.translateDynamicContent === "function") {
+      try { window.translateDynamicContent(modal); } catch (e) {}
+    }
+
+    function close() {
+      modal.style.transition = "opacity .25s ease"; modal.style.opacity = "0";
+      setTimeout(function () { if (modal.parentNode) modal.parentNode.removeChild(modal); }, 260);
+    }
+    var startBtn = modal.querySelector("#or-ob-start");
+    var skipBtn = modal.querySelector("#or-ob-skip");
+    var backdrop = modal.querySelector(".or-ob-backdrop");
+    if (startBtn) startBtn.addEventListener("click", function () { close(); setTimeout(startTour, 280); });
+    if (skipBtn) skipBtn.addEventListener("click", function () {
+      try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
+      close();
+    });
+    if (backdrop) backdrop.addEventListener("click", function () {
+      try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
+      close();
+    });
+  }
+
+  window.orirun = window.orirun || {};
+  window.orirun.restartTour = function () {
+    try { localStorage.removeItem(TOUR_KEY); } catch (e) {}
+    if (_active) end();
+    showOnboarding();
+  };
 
   function waitFor(selector, timeout) {
-    timeout = timeout || 4000;
+    timeout = timeout || 8000;
     return new Promise(function (resolve) {
       var deadline = Date.now() + timeout;
       (function check() {
-        var node = el(selector);
+        var node = document.querySelector(selector);
         if (node) return resolve(node);
         if (Date.now() > deadline) return resolve(null);
         setTimeout(check, 120);
@@ -70,785 +364,17 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  /* ── i18n: translate tour text through the shared translation engine ── */
-  function tourLang() {
-    return (typeof currentLang !== "undefined") ? currentLang : "baseline";
-  }
-  function tourTranslatable() {
-    var l = tourLang();
-    return l && l !== "baseline" && l !== "en" && typeof translateWithCache === "function";
-  }
-  async function tr(text) {
-    if (!text || !tourTranslatable()) return text;
-    try { return await translateWithCache(text, tourLang()); }
-    catch (e) { return text; }
-  }
-  // Translate many strings with limited concurrency; returns {original: translated}.
-  async function translateMany(strings, concurrency) {
-    concurrency = concurrency || 4;
-    var uniq = Array.from(new Set(strings.filter(Boolean)));
-    var map = {}, i = 0;
-    async function worker() {
-      while (i < uniq.length) { var idx = i++; map[uniq[idx]] = await tr(uniq[idx]); }
-    }
-    var workers = [], n = Math.min(concurrency, uniq.length);
-    for (var w = 0; w < n; w++) workers.push(worker());
-    await Promise.all(workers);
-    return map;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  1. LABEL WRAPPERS
-   *     For each input/select, grab the label element that
-   *     sits immediately before it and wrap both together
-   *     in a single <div>.  Driver.js then highlights the
-   *     wrapper, so the user sees the label AND the control.
-   * ═══════════════════════════════════════════════════════ */
-
-  /**
-   * Wraps anchorEl and its immediately preceding sibling
-   * (the label div/element) inside a new <div id=wrapperId>.
-   * Safe to call multiple times — skips if already wrapped.
-   */
-  function wrapWithLabel(wrapperId, anchorEl) {
-    if (!anchorEl) return;
-    if (document.getElementById(wrapperId)) return; // already done
-
-    var labelEl = anchorEl.previousElementSibling;
-    if (!labelEl) return;
-
-    var wrapper = document.createElement("div");
-    wrapper.id = wrapperId;
-
-    /* Insert wrapper exactly where the label currently sits */
-    anchorEl.parentNode.insertBefore(wrapper, labelEl);
-    wrapper.appendChild(labelEl);
-    wrapper.appendChild(anchorEl);
-
-    /* Absorb any trailing <br> so page layout stays intact */
-    var next = wrapper.nextSibling;
-    if (next && next.nodeName === "BR") wrapper.appendChild(next);
-  }
-
-  function wrapFieldsForTour() {
-    /* Divination selects — label-div sits directly before each <select> */
-    wrapWithLabel("tour-g-maincast",   document.getElementById("mainCast"));
-    wrapWithLabel("tour-g-orient",     document.getElementById("orientation"));
-    wrapWithLabel("tour-g-specorient", document.getElementById("specificOrientation"));
-    wrapWithLabel("tour-g-solution",   document.getElementById("solution"));
-    wrapWithLabel("tour-g-soldetail",  document.getElementById("solutionDetails"));
-
-    /* Numerology — "Enter your full name" label sits before #fullname-box */
-    wrapWithLabel("tour-g-fullname",   document.getElementById("fullname-box"));
-
-    /* Pick a Number — the flex label-div sits before #calculator */
-    wrapWithLabel("tour-g-picknum",    document.getElementById("calculator"));
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  2. TOUR STEPS
-   *     Identical structure to the stable v1 code, but step
-   *     elements now point to the wrapper IDs so both the
-   *     label and the control are highlighted together.
-   * ═══════════════════════════════════════════════════════ */
-  function buildSteps() {
-    var steps = [
-
-       {
-        element: ".languageBtn",
-        popover: {
-          title:       "Language Support",
-          description: "Orírùn supports multiple languages. " +
-                       "Switch language at any time using this selector.",
-          position:    posLeft(),
-          showButtons: true
-        }
-      },
-
-      {
-        element: ".historyBtn",
-        popover: {
-          title:       "Your Divination History",
-          description: "Every reading you make is saved here on your device. You can revisit it, " +
-                       "add personal reflections, and track your spiritual journey over time.",
-          position:    posRight1(),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#mainCast",
-        popover: {
-          title:       "Choose Your Odù Ifá",
-          description: "An Odù is a sacred chapter of Ifá. There are 256 in total. " +
-                       "Select the one that appeared in your divination — or explore any Odù you feel drawn to.",
-          position:    pos("right"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#orientation",
-        popover: {
-          title:       "Set the Orientation",
-          description: "<strong>Ire</strong> — the Odù appears in a favourable alignment: blessings are available.<br/>" +
-                       "<strong>Ayewo</strong> — a cautionary alignment: something needs your attention or spiritual action.",
-          position:    pos("right"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#specificOrientation",
-        popover: {
-          title:       "Specific Orientation",
-          description: "Narrow down exactly which area of life the Odù is speaking to — " +
-                       "Longevity (Aiku), wealth (Aje), victory (Isegun), and more.",
-          position:    pos("right"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#solution",
-        popover: {
-          title:       "Choose a Solution Type",
-          description: "<strong>Ebo</strong> — a prescribed offering or action to activate blessings or resolve challenges.<br/>" +
-                       "<strong>Adimu</strong> — a personal offering made directly to an Orisha.",
-          position:    pos("right"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#solutionDetails",
-        popover: {
-          title:       "Specific Solution",
-          description: "Each Ebo or Adimu type carries its own sacred items and actions " +
-                       "as revealed by the Odù — for example, <em>Akoru</em>, <em>Esha</em>, <em>Adimu Ori</em> and so on.",
-          position:    pos("right"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#divination-btn",
-        popover: {
-          title:       "Reveal Wisdom",
-          description: "When all fields are set, click <em>Reveal Wisdom</em> to receive the message. " +
-                       "The Odù's wisdom, Orisha guidance, Ebo prescription, Taboos, and spiritual insight will appear below.",
-          position:    pos("bottom"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#fullname-box",
-        popover: {
-          title:       "Enter Your Full Name",
-          description: "Your full name is the first half of your Yorùbá numerology chart — " +
-                       "type it just as you'd like it to be read.",
-          position:    pos("left"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#birthdate-box",
-        popover: {
-          title:       "Add Your Birth Date",
-          description: "Your birth date completes the chart. With both in place, tap " +
-                       "<em>Reveal Message</em> to generate your Life Path, Destiny, Soul Urge, and Orisha alignment.",
-          position:    pos("left"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#calculator",
-        popover: {
-          title:       "Pick a Sacred Number",
-          description: "Choose any number from 1–9 to instantly explore its Àṣẹ (divine energy) — " +
-                       "its essence, personality traits, and spiritual associations within Yoruba wisdom.",
-          position:    pos("left"),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#chatbot-toggle",
-        popover: {
-          title:       "Learning Corner",
-          description: "Have questions about Ifá, Orishas, or Yoruba spirituality? " +
-                       "Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. You can also type <b>Help</b> in the chat area to view the list of resources available.",
-          position:    posRight2(),
-          showButtons: true
-        }
-      },
-
-      {
-        element: "#tour-guidance-link",
-        popover: {
-          title:       "Today's Guidance",
-          description: "Tap here at any time to receive your personalised daily guidance — " +
-                       "rooted in your numerology, your Orisha alignment, and the energy of the current hour.",
-          position:    pos("top"),
-          showButtons: true
-        }
-      },
-
-      // {
-      //   element: ".donate-btn",
-      //   popover: {
-      //     title:       "Support the Project",
-      //     description: "Orírùn is a free educational resource. " +
-      //                  "Your support helps preserve and share Africa's ancestral wisdom with the world. " +
-      //                  "Every contribution is deeply appreciated as it helps keep this free for all.",
-      //     position:    pos("top"),
-      //     showButtons: true,
-      //     doneBtnText: "✅ Done"
-      //   }
-      // }
-
-    ];
-
-    /* Mobile only (<576px): the two-system tabs exist just under this width.
-       Introduce them so first-time users know how to switch systems. */
-    if (window.innerWidth < 576) {
-      steps.splice(2, 0, {
-        element: ".form-tabs",
-        popover: {
-          title:       "Two Paths to Wisdom",
-          description: "Orírùn offers two systems: <strong>Ifá Wisdom</strong> for Odù divination, " +
-                       "and <strong>Numerology</strong> for your sacred numbers. Tap these tabs to switch between them anytime.",
-          position:    pos("bottom"),
-          showButtons: true
-        }
-      });
-    }
-
-    return steps;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  3. DRIVER INSTANCE
-   * ═══════════════════════════════════════════════════════ */
-  function createDriver(labels) {
-    if (typeof Driver === "undefined") {
-      console.warn("Orírùn tour: Driver.js not loaded.");
-      return null;
-    }
-
-    labels = labels || {};
-    return new Driver({
-      animate:            true,
-      opacity:            0.78,
-      padding:            isMobile ? 6 : 12,
-      showButtons:        true,
-      doneBtnText:        labels.doneBtnText  || "✅ Done",
-      closeBtnText:       labels.closeBtnText || "✕",
-      nextBtnText:        labels.nextBtnText  || "Next →",
-      prevBtnText:        labels.prevBtnText  || "← Back",
-      allowClose:         true,
-      overlayClickNext:   false,
-      keyboardControl:    true,
-      scrollIntoViewOptions: { behavior: "smooth", block: "center" },
-
-      onHighlightStarted: function (element) {
-        if (window.innerWidth >= 576 || typeof window.orFormTab !== "function") return;
-        var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
-        var id = node && node.id ? node.id : "";
-        if (id === "fullname-box" || id === "birthdate-box") {
-          window.orFormTab("numerology");
-          if (typeof window.orNumMethod === "function") window.orNumMethod("namedate");
-        } else if (id === "calculator") {
-          window.orFormTab("numerology");
-          if (typeof window.orNumMethod === "function") window.orNumMethod("picknum");
-        } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
-          window.orFormTab("discover");
-        }
-      },
-
-      /* Placement is handled by repinPopover() below, which is driven by a
-         MutationObserver (so it re-applies whenever Driver rebuilds/moves the
-         popover) plus scroll/resize listeners. Here we just record which
-         element the current step points at. */
-      onHighlighted: function (element) {
-        try {
-          var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
-          _tourTarget = (node && node.getBoundingClientRect) ? node : null;
-          // Kick a pin now, and again shortly after Driver's own animation.
-          repinPopover();
-          setTimeout(repinPopover, 60);
-          setTimeout(repinPopover, 320);
-        } catch (e) { /* non-critical */ }
-      },
-
-      onReset: function () {
-        _tourTarget = null;
-        if (window.innerWidth < 576 && typeof window.orFormTab === "function") {
-          window.orFormTab("discover");
-        }
-        [
-          "#driver-page-overlay",
-          "#driver-highlighted-element-stage",
-          "#driver-popover-item"
-        ].forEach(function (s) {
-          var n = document.querySelector(s);
-          if (n) n.style.display = "none";
-        });
-      }
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  3b. POPOVER POSITIONING (self-contained, reliable)
-   *      Driver.js's own placement detaches the popover from
-   *      the target in this app's layout (fixed elements,
-   *      cards, mid-scroll reads). We position it ourselves:
-   *      measure where the target actually renders, place the
-   *      popover beside it in DOCUMENT coordinates (it stays
-   *      position:absolute, as Driver expects), and re-apply
-   *      via a MutationObserver so we always win the timing.
-   * ═══════════════════════════════════════════════════════ */
-  var _tourTarget   = null;   // element the current step points at
-  var _popObserver  = null;   // watches the popover for Driver's changes
-  var _repinning    = false;  // guard against observer feedback loops
-
-  function repinPopover() {
-    if (_repinning) return;
-    var node = _tourTarget;
-    if (!node || !node.getBoundingClientRect) return;
-    var pop = document.getElementById("driver-popover-item");
-    if (!pop || pop.style.display === "none") return;
-
-    var vw = window.innerWidth, vh = window.innerHeight, m = 12;
-
-    // Ensure the target is on-screen (for non-fixed elements). Fixed elements
-    // are always in view, so we never scroll for them.
-    var isFixed = false;
-    try { isFixed = window.getComputedStyle(node).position === "fixed"; } catch (e) {}
-    var r = node.getBoundingClientRect();
-    if (!isFixed && (r.top < 0 || r.bottom > vh) && node.scrollIntoView) {
-      try { node.scrollIntoView({ behavior: "instant", block: "center" }); }
-      catch (e2) { try { node.scrollIntoView(); } catch (e3) {} }
-      r = node.getBoundingClientRect();
-    }
-
-    var pr = pop.getBoundingClientRect();
-
-    // Vertical: below the target if it fits, else above, else clamp on-screen.
-    var top;
-    if (vh - r.bottom >= pr.height + m)      top = r.bottom + m;
-    else if (r.top >= pr.height + m)         top = r.top - pr.height - m;
-    else                                     top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
-
-    // Horizontal: align to the target's left, keep fully on-screen.
-    var left = (r.left + pr.width <= vw - m) ? r.left : (r.right - pr.width);
-    if (left + pr.width > vw - m) left = vw - pr.width - m;
-    if (left < m) left = m;
-    if (top < m) top = m;
-
-    // Document coordinates (popover is position:absolute — never change that).
-    var docLeft = Math.round(left + (window.pageXOffset || 0));
-    var docTop  = Math.round(top  + (window.pageYOffset || 0));
-
-    // Apply only if it actually moved (avoids observer thrash).
-    var curL = parseInt(pop.style.left, 10);
-    var curT = parseInt(pop.style.top, 10);
-    if (curL === docLeft && curT === docTop) return;
-
-    _repinning = true;
-    pop.style.left   = docLeft + "px";
-    pop.style.top    = docTop + "px";
-    pop.style.right  = "";
-    pop.style.bottom = "";
-    _repinning = false;
-  }
-
-  /* Observe the popover: whenever Driver rebuilds or repositions it, re-pin.
-     Started once, lazily, when the tour first runs. */
-  function ensurePopObserver() {
-    if (_popObserver || typeof MutationObserver === "undefined") return;
-    _popObserver = new MutationObserver(function () {
-      if (_tourTarget) repinPopover();
-    });
-    _popObserver.observe(document.body, {
-      childList: true, subtree: true, attributes: true,
-      attributeFilter: ["style"]
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  4. START TOUR
-   * ═══════════════════════════════════════════════════════ */
-  async function startTour() {
-    // This repo loads Driver.js lazily (it is not in a <script> tag), so
-    // ensure it's present before we use it. Nothing else here differs from
-    // the known-working baseline.
-    if (typeof Driver === "undefined" && typeof ensureLib === "function") {
-      try { await ensureLib("driver"); }
-      catch (e) { console.warn("Tour library failed to load:", e); return; }
-    }
-    /* Purge any leftover Driver DOM from previous runs */
-    [
-      "#driver-page-overlay",
-      "#driver-highlighted-element-stage",
-      "#driver-popover-item"
-    ].forEach(function (s) {
-      var n = document.querySelector(s);
-      if (n && n.parentNode) n.parentNode.removeChild(n);
-    });
-
-    /* Filter out steps whose target element doesn't exist */
-    var validSteps = buildSteps().filter(function (step) {
-      if (step.element === "body") return true;
-      return !!document.querySelector(step.element);
-    });
-
-    if (!validSteps.length) {
-      console.warn("Orírùn tour: No valid target elements found.");
-      return;
-    }
-
-    /* Button labels — translated below when a language is active */
-    var labels = {
-      doneBtnText:  "✅ Done",
-      closeBtnText: "✕",
-      nextBtnText:  "Next →",
-      prevBtnText:  "← Back"
-    };
-
-    /* Translate step titles/descriptions + button labels into the selected language */
-    if (tourTranslatable()) {
-      var strings = [];
-      validSteps.forEach(function (st) {
-        if (st.popover) strings.push(st.popover.title, st.popover.description);
-      });
-      strings.push(labels.doneBtnText, labels.nextBtnText, labels.prevBtnText);
-
-      var map = await translateMany(strings, 4);
-
-      validSteps.forEach(function (st) {
-        if (!st.popover) return;
-        st.popover.title       = map[st.popover.title]       || st.popover.title;
-        st.popover.description = map[st.popover.description] || st.popover.description;
-      });
-      labels.doneBtnText = map[labels.doneBtnText] || labels.doneBtnText;
-      labels.nextBtnText = map[labels.nextBtnText] || labels.nextBtnText;
-      labels.prevBtnText = map[labels.prevBtnText] || labels.prevBtnText;
-    }
-
-    var driverInstance = createDriver(labels);
-    if (!driverInstance) return;
-
-    driverInstance.defineSteps(validSteps);
-    ensurePopObserver();
-    driverInstance.start();
-
-    try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
-
-    /* Keep the current step's popover glued to its element as the viewport
-       changes. We do NOT restart the tour on resize — on mobile the browser
-       address bar shows/hides on scroll, firing resize events; restarting
-       there caused the tour to jump back to step 1 mid-way. Instead we just
-       re-pin the popover to wherever its target now renders. A true
-       orientation change (width crosses a breakpoint) still updates the
-       device flags for the NEXT step, but never resets an active tour. */
-    var resizeTimer;
-    function onViewportChange() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function () {
-        isMobile  = window.innerWidth <= 767;
-        isTablet  = window.innerWidth >= 768 && window.innerWidth <= 1024;
-        isDesktop = window.innerWidth >= 1025;
-        repinPopover();
-      }, 120);
-    }
-    window.addEventListener("resize", onViewportChange);
-    window.addEventListener("scroll", repinPopover, { passive: true });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  5. ONBOARDING MODAL
-   * ═══════════════════════════════════════════════════════ */
-  function buildModal() {
-    var existing = document.getElementById("onboarding-modal");
-    if (existing) existing.parentNode.removeChild(existing);
-
-    var modal = document.createElement("div");
-    modal.id = "onboarding-modal";
-    modal.setAttribute("role", "dialog");
-    modal.setAttribute("aria-modal", "true");
-    modal.setAttribute("aria-labelledby", "onboarding-title");
-    modal.innerHTML = [
-      '<div class="ob-backdrop"></div>',
-      '<div class="ob-card">',
-      '  <div class="ob-logo">',
-      '    <img src="public/img/logo.png" alt="Orírùn" />',
-      '  </div>',
-      '  <h2 id="onboarding-title" data-translate>Ekáàbọ̀ — Welcome to Orírùn</h2>',
-      '  <p class="ob-sub" data-translate>',
-      '    Discover yourself through Ifá, numerology, astrology and ancestral wisdom.',
-      '    Take a quick tour to get the most from your experience.',
-      '  </p>',
-      '  <div class="ob-actions">',
-      '    <button id="ob-start-btn" class="ob-btn ob-btn--primary">',
-      '      📖 <span data-translate>Take the Tour</span> <span class="ob-badge">~1 min</span>',
-      '    </button>',
-      '    <button id="ob-skip-btn" class="ob-btn ob-btn--ghost" data-translate>',
-      '      Skip for now',
-      '    </button>',
-      '  </div>',
-      '  <p class="ob-footer-note" data-translate>',
-      '    You can restart this tour any time from the About section.',
-      '  </p>',
-      '</div>'
-    ].join("\n");
-
-    var style = document.createElement("style");
-    style.textContent = [
-      "#onboarding-modal {",
-      "  position: fixed; inset: 0;",
-      "  z-index: 99999;",
-      "  display: flex;",
-      "  align-items: center;",
-      "  justify-content: center;",
-      "  padding: 16px;",
-      "  font-family: Courier, monospace;",
-      "}",
-      ".ob-backdrop {",
-      "  position: absolute; inset: 0;",
-      "  background: rgba(0,0,0,0.65);",
-      "  backdrop-filter: blur(3px);",
-      "  -webkit-backdrop-filter: blur(3px);",
-      "}",
-      ".ob-card {",
-      "  position: relative;",
-      "  background: #ffffff;",
-      "  border-radius: 18px;",
-      "  padding: clamp(24px, 5vw, 40px) clamp(20px, 5vw, 36px);",
-      "  max-width: 420px;",
-      "  width: 100%;",
-      "  text-align: center;",
-      "  box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 0 0 1px rgba(46,125,50,0.15);",
-      "  animation: ob-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both;",
-      "}",
-      "@keyframes ob-slide-up {",
-      "  from { opacity: 0; transform: translateY(28px) scale(0.96); }",
-      "  to   { opacity: 1; transform: translateY(0)    scale(1);    }",
-      "}",
-      ".ob-logo { margin-bottom: 14px; }",
-      ".ob-logo img { height: 52px; width: auto; }",
-      "#onboarding-modal h2 {",
-      "  color: #1b4332;",
-      "  font-size: clamp(18px, 4vw, 22px);",
-      "  margin: 0 0 10px;",
-      "  line-height: 1.3;",
-      "}",
-      ".ob-sub {",
-      "  color: #444;",
-      "  font-size: clamp(13px, 3vw, 15px);",
-      "  line-height: 1.6;",
-      "  margin: 0 0 22px;",
-      "}",
-      ".ob-actions {",
-      "  display: flex;",
-      "  flex-direction: column;",
-      "  gap: 10px;",
-      "  align-items: center;",
-      "}",
-      ".ob-btn {",
-      "  cursor: pointer;",
-      "  border-radius: 9px;",
-      "  font-family: Courier, monospace;",
-      "  font-weight: bold;",
-      "  font-size: clamp(13px, 3vw, 15px);",
-      "  padding: 12px 28px;",
-      "  width: 100%;",
-      "  max-width: 300px;",
-      "  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;",
-      "  border: none;",
-      "}",
-      ".ob-btn--primary {",
-      "  background: #2e7d32;",
-      "  color: #ffffff;",
-      "  box-shadow: 0 4px 18px rgba(46,125,50,0.35);",
-      "  display: flex;",
-      "  align-items: center;",
-      "  justify-content: center;",
-      "  gap: 8px;",
-      "}",
-      ".ob-btn--primary:hover {",
-      "  background: #1b5e20;",
-      "  transform: translateY(-2px);",
-      "  box-shadow: 0 8px 24px rgba(46,125,50,0.4);",
-      "}",
-      ".ob-btn--ghost {",
-      "  background: transparent;",
-      "  color: #555;",
-      "  border: 1.5px solid #ccc;",
-      "}",
-      ".ob-btn--ghost:hover {",
-      "  background: #f5f5f5;",
-      "  transform: translateY(-1px);",
-      "}",
-      ".ob-badge {",
-      "  background: rgba(255,255,255,0.25);",
-      "  border-radius: 20px;",
-      "  padding: 2px 8px;",
-      "  font-size: 11px;",
-      "  font-weight: normal;",
-      "  letter-spacing: 0.3px;",
-      "}",
-      ".ob-footer-note {",
-      "  margin-top: 16px;",
-      "  font-size: 11px;",
-      "  color: #aaa;",
-      "  font-style: italic;",
-      "}",
-      /* Driver.js popover overrides */
-      "#driver-popover-item {",
-      "  border-radius: 12px !important;",
-      "  font-family: Courier, monospace !important;",
-      "  max-width: min(360px, 92vw) !important;",
-      "  border: 1.5px solid #2e7d32 !important;",
-      "  box-shadow: 0 12px 40px rgba(0,0,0,0.22) !important;",
-      "}",
-      "#driver-popover-item .driver-popover-title {",
-      "  color: #1b4332 !important;",
-      "  font-size: clamp(13px, 3.5vw, 16px) !important;",
-      "  font-weight: bold !important;",
-      "  border-bottom: 1px solid #e0f0e0 !important;",
-      "  padding-bottom: 8px !important;",
-      "  margin-bottom: 8px !important;",
-      "}",
-      "#driver-popover-item .driver-popover-description {",
-      "  font-size: clamp(12px, 3vw, 14px) !important;",
-      "  line-height: 1.6 !important;",
-      "  color: #333 !important;",
-      "}",
-      "#driver-popover-item .driver-popover-footer button {",
-      "  background: #2e7d32 !important;",
-      "  color: #fff !important;",
-      "  border: none !important;",
-      "  border-radius: 6px !important;",
-      "  padding: 6px 14px !important;",
-      "  font-size: 13px !important;",
-      "  font-family: Courier, monospace !important;",
-      "  font-weight: bold !important;",
-      "  cursor: pointer !important;",
-      "}",
-      "#driver-popover-item .driver-popover-footer button:hover {",
-      "  background: #1b5e20 !important;",
-      "}",
-      "#driver-popover-item .driver-close-btn {",
-      "  color: #555 !important;",
-      "  font-size: 18px !important;",
-      "}",
-      "@media (max-width: 480px) {",
-      "  .ob-card { padding: 22px 16px; border-radius: 14px; }",
-      "  #driver-popover-item { max-width: 96vw !important; margin: 0 2vw !important; }",
-      "}"
-    ].join("\n");
-
-    document.head.appendChild(style);
-    document.body.appendChild(modal);
-    return modal;
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  6. SHOW MODAL / WIRE BUTTONS
-   * ═══════════════════════════════════════════════════════ */
-  function showOnboarding() {
-    var modal = buildModal();
-
-    /* Translate the onboarding modal into the active language */
-    if (tourTranslatable() && typeof window.translateDynamicContent === "function") {
-      window.translateDynamicContent(modal);
-    }
-
-    function closeModal() {
-      modal.style.opacity    = "0";
-      modal.style.transition = "opacity 0.3s ease";
-      setTimeout(function () {
-        if (modal.parentNode) modal.parentNode.removeChild(modal);
-      }, 320);
-    }
-
-    document.getElementById("ob-start-btn").addEventListener("click", function () {
-      closeModal();
-      setTimeout(startTour, 380);
-    });
-
-    document.getElementById("ob-skip-btn").addEventListener("click", function () {
-      try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
-      closeModal();
-    });
-
-    modal.querySelector(".ob-backdrop").addEventListener("click", function () {
-      try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
-      closeModal();
-    });
-
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        document.removeEventListener("keydown", onEsc);
-        try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
-        closeModal();
-      }
-    });
-  }
-
-  /* ═══════════════════════════════════════════════════════
-   *  7. EXPOSE orirun.restartTour() globally
-   * ═══════════════════════════════════════════════════════ */
-  window.orirun = window.orirun || {};
-  window.orirun.restartTour = function () {
-    try { localStorage.removeItem(TOUR_KEY); } catch (e) {}
-    wrapFieldsForTour();
-    showOnboarding();
-  };
-
-  /* ═══════════════════════════════════════════════════════
-   *  8. BOOT
-   *     Step 1 — wait for #divination-btn to exist in the
-   *              DOM (confirms the app has rendered).
-   *     Step 2 — wait a further 2500 ms so fonts, images,
-   *              dropdowns, and animations are all settled
-   *              before the modal appears.
-   * ═══════════════════════════════════════════════════════ */
   var alreadySeen = false;
   try { alreadySeen = localStorage.getItem(TOUR_KEY) === "1"; } catch (e) {}
 
-  // if (!alreadySeen) {
-  //   waitFor("#divination-btn", 8000).then(function (found) {
-  //     if (!found) return; // app never rendered — bail silently
-  //     wrapFieldsForTour();
-  //     setTimeout(showOnboarding, 2500);
-  //   });
-  // }
-
   if (!alreadySeen) {
     waitFor("#divination-btn", 8000).then(function (found) {
-      if (!found) return; // app never rendered — bail silently
-      wrapFieldsForTour();
-
-      /* Wait until the preloader is actually hidden before showing
-         the modal — on slow connections the server may still be
-         waking up even after #divination-btn appears in the DOM */
-      var deadline = Date.now() + 25000; // max 25s
+      if (!found) return;
+      var deadline = Date.now() + 25000;
       (function waitForPreloader() {
-        var preloader = document.getElementById("preloader");
-        var isGone    = !preloader || preloader.style.display === "none";
-        if (isGone) {
-          setTimeout(showOnboarding, 600); // brief settle delay
-          return;
-        }
-        if (Date.now() > deadline) {
-          setTimeout(showOnboarding, 600); // timeout — show anyway
-          return;
-        }
+        var pre = document.getElementById("preloader");
+        var gone = !pre || pre.style.display === "none";
+        if (gone || Date.now() > deadline) { setTimeout(showOnboarding, 500); return; }
         setTimeout(waitForPreloader, 200);
       })();
     });

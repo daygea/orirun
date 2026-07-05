@@ -106,7 +106,7 @@ if (location.protocol !== 'file:') {
   <link rel="stylesheet" href="public/css/bootstrap.css">
   <link rel="stylesheet" href="public/css/style.css">
 </noscript>
-<link rel="preload" href="public/css/driver.css" as="style" media="print" onload="this.media='all'">
+
 
 <!-- Schema: Organization -->
 <script type="application/ld+json">
@@ -369,7 +369,7 @@ if (location.protocol !== 'file:') {
                 /* Switching flows starts fresh — clear the previous result so a
                    numerology reading doesn't linger under the Ifa Wisdom form
                    (and vice versa). Skip while the onboarding tour drives tabs. */
-                if(!document.querySelector('#driver-page-overlay')){
+                if(!document.querySelector('#driver-page-overlay') && !document.querySelector('#or-tour-dim')){
                   var r=document.getElementById('divinationResult'); if(r) r.innerHTML='';
                   var c=document.getElementById('configurationResult');
                   if(c) c.innerHTML='<img class="moving-bg" src="public/img/bird.gif" alt="bird" />';

@@ -216,8 +216,8 @@ function _anotherModalOpen() {
 
 async function showGuidancePopup(lang, _retries) {
   if (document.getElementById("guidance-overlay")) return;
-  /* Do not interrupt Driver.js onboarding tour */
-  if (document.querySelector("#driver-page-overlay")) return;
+  /* Do not interrupt the onboarding tour */
+  if (document.querySelector("#driver-page-overlay") || document.querySelector("#or-tour-dim") || document.getElementById("or-onboard")) return;
   /* Do not stack on top of another open modal — wait until it is dismissed */
   if (_anotherModalOpen()) {
     if ((_retries || 0) < 20) {
