@@ -252,6 +252,28 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .audit-row .who{margin-left:0;width:100%}
   input,select,button,textarea{font-size:16px}
 }
+
+/* ── Loader shown while a section's data is fetching ── */
+@keyframes or-spin { to { transform: rotate(360deg); } }
+.or-loader {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 48px 20px; width: 100%;
+}
+.or-loader__ring {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid rgba(15,123,61,.18);
+  border-top-color: #0f7b3d;
+  animation: or-spin .8s linear infinite;
+}
+.or-loader__text { font-size: 13px; color: #5a6a62; letter-spacing: .02em; }
+/* a slim top progress bar for quick tab switches */
+#or-topbar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg,#0f7b3d,#b8860b);
+  z-index: 99999; transition: width .25s ease, opacity .3s ease; opacity: 0;
+  pointer-events: none;
+}
+#or-topbar.on { opacity: 1; }
 </style>
 </head>
 <body>
@@ -708,6 +730,39 @@ async function loadAudit() {
 
 /* ── Operations: area switching, Dashboard, Logs ──────────── */
 const AREAS = ["content", "dashboard", "logs"];
+/* ── Loader helpers ─────────────────────────────────────────────
+   orLoaderHTML(): markup for an in-panel spinner (replaces the bare
+   "Loading…" text). orTopbar(): a slim top progress bar for the brief
+   moment between clicking a tab and its content arriving. */
+function orLoaderHTML(msg) {
+  return '<div class="or-loader"><div class="or-loader__ring"></div>' +
+         '<div class="or-loader__text">' + (msg || "Loading…") + '</div></div>';
+}
+(function ensureTopbar() {
+  if (document.getElementById("or-topbar")) return;
+  var bar = document.createElement("div");
+  bar.id = "or-topbar";
+  (document.body || document.documentElement).appendChild(bar);
+})();
+var _orBarTimer = null;
+function orTopbarStart() {
+  var bar = document.getElementById("or-topbar");
+  if (!bar) return;
+  clearTimeout(_orBarTimer);
+  bar.classList.add("on");
+  bar.style.width = "20%";
+  requestAnimationFrame(function () { bar.style.width = "70%"; });
+}
+function orTopbarDone() {
+  var bar = document.getElementById("or-topbar");
+  if (!bar) return;
+  bar.style.width = "100%";
+  _orBarTimer = setTimeout(function () {
+    bar.classList.remove("on");
+    bar.style.width = "0";
+  }, 300);
+}
+
 window.showArea = function (area) {
   document.querySelectorAll(".area-tab").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.area === area));
@@ -721,16 +776,23 @@ window.showArea = function (area) {
   document.getElementById("area-dashboard").style.display = area === "dashboard" ? "flex" : "none";
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
   document.getElementById("area-verses").style.display = area === "verses" ? "flex" : "none";
-  if (area === "dashboard") { loadDashboard(); loadBackups(); }
-  if (area === "logs" && !logState.loadedOnce) loadLogs(logState.type);
-  if (area === "verses") loadContributions();
+  // Show a quick top progress bar for the click→content gap.
+  if (area === "dashboard") {
+    orTopbarStart();
+    Promise.all([loadDashboard(), loadBackups()]).finally(orTopbarDone);
+  } else if (area === "logs") {
+    if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
+  } else if (area === "verses") {
+    orTopbarStart();
+    Promise.resolve(loadContributions()).finally(orTopbarDone);
+  }
 };
 
 /* ── Babaláwo contribution review queue ──────────────────────── */
 async function loadContributions() {
   const list = $("contribList");
   const note = $("contribNote");
-  list.innerHTML = '<div style="opacity:.6">Loading…</div>';
+  list.innerHTML = orLoaderHTML("Loading contributions…");
   try {
     const res = await api("/verses/pending-contributions");
     if (res.status === 401 || res.status === 403) return showAuth();
@@ -822,7 +884,7 @@ function escapeHtml(str) {
 /* ── Dashboard ── */
 async function loadDashboard() {
   const grid = $("statGrid");
-  grid.innerHTML = '<div class="stat-card"><div class="l">Loading…</div></div>';
+  grid.innerHTML = '<div class="stat-card" style="grid-column:1/-1">' + orLoaderHTML("Loading dashboard…") + '</div>';
   try {
     const res = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
     if (res.status === 401 || res.status === 403) return showAuth();
@@ -932,7 +994,7 @@ $("logPills").innerHTML = LOG_TYPES.map((t) =>
 window.loadLogs = async function (type) {
   logState.type = type; logState.loadedOnce = true;
   document.querySelectorAll(".log-pill").forEach((p) => p.classList.toggle("is-active", p.dataset.log === type));
-  $("logBody").innerHTML = '<tr><td>Loading…</td></tr>'; $("logHead").innerHTML = ""; $("logDetail").style.display = "none";
+  $("logHead").innerHTML = ""; $("logBody").innerHTML = '<tr><td colspan="99">' + orLoaderHTML("Loading logs…") + '</td></tr>'; $("logDetail").style.display = "none";
   try {
     const res = await fetch(API_BASE + "/api/" + type + "/logs", { credentials: "include" });
     if (res.status === 401 || res.status === 403) return showAuth();
