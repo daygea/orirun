@@ -369,6 +369,54 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       },
 
+      /* Fixed-position targets only (Language button, History button, chat
+         toggle) need special handling: Driver.js positions its popover by
+         adding the page scroll offset to the element's rect — correct for
+         normal elements, but WRONG for position:fixed ones, which stay put
+         while the page scrolls. That mismatch is what threw the Language
+         popover to the bottom of the screen. Here we detect a fixed target
+         and re-place the popover in VIEWPORT space, just beside it, so it
+         stays attached on every screen. Non-fixed steps are untouched. */
+      onHighlighted: function (element) {
+        try {
+          var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
+          if (!node || !node.getBoundingClientRect) return;
+          var cs = window.getComputedStyle(node);
+          if (cs.position !== "fixed") return;   // only fixed targets
+
+          // Driver positions its popover on a delayed (animated) timeout, so
+          // we reposition just after, to win over its (incorrect-for-fixed)
+          // placement.
+          setTimeout(function () {
+            var pop = document.getElementById("driver-popover-item");
+            if (!pop) return;
+
+            var r  = node.getBoundingClientRect();   // viewport coords (fixed)
+            var pr = pop.getBoundingClientRect();
+            var m  = 10;
+            var vw = window.innerWidth, vh = window.innerHeight;
+
+            // Prefer placing the popover just BELOW the element; if it's a
+            // right-edge element (right half of screen), right-align it.
+            var top  = r.bottom + m;
+            var left = (r.left < vw / 2) ? r.left : (r.right - pr.width);
+
+            // Keep it fully on-screen.
+            if (left + pr.width > vw - m) left = vw - pr.width - m;
+            if (left < m) left = m;
+            if (top + pr.height > vh - m) top = Math.max(m, r.top - pr.height - m); // flip above
+            if (top < m) top = m;
+
+            // Pin in viewport space so it tracks the fixed element exactly.
+            pop.style.position = "fixed";
+            pop.style.left = left + "px";
+            pop.style.top  = top + "px";
+            pop.style.right = "";
+            pop.style.bottom = "";
+          }, 350);
+        } catch (e) { /* non-critical: leave Driver's own placement */ }
+      },
+
       onReset: function () {
         if (window.innerWidth < 576 && typeof window.orFormTab === "function") {
           window.orFormTab("discover");
