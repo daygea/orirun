@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.orirun.app",
+      "sha256_cert_fingerprints": [
+        "6B:C1:66:5C:C3:70:F4:1E:A0:88:5D:91:8E:15:81:0E:29:72:AF:D7:56:4C:72:EC:CE:1E:76:18:90:95:31:44",
+        "72:24:A2:D3:3B:23:D6:8E:3A:01:C9:1D:25:DA:36:43:81:50:C7:A0:B3:34:65:72:B1:EE:87:02:EC:2A:DC:BD"
+      ]
+    }
+  }
+]
