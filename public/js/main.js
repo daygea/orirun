@@ -898,25 +898,37 @@ window.onload = async () => {
   const savedLang = localStorage.getItem("appLanguage");
   if (savedLang && LANGUAGES[savedLang]) currentLang = savedLang;
 
-  // printArea hidden while loading
-  printArea.style.display = "none";
+  // Is a non-English translation pending? Only then must we hide the
+  // content to avoid a flash of English before it translates. For English
+  // (the default "baseline"), there's nothing to translate — so we reveal
+  // the app IMMEDIATELY. This is the key LCP win: the largest content (the
+  // homage banner) paints right away instead of waiting on the JS + server
+  // chain behind the preloader.
+  var _lang = (typeof currentLang !== "undefined") ? currentLang : "baseline";
+  var _needsTranslation = _lang && _lang !== "baseline" && _lang !== "en";
 
-  showLoading(currentLang);
-
-  // Reveal the app quickly. We wait for the server only briefly (it may be
-  // cold, flaky, or absent) — capped at 6s instead of 20s — then show the
-  // shell regardless. Dropdowns and other data populate in the background,
-  // so the user sees and can interact with the app immediately rather than
-  // staring at a spinner while the network resolves.
-  await Promise.race([
-    serverReady,
-    new Promise(resolve => setTimeout(resolve, 6000))
-  ]);
-
-  // Show the app shell NOW — don't block the reveal on dropdown data.
-  loadingScreen.style.display = "none";
-  preloader.style.display     = "none";
-  printArea.style.display     = "block";
+  if (_needsTranslation) {
+    // Non-English: keep the current behaviour — hide content, show loader,
+    // wait briefly for the server, then reveal (translation applies after).
+    printArea.style.display = "none";
+    showLoading(currentLang);
+    await Promise.race([
+      serverReady,
+      new Promise(resolve => setTimeout(resolve, 6000))
+    ]);
+    loadingScreen.style.display = "none";
+    preloader.style.display     = "none";
+    printArea.style.display     = "block";
+  } else {
+    // English / baseline: reveal the app AT ONCE. No preloader wait, no
+    // hidden content — the browser paints the real page immediately, so
+    // LCP is the homage banner at first paint, not after the JS chain.
+    preloader.style.display     = "none";
+    loadingScreen.style.display = "none";
+    printArea.style.display     = "block";
+    // The server can still warm up in the background; we don't block on it.
+    Promise.race([serverReady, new Promise(r => setTimeout(r, 6000))]).catch(() => {});
+  }
 
   const bdInput = document.getElementById("birthdate");
   if (bdInput) {

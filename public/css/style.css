@@ -1108,6 +1108,7 @@ button:hover {
 
   .socials img {
     height: 25px;
+    width: auto;
   }
 
   #waveform-container {
@@ -1953,7 +1954,7 @@ select.form-control{
 /* footer: calmer, muted, smaller — and clear of the chat bubble */
 .col-12.text-center{ color:var(--of-ink-soft) !important; padding-bottom:96px; }
 .col-12.text-center p{ font-size:13px; line-height:1.6; }
-.socials img{ height:22px !important; transition:transform .15s ease; }
+.socials img{ height:22px !important; width:auto !important; transition:transform .15s ease; }
 .socials a:hover img{ transform:translateY(-1px); }
 #chatbot-toggle{ background:var(--of-green) !important; box-shadow:0 6px 16px rgba(15,123,61,.32) !important; }
 
