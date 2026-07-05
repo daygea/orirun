@@ -369,72 +369,23 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       },
 
-      /* Popover placement — done ourselves for EVERY step.
-         Driver.js positions the popover from the element's document rect plus
-         scroll offset. That detaches the card from the field in several cases
-         (position:fixed targets, transformed ancestors, mid-scroll reads) on
-         both desktop and mobile. Instead we let Driver scroll the field into
-         view, then pin the popover in VIEWPORT space right next to where the
-         field actually renders — below it if there's room, otherwise above,
-         horizontally aligned to the field but always kept fully on-screen.
-         This is reliable regardless of the target's CSS positioning. */
+      /* Placement is handled by repinPopover() below, which is driven by a
+         MutationObserver (so it re-applies whenever Driver rebuilds/moves the
+         popover) plus scroll/resize listeners. Here we just record which
+         element the current step points at. */
       onHighlighted: function (element) {
         try {
           var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
-          if (!node || !node.getBoundingClientRect) return;
-
-          // Run AFTER Driver's animated placement (300ms) so ours wins.
-          setTimeout(function () {
-            var pop = document.getElementById("driver-popover-item");
-            if (!pop) return;
-
-            // IMPORTANT: never change pop.style.position. Driver keeps the
-            // popover position:absolute and resets only left/top between
-            // steps — if we switch it to fixed, every later step's document-
-            // coordinate placement lands off-screen and Driver scrolls the
-            // page chasing it (the "scrolls to the bottom" cascade).
-
-            // Driver may have scrolled the page toward a mispositioned
-            // popover; bring the actual target back into view first.
-            var r0 = node.getBoundingClientRect();
-            var vh = window.innerHeight, vw = window.innerWidth;
-            var fullyVisible = r0.top >= 0 && r0.bottom <= vh;
-            var isFixed = false;
-            try { isFixed = window.getComputedStyle(node).position === "fixed"; } catch (e2) {}
-            if (!fullyVisible && !isFixed && node.scrollIntoView) {
-              try { node.scrollIntoView({ behavior: "instant", block: "center" }); }
-              catch (e3) { node.scrollIntoView(); }
-            }
-
-            // Measure where the field ACTUALLY renders now.
-            var r  = node.getBoundingClientRect();
-            var pr = pop.getBoundingClientRect();
-            var m  = 12;
-
-            // Vertical (viewport terms): below if it fits, else above, else clamp.
-            var top;
-            if (vh - r.bottom >= pr.height + m)      top = r.bottom + m;
-            else if (r.top >= pr.height + m)         top = r.top - pr.height - m;
-            else top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
-
-            // Horizontal: align to the field, keep fully on-screen.
-            var left = (r.left + pr.width <= vw - m) ? r.left : (r.right - pr.width);
-            if (left + pr.width > vw - m) left = vw - pr.width - m;
-            if (left < m) left = m;
-            if (top < m) top = m;
-
-            // Convert to DOCUMENT coordinates (popover stays absolute).
-            var docLeft = left + (window.pageXOffset || 0);
-            var docTop  = top  + (window.pageYOffset || 0);
-            pop.style.left = docLeft + "px";
-            pop.style.top  = docTop + "px";
-            pop.style.right = "";
-            pop.style.bottom = "";
-          }, 350);
-        } catch (e) { /* non-critical: leave Driver's own placement */ }
+          _tourTarget = (node && node.getBoundingClientRect) ? node : null;
+          // Kick a pin now, and again shortly after Driver's own animation.
+          repinPopover();
+          setTimeout(repinPopover, 60);
+          setTimeout(repinPopover, 320);
+        } catch (e) { /* non-critical */ }
       },
 
       onReset: function () {
+        _tourTarget = null;
         if (window.innerWidth < 576 && typeof window.orFormTab === "function") {
           window.orFormTab("discover");
         }
@@ -447,6 +398,84 @@ document.addEventListener("DOMContentLoaded", function () {
           if (n) n.style.display = "none";
         });
       }
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════
+   *  3b. POPOVER POSITIONING (self-contained, reliable)
+   *      Driver.js's own placement detaches the popover from
+   *      the target in this app's layout (fixed elements,
+   *      cards, mid-scroll reads). We position it ourselves:
+   *      measure where the target actually renders, place the
+   *      popover beside it in DOCUMENT coordinates (it stays
+   *      position:absolute, as Driver expects), and re-apply
+   *      via a MutationObserver so we always win the timing.
+   * ═══════════════════════════════════════════════════════ */
+  var _tourTarget   = null;   // element the current step points at
+  var _popObserver  = null;   // watches the popover for Driver's changes
+  var _repinning    = false;  // guard against observer feedback loops
+
+  function repinPopover() {
+    if (_repinning) return;
+    var node = _tourTarget;
+    if (!node || !node.getBoundingClientRect) return;
+    var pop = document.getElementById("driver-popover-item");
+    if (!pop || pop.style.display === "none") return;
+
+    var vw = window.innerWidth, vh = window.innerHeight, m = 12;
+
+    // Ensure the target is on-screen (for non-fixed elements). Fixed elements
+    // are always in view, so we never scroll for them.
+    var isFixed = false;
+    try { isFixed = window.getComputedStyle(node).position === "fixed"; } catch (e) {}
+    var r = node.getBoundingClientRect();
+    if (!isFixed && (r.top < 0 || r.bottom > vh) && node.scrollIntoView) {
+      try { node.scrollIntoView({ behavior: "instant", block: "center" }); }
+      catch (e2) { try { node.scrollIntoView(); } catch (e3) {} }
+      r = node.getBoundingClientRect();
+    }
+
+    var pr = pop.getBoundingClientRect();
+
+    // Vertical: below the target if it fits, else above, else clamp on-screen.
+    var top;
+    if (vh - r.bottom >= pr.height + m)      top = r.bottom + m;
+    else if (r.top >= pr.height + m)         top = r.top - pr.height - m;
+    else                                     top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
+
+    // Horizontal: align to the target's left, keep fully on-screen.
+    var left = (r.left + pr.width <= vw - m) ? r.left : (r.right - pr.width);
+    if (left + pr.width > vw - m) left = vw - pr.width - m;
+    if (left < m) left = m;
+    if (top < m) top = m;
+
+    // Document coordinates (popover is position:absolute — never change that).
+    var docLeft = Math.round(left + (window.pageXOffset || 0));
+    var docTop  = Math.round(top  + (window.pageYOffset || 0));
+
+    // Apply only if it actually moved (avoids observer thrash).
+    var curL = parseInt(pop.style.left, 10);
+    var curT = parseInt(pop.style.top, 10);
+    if (curL === docLeft && curT === docTop) return;
+
+    _repinning = true;
+    pop.style.left   = docLeft + "px";
+    pop.style.top    = docTop + "px";
+    pop.style.right  = "";
+    pop.style.bottom = "";
+    _repinning = false;
+  }
+
+  /* Observe the popover: whenever Driver rebuilds or repositions it, re-pin.
+     Started once, lazily, when the tour first runs. */
+  function ensurePopObserver() {
+    if (_popObserver || typeof MutationObserver === "undefined") return;
+    _popObserver = new MutationObserver(function () {
+      if (_tourTarget) repinPopover();
+    });
+    _popObserver.observe(document.body, {
+      childList: true, subtree: true, attributes: true,
+      attributeFilter: ["style"]
     });
   }
 
@@ -514,24 +543,30 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!driverInstance) return;
 
     driverInstance.defineSteps(validSteps);
+    ensurePopObserver();
     driverInstance.start();
 
     try { localStorage.setItem(TOUR_KEY, "1"); } catch (e) {}
 
-    /* Re-orient steps on resize / rotate */
+    /* Keep the current step's popover glued to its element as the viewport
+       changes. We do NOT restart the tour on resize — on mobile the browser
+       address bar shows/hides on scroll, firing resize events; restarting
+       there caused the tour to jump back to step 1 mid-way. Instead we just
+       re-pin the popover to wherever its target now renders. A true
+       orientation change (width crosses a breakpoint) still updates the
+       device flags for the NEXT step, but never resets an active tour. */
     var resizeTimer;
-    window.addEventListener("resize", function () {
+    function onViewportChange() {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
         isMobile  = window.innerWidth <= 767;
         isTablet  = window.innerWidth >= 768 && window.innerWidth <= 1024;
         isDesktop = window.innerWidth >= 1025;
-        if (driverInstance.isActivated) {
-          driverInstance.reset();
-          startTour();
-        }
-      }, 300);
-    });
+        repinPopover();
+      }, 120);
+    }
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", repinPopover, { passive: true });
   }
 
   /* ═══════════════════════════════════════════════════════
