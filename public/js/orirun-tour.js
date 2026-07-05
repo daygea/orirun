@@ -383,45 +383,51 @@ document.addEventListener("DOMContentLoaded", function () {
           var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
           if (!node || !node.getBoundingClientRect) return;
 
-          // Reposition AFTER Driver's animated placement + scroll settle.
+          // Run AFTER Driver's animated placement (300ms) so ours wins.
           setTimeout(function () {
             var pop = document.getElementById("driver-popover-item");
             if (!pop) return;
 
-            var r  = node.getBoundingClientRect();   // where the field really is
+            // IMPORTANT: never change pop.style.position. Driver keeps the
+            // popover position:absolute and resets only left/top between
+            // steps — if we switch it to fixed, every later step's document-
+            // coordinate placement lands off-screen and Driver scrolls the
+            // page chasing it (the "scrolls to the bottom" cascade).
+
+            // Driver may have scrolled the page toward a mispositioned
+            // popover; bring the actual target back into view first.
+            var r0 = node.getBoundingClientRect();
+            var vh = window.innerHeight, vw = window.innerWidth;
+            var fullyVisible = r0.top >= 0 && r0.bottom <= vh;
+            var isFixed = false;
+            try { isFixed = window.getComputedStyle(node).position === "fixed"; } catch (e2) {}
+            if (!fullyVisible && !isFixed && node.scrollIntoView) {
+              try { node.scrollIntoView({ behavior: "instant", block: "center" }); }
+              catch (e3) { node.scrollIntoView(); }
+            }
+
+            // Measure where the field ACTUALLY renders now.
+            var r  = node.getBoundingClientRect();
             var pr = pop.getBoundingClientRect();
             var m  = 12;
-            var vw = window.innerWidth, vh = window.innerHeight;
 
-            // Vertical: prefer below the field; flip above if it won't fit;
-            // clamp into view as a last resort.
-            var spaceBelow = vh - r.bottom;
-            var spaceAbove = r.top;
+            // Vertical (viewport terms): below if it fits, else above, else clamp.
             var top;
-            if (spaceBelow >= pr.height + m) {
-              top = r.bottom + m;                       // below
-            } else if (spaceAbove >= pr.height + m) {
-              top = r.top - pr.height - m;              // above
-            } else {
-              top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
-            }
+            if (vh - r.bottom >= pr.height + m)      top = r.bottom + m;
+            else if (r.top >= pr.height + m)         top = r.top - pr.height - m;
+            else top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
 
-            // Horizontal: align the popover's left with the field, but keep
-            // it fully on-screen. For right-edge fields, right-align instead.
-            var left;
-            if (r.left + pr.width <= vw - m) {
-              left = r.left;                            // left-aligned
-            } else {
-              left = r.right - pr.width;                // right-aligned
-            }
+            // Horizontal: align to the field, keep fully on-screen.
+            var left = (r.left + pr.width <= vw - m) ? r.left : (r.right - pr.width);
             if (left + pr.width > vw - m) left = vw - pr.width - m;
             if (left < m) left = m;
             if (top < m) top = m;
 
-            // Pin in viewport space so it stays attached to the field.
-            pop.style.position = "fixed";
-            pop.style.left = left + "px";
-            pop.style.top  = top + "px";
+            // Convert to DOCUMENT coordinates (popover stays absolute).
+            var docLeft = left + (window.pageXOffset || 0);
+            var docTop  = top  + (window.pageYOffset || 0);
+            pop.style.left = docLeft + "px";
+            pop.style.top  = docTop + "px";
             pop.style.right = "";
             pop.style.bottom = "";
           }, 350);
