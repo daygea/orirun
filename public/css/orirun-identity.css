@@ -226,3 +226,132 @@ body.bg-ready::before { opacity: 1; }
   .dv-hero, .dv-card { border-radius: 13px !important; }
   .acc-header { padding-left: 24px !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   MODAL & BUTTON POLISH (v6) — standards-aligned, on-brand
+   Refines the Share Insight (and any .custom-modal) dialog and the
+   primary/close buttons: smooth entrance, scrollable body on mobile,
+   focus-visible rings, brass keyline. Appended last so it wins.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Backdrop: soft blur + fade so it feels layered, not a flat black wash */
+.custom-modal {
+  background: rgba(20, 32, 24, 0.55) !important;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: or-modal-fade .22s ease;
+  padding: 16px;
+}
+@keyframes or-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Dialog card: paper surface, brass top rule, gentle rise-in, and a
+   scrollable body so a tall form never overflows the viewport on mobile. */
+.custom-modal-content {
+  background: #fffef9 !important;
+  border: 1px solid rgba(20,40,30,.12) !important;
+  border-top: 3px solid var(--or-brass, #b8860b) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 48px rgba(15,45,30,.22) !important;
+  margin: 6vh auto !important;
+  padding: 26px 24px 24px !important;
+  max-width: 560px !important;
+  max-height: 88vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
+}
+@keyframes or-modal-rise {
+  from { transform: translateY(14px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.custom-modal-content h3 {
+  font-family: 'Source Serif 4', Georgia, serif !important;
+  color: #0c3d24 !important;
+  font-size: 21px !important;
+  margin: 2px 0 14px !important;
+}
+
+/* Close: from a stray text link to a proper icon button, top-right,
+   with a real hit target and hover state. */
+.custom-modal-content .customClose {
+  position: absolute !important;
+  top: 12px !important; right: 12px !important;
+  width: 40px; height: 40px;
+  margin: 0 !important; padding: 0 !important;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0 !important;              /* hide the word, show a glyph */
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: #5a6a62 !important;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.custom-modal-content .customClose::before {
+  content: "✕";
+  font-size: 18px; line-height: 1;
+}
+.custom-modal-content .customClose:hover {
+  background: #f1efe7 !important;
+  color: #0c3d24 !important;
+  border-color: rgba(20,40,30,.14) !important;
+}
+
+/* Form controls: comfortable, consistent, 16px to prevent iOS zoom */
+.custom-modal-content .form-control {
+  border: 1px solid rgba(20,40,30,.18) !important;
+  border-radius: 10px !important;
+  padding: 11px 13px !important;
+  font-size: 16px !important;
+  background: #fff !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.custom-modal-content .form-control:focus {
+  border-color: #0f7b3d !important;
+  box-shadow: 0 0 0 3px rgba(15,123,61,.14) !important;
+  outline: none !important;
+}
+.custom-modal-content label {
+  font-size: 13.5px !important;
+  color: #33463b !important;
+  margin-bottom: 5px !important;
+  letter-spacing: .01em;
+}
+.custom-modal-content .mb-3 { margin-bottom: 15px !important; }
+
+/* Primary submit button: solid, tactile, full-width for a clear CTA */
+.custom-modal-content .btn.btn-primary {
+  background: #0f7b3d !important;
+  border: none !important;
+  border-radius: 11px !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  padding: 12px 20px !important;
+  min-height: 48px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(15,123,61,.24) !important;
+  transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+}
+.custom-modal-content .btn.btn-primary:hover {
+  background: #0c6a34 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15,123,61,.30) !important;
+}
+.custom-modal-content .btn.btn-primary:active { transform: translateY(0); }
+.custom-modal-content .btn.btn-primary:disabled {
+  opacity: .65; cursor: not-allowed; transform: none; box-shadow: none !important;
+}
+
+/* Accessible focus ring for keyboard users across modal controls */
+.custom-modal-content .form-control:focus-visible,
+.custom-modal-content .btn:focus-visible,
+.custom-modal-content .customClose:focus-visible {
+  outline: 2px solid #0f7b3d !important;
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .custom-modal-content { margin: 4vh auto !important; padding: 22px 18px 20px !important; max-height: 92vh; }
+}

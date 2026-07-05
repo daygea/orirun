@@ -1126,20 +1126,20 @@ async function submitContribution() {
     btn.disabled = true;
     btn.innerText = "Submitting...";
 
-    const category = document.getElementById("contributionCategory").value;
-    const name = document.getElementById("contributorName").value || "Anonymous";
-    const text = document.getElementById("contributionText").value.trim();
-    const title = document.getElementById("ifaTitle").value.trim();
-    const media = document.getElementById("ifaMedia").value.trim();
+    // Null-safe reads: the old ifaTitle field was removed when the Ifá and
+    // Babaláwo categories merged. Any field may be absent depending on the
+    // selected category, so guard every lookup. The Babaláwo/Ifá path is
+    // handled by babalawo-contribution.js; this function serves General,
+    // Numerology, and Astrology (a plain name + text submission).
+    const val = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+
+    const category = val("contributionCategory") || "General";
+    const name = val("contributorName") || "Anonymous";
+    const text = val("contributionText");
+    const media = val("ifaMedia");   // present only if the merged Ifá field is shown
 
     if (!text) {
         alert("Please enter your contribution.");
-        resetButton(btn);
-        return;
-    }
-
-    if (category === "Ifa" && !title) {
-        alert("Title is required for Ifá content.");
         resetButton(btn);
         return;
     }
@@ -1148,8 +1148,8 @@ async function submitContribution() {
         name,
         category,
         text,
-        title: category === "Ifa" ? title : "",
-        media: category === "Ifa" ? media : ""
+        title: "",
+        media: media || ""
     };
 
     try {
@@ -1185,12 +1185,16 @@ function resetButton(btn) {
 }
 
 function resetForm() {
-    document.getElementById("contributorName").value = "";
-    document.getElementById("contributionText").value = "";
-    document.getElementById("ifaTitle").value = "";
-    document.getElementById("ifaMedia").value = "";
-    document.getElementById("contributionCategory").value = "General";
-    document.getElementById("ifaFields").style.display = "none";
+    // Null-safe: ifaTitle and ifaFields were removed in the category merge.
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+    set("contributorName", "");
+    set("contributionText", "");
+    set("ifaMedia", "");
+    set("contributionCategory", "General");
+    const ifaFields = document.getElementById("ifaFields");
+    if (ifaFields) ifaFields.style.display = "none";
+    const babFields = document.getElementById("babalawoFields");
+    if (babFields) babFields.style.display = "none";
 }
 
 function closeModal() {
