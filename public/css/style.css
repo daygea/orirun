@@ -25,11 +25,10 @@
     -ms-user-select: none;
     user-select: none;
     color: green;
-    background-color: white;
-    background-image: url('../img/background.jpg');
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: cover;
+    /* Instant paint: solid warm scrim tone, no image dependency. The
+       background photo is layered in non-blockingly by orirun-identity.css
+       after load, so it never delays Largest Contentful Paint. */
+    background-color: #f6f3ec;
     font-family: var(--font-body);
     font-weight: bold;
  }

@@ -1082,8 +1082,11 @@ function showContributionModal() {
 }
 
 document.getElementById("contributionCategory").addEventListener("change", function () {
+    // Legacy ifaFields block was removed when Ifá + Babaláwo merged; guard
+    // against its absence. The unified Ifá fields are handled by
+    // babalawo-contribution.js (syncBabalawoFields).
     const ifaFields = document.getElementById("ifaFields");
-    ifaFields.style.display = this.value === "Ifa" ? "block" : "none";
+    if (ifaFields) ifaFields.style.display = this.value === "Ifa" ? "block" : "none";
 });
 
 /* -----------------------------
@@ -1098,13 +1101,18 @@ document.addEventListener("change", function (e) {
     const titleField = document.getElementById("ifaTitle");
     const mediaField = document.getElementById("ifaMedia");
 
+    // Legacy path — only runs if the old elements still exist. After the
+    // Ifá/Babaláwo merge they don't, so this is a no-op and the unified
+    // fields are driven by babalawo-contribution.js instead.
+    if (!ifaFields) return;
+
     if (category === "Ifa") {
         ifaFields.style.display = "block";
-        setTimeout(() => titleField.focus(), 50);
+        if (titleField) setTimeout(() => titleField.focus(), 50);
     } else {
         ifaFields.style.display = "none";
-        titleField.value = "";
-        mediaField.value = "";
+        if (titleField) titleField.value = "";
+        if (mediaField) mediaField.value = "";
     }
 });
 

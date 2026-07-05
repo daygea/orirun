@@ -32,12 +32,25 @@
 /* ── The field: chalk, with the photograph as a faint memory ──────
    The scrim shifts from flat white to efun tones so every card sits
    on a warm, cohesive ground instead of a washed photo. */
-body {
-  background-image:
+/* The warm scrim colour is painted instantly by style.css. The background
+   photo is layered on a fixed ::before that fades in AFTER first paint, so
+   it enriches the look without ever blocking Largest Contentful Paint.
+   (background-attachment:fixed is dropped — it forces expensive repaints on
+   mobile scroll and hurt LCP.) */
+body { background-color: #f6f3ec !important; }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
     linear-gradient(rgba(246, 243, 236, 0.86), rgba(246, 243, 236, 0.93)),
-    url('../img/background.jpg') !important;
-  background-attachment: fixed;
+    url('../img/background.jpg') center / cover no-repeat;
+  opacity: 0;
+  transition: opacity .6s ease;
 }
+body.bg-ready::before { opacity: 1; }
 
 /* ── SIGNATURE 1: the stroke marks ────────────────────────────────
    Section headings close with a three-stroke odù motif — drawn, not

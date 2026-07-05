@@ -293,7 +293,7 @@ if (location.protocol !== 'file:') {
     </div>
     <div class="container-fluid" style="display: none;" id="printArea">
         <header class="app-header">
-        <div class="text-center"><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" style="height:60px; margin-top: 3vh" alt="Orirun Logo"/></a></div>
+        <div class="text-center"><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" width="270" height="115" style="height:60px;width:auto;margin-top:3vh" alt="Orirun Logo"/></a></div>
         <div class="row">
             <div class="col-md-2">
                 <div class="languageBtn">
@@ -647,11 +647,6 @@ if (location.protocol !== 'file:') {
              onclick="showContributionModal()">
             <span data-translate>Share Insight</span>
           </a>
-          |
-          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
-             onclick="openBabalawoContribution(); return false;">
-            <span data-translate>Babaláwo Contribution</span>
-          </a>
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="orirun.restartTour()">
@@ -674,15 +669,15 @@ if (location.protocol !== 'file:') {
         <!-- 5. Socials -->
         <p class="socials">
           <a href="https://wa.me/2348027573121" target="_blank">
-            <img width="25px" src="public/img/whatsapp.png" alt="WhatsApp"/></a> |
+            <img width="44" height="45" style="width:25px;height:auto" src="public/img/whatsapp.png" alt="WhatsApp"/></a> |
           <a href="https://www.facebook.com/orirunng" target="_blank">
-            <img loading="lazy" decoding="async" src="public/img/facebook.png" alt="Facebook"/></a> |
+            <img loading="lazy" decoding="async" width="40" height="66" src="public/img/facebook.png" alt="Facebook"/></a> |
           <a href="https://twitter.com/orirun_ng" target="_blank">
-            <img loading="lazy" decoding="async" src="public/img/twitter.png" alt="Twitter"/></a> |
+            <img loading="lazy" decoding="async" width="40" height="62" src="public/img/twitter.png" alt="Twitter"/></a> |
           <a href="https://instagram.com/orirun_ng" target="_blank">
-            <img loading="lazy" decoding="async" src="public/img/instagram.png" alt="Instagram"/></a> |
+            <img loading="lazy" decoding="async" width="40" height="68" src="public/img/instagram.png" alt="Instagram"/></a> |
           <a href="https://www.youtube.com/@orirun" target="_blank">
-            <img loading="lazy" decoding="async" src="public/img/youtube.png" alt="Youtube"/></a>
+            <img loading="lazy" decoding="async" width="40" height="71" src="public/img/youtube.png" alt="Youtube"/></a>
         </p>
 
         <!-- App download badges — shown on the website, hidden inside the installed app -->
@@ -760,28 +755,20 @@ if (location.protocol !== 'file:') {
                 placeholder="e.g. Princess Aminat Ola Kadri"
                 class="form-control allow-paste">
             </div>
-            <div class="mb-3">
+            <div class="mb-3" id="contributionCategoryField">
               <label data-translate>Select Category</label>
               <select id="contributionCategory" class="form-control">
                 <option value="General">General</option>
-                <option value="Babalawo">Babaláwo / Ìyánífá (verse or teaching)</option>
-                <option value="Ifa">Ifa</option>
+                <option value="Babalawo">Ifá verse or teaching</option>
                 <option value="Numerology">Numerology</option>
                 <option value="Astrology">Astrology</option>
               </select>
             </div>
-            <div id="ifaFields" style="display:none;">
-              <div class="mb-3">
-                <label data-translate>Title</label>
-                <input type="text" id="ifaTitle" class="form-control allow-paste">
-              </div>
-              <div class="mb-3">
-                <label data-translate>Link (optional)</label>
-                <input type="text" id="ifaMedia" class="form-control allow-paste">
-              </div>
-            </div>
-            <!-- Babaláwo lineage fields: shown only for the Babaláwo category.
-                 These carry the provenance a verifying elder needs downstream. -->
+            <!-- Unified Ifá contribution fields (verse/teaching, from anyone
+                 incl. babaláwo/ìyánífá). Lean: only what the verse pipeline
+                 needs — Odù (routes it) + consent — plus optional title and a
+                 media link. Lineage/town were dropped to keep the modal short;
+                 the backend already treats them as optional. -->
             <div id="babalawoFields" style="display:none;">
               <div class="mb-3">
                 <label data-translate>Odù this verse or teaching belongs to</label>
@@ -789,23 +776,18 @@ if (location.protocol !== 'file:') {
                   data-translate-attr="placeholder" placeholder="e.g. Èjì Ogbè, Ọ̀yẹ̀kú Méjì">
               </div>
               <div class="mb-3">
-                <label data-translate>Your title</label>
+                <label data-translate>Title (optional)</label>
                 <input type="text" id="babTitle" class="form-control allow-paste"
-                  data-translate-attr="placeholder" placeholder="e.g. Babaláwo, Ìyánífá, Àwíṣẹ">
+                  data-translate-attr="placeholder" placeholder="A short title for this verse">
               </div>
               <div class="mb-3">
-                <label data-translate>Ilé / compound or lineage (optional)</label>
-                <input type="text" id="babLineage" class="form-control allow-paste"
-                  data-translate-attr="placeholder" placeholder="e.g. Ilé Ọ̀ṣun, Ìbàdàn lineage">
-              </div>
-              <div class="mb-3">
-                <label data-translate>Town or region (optional)</label>
-                <input type="text" id="babTown" class="form-control allow-paste"
-                  data-translate-attr="placeholder" placeholder="e.g. Abẹ́òkúta, Nigeria">
+                <label data-translate>Audio or video link (optional)</label>
+                <input type="text" id="ifaMedia" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="Paste a YouTube, audio, or video link">
               </div>
               <label style="display:flex;gap:8px;align-items:flex-start;font-size:0.9em;line-height:1.5;">
                 <input type="checkbox" id="babConsent" style="margin-top:3px;flex-shrink:0;">
-                <span data-translate>I confirm this teaching is shared for the benefit of all, and I consent to being credited by name as its contributor once a verifying elder has reviewed it.</span>
+                <span data-translate>I consent to being credited by name once a verifying elder has reviewed this.</span>
               </label>
             </div>
             <div class="mb-3">
@@ -1071,6 +1053,27 @@ if (location.protocol !== 'file:') {
         renderNotifToggle(document.getElementById("notif-toggle-slot"));
       }
     });
+
+    // Load the decorative background photo AFTER first paint, off the
+    // critical path, then fade it in. This keeps Largest Contentful Paint
+    // fast (the app paints on the solid scrim colour immediately) while the
+    // photo still arrives a moment later.
+    (function () {
+      function revealBackground() {
+        var img = new Image();
+        img.onload = function () { document.body.classList.add("bg-ready"); };
+        img.src = "public/img/background.jpg";
+      }
+      var kick = function () {
+        if ("requestIdleCallback" in window) {
+          requestIdleCallback(revealBackground, { timeout: 2000 });
+        } else {
+          setTimeout(revealBackground, 400);
+        }
+      };
+      if (document.readyState === "complete") kick();
+      else window.addEventListener("load", kick);
+    })();
 </script>
 <script src="public/js/orirun-tour.js" defer></script>
 </body>

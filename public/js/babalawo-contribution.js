@@ -40,6 +40,27 @@
   }
 
   /* ── Footer entry: open the shared modal, pre-set to Babaláwo ── */
+  // Wrap the general modal opener so that entering via "Share Insight"
+  // always RESTORES the category selector (in case a prior babaláwo entry
+  // hid it) and clears the babaláwo fields. Keeps utils.js untouched.
+  function wrapShowModal() {
+    if (typeof window.showContributionModal !== "function" || window.__babShowWrapped) {
+      return typeof window.showContributionModal === "function";
+    }
+    var originalShow = window.showContributionModal;
+    window.showContributionModal = function () {
+      var r = originalShow.apply(this, arguments);
+      // Only restore if THIS call isn't the babaláwo entry (which hides it
+      // again right after). We restore by default; the babaláwo opener
+      // re-hides synchronously after calling through.
+      var catField = $("contributionCategoryField");
+      if (catField) catField.style.display = "";
+      return r;
+    };
+    window.__babShowWrapped = true;
+    return true;
+  }
+
   window.openBabalawoContribution = function () {
     if (typeof showContributionModal !== "function") return;
     showContributionModal();
@@ -49,6 +70,11 @@
       // fire the app's own change handlers, then our sync
       sel.dispatchEvent(new Event("change", { bubbles: true }));
     }
+    // The category is fixed to Babaláwo on this entry, so hide the selector
+    // (it would just be a redundant menu). The value is still set and sent,
+    // so backend routing is unaffected. General "Share Insight" still shows it.
+    var catField = $("contributionCategoryField");
+    if (catField) catField.style.display = "none";
     syncBabalawoFields();
     setTimeout(function () { var el = $("babOdu"); if (el) el.focus(); }, 60);
   };
@@ -71,10 +97,9 @@
       var sel = $("contributionCategory");
       if (!sel || sel.value !== CATEGORY) return original.apply(this, arguments);
 
-      var odu     = ($("babOdu")     || {}).value ? $("babOdu").value.trim()     : "";
-      var title   = ($("babTitle")   || {}).value ? $("babTitle").value.trim()   : "";
-      var lineage = ($("babLineage") || {}).value ? $("babLineage").value.trim() : "";
-      var town    = ($("babTown")    || {}).value ? $("babTown").value.trim()    : "";
+      var odu     = ($("babOdu")   || {}).value ? $("babOdu").value.trim()   : "";
+      var title   = ($("babTitle") || {}).value ? $("babTitle").value.trim() : "";
+      var media   = ($("ifaMedia") || {}).value ? $("ifaMedia").value.trim() : "";
       var consent = ($("babConsent") || {}).checked || false;
       var name    = ($("contributorName") || {}).value ? $("contributorName").value.trim() : "";
       var textEl  = $("contributionText");
@@ -93,8 +118,8 @@
         category: CATEGORY,
         text: body,
         title: title || "",
-        media: "",
-        babalawo: { odu: odu, title: title, lineage: lineage, town: town, consent: true }
+        media: media || "",
+        babalawo: { odu: odu, title: title, lineage: "", town: "", consent: true }
       };
 
       return fetch("/api/contribution/submit", {
@@ -106,7 +131,7 @@
         .then(function (r) {
           if (!r.ok || (r.j && r.j.error)) throw new Error((r.j && r.j.error) || "Submission failed");
           // reset our fields + the shared ones, show the app's success popup
-          ["babOdu", "babTitle", "babLineage", "babTown"].forEach(function (id) { var el = $(id); if (el) el.value = ""; });
+          ["babOdu", "babTitle", "ifaMedia"].forEach(function (id) { var el = $(id); if (el) el.value = ""; });
           var c = $("babConsent"); if (c) c.checked = false;
           if (textEl) textEl.value = "";
           var nm = $("contributorName"); if (nm) nm.value = "";
@@ -126,12 +151,17 @@
     return true;
   }
 
-  // utils.js defines submitContribution at parse time, but be defensive:
-  // try now, and retry briefly if load order ever changes.
-  if (!installSubmitWrapper()) {
+  // utils.js defines these at parse time, but be defensive: try each now,
+  // and retry briefly if load order ever changes. Evaluate BOTH each round
+  // (no short-circuit) so one failing doesn't skip the other.
+  var okSubmit = installSubmitWrapper();
+  var okShow = wrapShowModal();
+  if (!okSubmit || !okShow) {
     var tries = 0;
     var iv = setInterval(function () {
-      if (installSubmitWrapper() || ++tries > 20) clearInterval(iv);
+      if (!okSubmit) okSubmit = installSubmitWrapper();
+      if (!okShow) okShow = wrapShowModal();
+      if ((okSubmit && okShow) || ++tries > 20) clearInterval(iv);
     }, 100);
   }
 
