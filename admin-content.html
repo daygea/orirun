@@ -514,6 +514,8 @@ function confirmAct(msg) { return window.confirm(msg); }
 
 /* ── Collections ───────────────────────────────────────────── */
 async function loadCollections() {
+  orTopbarStart();
+  $("colList").innerHTML = orLoaderHTML("Loading collections…");
   try {
     const res = await api("/content");
     if (res.status === 401 || res.status === 403) return showAuth();
@@ -527,10 +529,11 @@ async function loadCollections() {
     $("dbBadge").className = "db-badge" + (anyDb ? "" : " off");
     $("dbBadgeText").textContent = anyDb ? "database live" : "file fallback";
   } catch (err) {
+    $("colList").innerHTML = "";
     $("dbBadge").className = "db-badge off";
     $("dbBadgeText").textContent = "unreachable";
     toast("Could not reach the backend: " + err.message, true);
-  }
+  } finally { orTopbarDone(); }
 }
 function showAuth() {
   // The sign-in card lives in the Content area; if a 401 arrives while
@@ -563,12 +566,19 @@ async function selectCollection(c) {
   $("editorWrap").style.display = "none";
   $("emptyState").style.display = "flex";
   $("search").value = "";
+  // Loader: top bar + in-panel spinner while this collection's items load.
+  orTopbarStart();
+  $("itemList").innerHTML = orLoaderHTML("Loading items…");
+  $("countNote").textContent = "";
   try {
     const res = await api(`/content/${c.key}`);
     if (res.status === 401 || res.status === 403) return showAuth();
     colPayload = await res.json();
     renderItems();
-  } catch (err) { toast("Failed to load items: " + err.message, true); }
+  } catch (err) {
+    $("itemList").innerHTML = "";
+    toast("Failed to load items: " + err.message, true);
+  } finally { orTopbarDone(); }
 }
 function renderItems() {
   const q = $("search").value.trim().toLowerCase();
@@ -592,6 +602,10 @@ async function selectItem(key) {
   if (itemDirty && !confirmAct("Discard unsaved changes?")) return;
   activeKey = key; itemDirty = false;
   renderItems();
+  // Loader while the item's JSON is fetched. We use the top progress bar
+  // only (not an in-panel spinner) so we don't overwrite the emptyState
+  // Odù mark; the editor swaps in as soon as the data arrives.
+  orTopbarStart();
   try {
     const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(key)}`);
     if (!res.ok) throw new Error((await res.json()).error || "HTTP " + res.status);
@@ -606,6 +620,7 @@ async function selectItem(key) {
     paintProvenance();
     loadAudit();
   } catch (err) { toast(err.message, true); }
+  finally { orTopbarDone(); }
 }
 function paintProvenance() {
   const src = String(activeCol.source || "");
