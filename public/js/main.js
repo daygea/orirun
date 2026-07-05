@@ -1,4 +1,30 @@
 /* ─────────────────────────────────────────────────────────────
+ *  Prevent pinch / double-tap zoom on iOS Safari, which ignores the
+ *  viewport meta's user-scalable=no. touch-action (in CSS) blocks most
+ *  zoom, but iOS still fires gesture* events on two-finger pinch and
+ *  allows double-tap zoom — we cancel both here so the installed PWA
+ *  feels native and can't be stretched. One-finger scrolling is not
+ *  affected (we never touch single-touch touchmove).
+ * ───────────────────────────────────────────────────────────── */
+(function () {
+  // Block iOS pinch-zoom gestures.
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (evt) {
+    document.addEventListener(evt, function (e) { e.preventDefault(); }, { passive: false });
+  });
+  // Block double-tap-to-zoom (two taps under 300ms).
+  var lastTouchEnd = 0;
+  document.addEventListener("touchend", function (e) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 300) { e.preventDefault(); }
+    lastTouchEnd = now;
+  }, { passive: false });
+  // Extra guard: cancel any multi-touch (pinch) that starts.
+  document.addEventListener("touchmove", function (e) {
+    if (e.touches && e.touches.length > 1) { e.preventDefault(); }
+  }, { passive: false });
+})();
+
+/* ─────────────────────────────────────────────────────────────
  *  App-vs-web detection — reveal the App Store / Google Play badges
  *  only in a real browser (hidden inside the installed app). Lives in
  *  this external file so it runs regardless of inline-script handling.
