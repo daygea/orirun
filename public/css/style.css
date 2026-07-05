@@ -2348,3 +2348,46 @@ a:focus-visible, button:focus-visible,
   *{ animation-duration:.001ms !important; animation-iteration-count:1 !important;
      transition-duration:.001ms !important; scroll-behavior:auto !important; }
 }
+
+
+/* ── iOS date-input fix ──────────────────────────────────────────
+   iPhone Safari renders <input type="date"> with its own internal
+   layout that ignores normal box-sizing/appearance, so the value
+   ("5 Jul 2026") overflows the field. Normalise the control: strip
+   the native appearance, enforce border-box, and align the value
+   left within the padding. Android/desktop are unaffected (they
+   already render correctly; these rules are compatible with them). */
+input#birthdate[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  box-sizing: border-box !important;
+  width: 100%;
+  max-width: 100%;
+  min-height: 44px;                 /* comfortable iOS tap target */
+  display: block;
+  text-align: left;
+  overflow: hidden;                 /* never let the value spill out */
+}
+/* WebKit's inner date container + text: keep them within the box */
+input#birthdate[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+input#birthdate[type="date"]::-webkit-datetime-edit {
+  padding: 0;
+}
+input#birthdate[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+/* Keep the calendar picker indicator tidy and inside the field */
+input#birthdate[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+/* Container also enforces the boundary so nothing escapes on iOS. */
+#birthdate-box {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: hidden;
+}
