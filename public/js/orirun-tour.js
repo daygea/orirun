@@ -369,45 +369,56 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       },
 
-      /* Fixed-position targets only (Language button, History button, chat
-         toggle) need special handling: Driver.js positions its popover by
-         adding the page scroll offset to the element's rect — correct for
-         normal elements, but WRONG for position:fixed ones, which stay put
-         while the page scrolls. That mismatch is what threw the Language
-         popover to the bottom of the screen. Here we detect a fixed target
-         and re-place the popover in VIEWPORT space, just beside it, so it
-         stays attached on every screen. Non-fixed steps are untouched. */
+      /* Popover placement — done ourselves for EVERY step.
+         Driver.js positions the popover from the element's document rect plus
+         scroll offset. That detaches the card from the field in several cases
+         (position:fixed targets, transformed ancestors, mid-scroll reads) on
+         both desktop and mobile. Instead we let Driver scroll the field into
+         view, then pin the popover in VIEWPORT space right next to where the
+         field actually renders — below it if there's room, otherwise above,
+         horizontally aligned to the field but always kept fully on-screen.
+         This is reliable regardless of the target's CSS positioning. */
       onHighlighted: function (element) {
         try {
           var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
           if (!node || !node.getBoundingClientRect) return;
-          var cs = window.getComputedStyle(node);
-          if (cs.position !== "fixed") return;   // only fixed targets
 
-          // Driver positions its popover on a delayed (animated) timeout, so
-          // we reposition just after, to win over its (incorrect-for-fixed)
-          // placement.
+          // Reposition AFTER Driver's animated placement + scroll settle.
           setTimeout(function () {
             var pop = document.getElementById("driver-popover-item");
             if (!pop) return;
 
-            var r  = node.getBoundingClientRect();   // viewport coords (fixed)
+            var r  = node.getBoundingClientRect();   // where the field really is
             var pr = pop.getBoundingClientRect();
-            var m  = 10;
+            var m  = 12;
             var vw = window.innerWidth, vh = window.innerHeight;
 
-            // Prefer placing the popover just BELOW the element; if it's a
-            // right-edge element (right half of screen), right-align it.
-            var top  = r.bottom + m;
-            var left = (r.left < vw / 2) ? r.left : (r.right - pr.width);
+            // Vertical: prefer below the field; flip above if it won't fit;
+            // clamp into view as a last resort.
+            var spaceBelow = vh - r.bottom;
+            var spaceAbove = r.top;
+            var top;
+            if (spaceBelow >= pr.height + m) {
+              top = r.bottom + m;                       // below
+            } else if (spaceAbove >= pr.height + m) {
+              top = r.top - pr.height - m;              // above
+            } else {
+              top = Math.max(m, Math.min(vh - pr.height - m, r.bottom + m));
+            }
 
-            // Keep it fully on-screen.
+            // Horizontal: align the popover's left with the field, but keep
+            // it fully on-screen. For right-edge fields, right-align instead.
+            var left;
+            if (r.left + pr.width <= vw - m) {
+              left = r.left;                            // left-aligned
+            } else {
+              left = r.right - pr.width;                // right-aligned
+            }
             if (left + pr.width > vw - m) left = vw - pr.width - m;
             if (left < m) left = m;
-            if (top + pr.height > vh - m) top = Math.max(m, r.top - pr.height - m); // flip above
             if (top < m) top = m;
 
-            // Pin in viewport space so it tracks the fixed element exactly.
+            // Pin in viewport space so it stays attached to the field.
             pop.style.position = "fixed";
             pop.style.left = left + "px";
             pop.style.top  = top + "px";
