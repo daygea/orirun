@@ -777,6 +777,17 @@ const performUserDivination = async (
 
       resultElement.innerHTML = parts.join("");
 
+      /* Download / Share the reading as a branded PDF */
+      if (window.orirunExport) {
+        window.orirunExport.attachBar({
+          key: "divination",
+          sourceEl: resultElement,
+          title: `${mainCast} — Ifá Reading`,
+          subtitle: `${orientation} · ${specificOrientation} · ${solution}`,
+          filename: `orirun-${mainCast}-reading`.toLowerCase()
+        });
+      }
+
       renderFeedbackSection("Divination", {
         oduName: mainCast, orientationText: orientation,
         specificOrientation, solution, solutionDetails, hasAccess: true
@@ -1075,6 +1086,17 @@ async function displayMeaning(number) {
     _dedupeSectionHeadings(resultEl);
 
     configEl.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" />`;
+
+    /* Download / Share the number reading as a branded PDF */
+    if (window.orirunExport) {
+      window.orirunExport.attachBar({
+        key: "picknumber",
+        sourceEl: resultEl,
+        title: `Energy ${number} — ${label}`,
+        subtitle: "Sacred number reading",
+        filename: `orirun-energy-${number}`
+      });
+    }
 
     renderFeedbackSection("Numerology", { numerology: number, label }, resultEl);
     window.scrollTo({ top: resultEl.offsetTop, behavior: "smooth" });
@@ -1519,6 +1541,17 @@ function parseEnergyAccordion(text) {
       </p>
     `);
     resultElement.innerHTML = parts.join("");
+
+    /* Download / Share the numerology chart as a branded PDF */
+    if (window.orirunExport) {
+      window.orirunExport.attachBar({
+        key: "numerology",
+        sourceEl: resultElement,
+        title: `${fullName} — Numerology Chart`,
+        subtitle: "Yorùbá numerology birth chart",
+        filename: `orirun-${(fullName || "chart").replace(/\s+/g, "-")}-numerology`.toLowerCase()
+      });
+    }
 
     renderFeedbackSection("Birth Details",
       { fullName, birthdate, age, location: userLocation },

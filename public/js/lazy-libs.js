@@ -33,7 +33,7 @@
     _loading[name] = new Promise(function (resolve, reject) {
       // Already present (e.g. loaded by an earlier page state)?
       if (
-        (name === "jspdf" && window.jsPDF) ||
+        (name === "jspdf" && (window.jspdf || window.jsPDF)) ||
         (name === "html2canvas" && window.html2canvas) ||
         (name === "chart" && window.Chart) ||
         (name === "driver" && typeof window.Driver !== "undefined")

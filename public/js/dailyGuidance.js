@@ -258,7 +258,7 @@ async function showGuidancePopup(lang, _retries) {
           id="dg-share-btn"
           style="border:1px solid #2e7d32;display:none;transform:none !important;"
           onclick="_shareDailyGuidance()">
-          📤 <span data-translate>Share</span>
+          📤 <span data-translate>Download / Share</span>
         </button>
       </div>
     </div>`;
