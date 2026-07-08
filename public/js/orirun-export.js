@@ -290,6 +290,25 @@
         if (!first) pdf.addPage();
         pdf.addImage(sliceData, "JPEG", margin, margin, usableW, sliceHmm);
 
+        // Faint centered "Orírùn" watermark on every page. Wrapped in
+        // try/catch because GState opacity isn't available in every jsPDF
+        // build — if it's missing we simply skip the watermark rather than
+        // fail the export.
+        try {
+          var gsW = new pdf.GState({ opacity: 0.08 });
+          pdf.setGState(gsW);
+          pdf.setTextColor(12, 61, 36);            // brand green
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(64);
+          pdf.text("Orírùn", pageW / 2, pageH / 2, {
+            align: "center",
+            angle: 35,
+            baseline: "middle"
+          });
+          // Restore full opacity so subsequent pages' images aren't dimmed.
+          pdf.setGState(new pdf.GState({ opacity: 1 }));
+        } catch (wmErr) { /* watermark optional */ }
+
         // Overlay clickable link annotations that fall on THIS page.
         var pageTopCss = pageIndex * pageSliceCssPx;
         var pageBottomCss = pageTopCss + pageSliceCssPx;

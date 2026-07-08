@@ -783,7 +783,7 @@ const performUserDivination = async (
           key: "divination",
           sourceEl: resultElement,
           title: `${mainCast}`,
-          subtitle: `${orientationText} · ${specificOrientation} · ${solution}`,
+          subtitle: `${orientationText} (${specificOrientation}), ${solution} ${solutionDetails}`,
           filename: `orirun-${mainCast}-reading`.toLowerCase(),
           includeConfig: true
         });
