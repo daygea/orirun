@@ -784,7 +784,8 @@ const performUserDivination = async (
           sourceEl: resultElement,
           title: `${mainCast} — Ifá Reading`,
           subtitle: `${orientation} · ${specificOrientation} · ${solution}`,
-          filename: `orirun-${mainCast}-reading`.toLowerCase()
+          filename: `orirun-${mainCast}-reading`.toLowerCase(),
+          includeConfig: true
         });
       }
 
