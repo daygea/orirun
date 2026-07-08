@@ -782,8 +782,8 @@ const performUserDivination = async (
         window.orirunExport.attachBar({
           key: "divination",
           sourceEl: resultElement,
-          title: `${mainCast} — Ifá Reading`,
-          subtitle: `${orientation} · ${specificOrientation} · ${solution}`,
+          title: `${mainCast}`,
+          subtitle: `${orientationText} · ${specificOrientation} · ${solution}`,
           filename: `orirun-${mainCast}-reading`.toLowerCase(),
           includeConfig: true
         });

@@ -102,6 +102,15 @@
     body.appendChild(clone);
     sheet.appendChild(body);
 
+    // Traditional Ifá closing blessing — shown on the Ifá reading only
+    // (same gate as the Odù configuration), not on numerology exports.
+    if (includeConfig) {
+      var blessing = document.createElement("div");
+      blessing.style.cssText = "text-align:center;margin-top:20px;font-family:'Source Serif 4',Georgia,serif;font-size:15px;font-weight:600;color:" + BRAND_GREEN + ";letter-spacing:.3px;";
+      blessing.textContent = "Àbọrú, Àbọyè, Àbọṣíṣẹ oo";
+      sheet.appendChild(blessing);
+    }
+
     // Footer
     var footer = document.createElement("div");
     var d = new Date();
