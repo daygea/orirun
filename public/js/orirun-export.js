@@ -71,8 +71,11 @@
       '<img src="public/img/logo.png" crossorigin="anonymous" style="height:56px;width:auto;display:block;margin:0 auto 10px;" alt="Orírùn" />' +
       // Homage banner — mirrors the on-screen green homage strip.
       '<div style="background:linear-gradient(135deg,#0c3d24,#0f7b3d);color:#fffef9;font-family:\'Source Serif 4\',Georgia,serif;font-size:12px;line-height:1.6;letter-spacing:.2px;padding:12px 16px;border-radius:12px;margin:0 auto 12px;max-width:600px;">' + escapeHTML(homageText) + '</div>' +
-      // Bird motif.
-      '<img src="public/img/bird.gif" crossorigin="anonymous" style="height:38px;width:auto;display:block;margin:0 auto 12px;opacity:.85;" alt="" />' +
+      // Bird motif — shown only when there is NO Odù configuration below
+      // (for numerology / pick-a-number). For the Ifá reading the real Odù
+      // sign (opele on the opon board) renders just under the header instead.
+      (includeConfig ? "" :
+        '<img src="public/img/bird.gif" crossorigin="anonymous" style="height:38px;width:auto;display:block;margin:0 auto 12px;opacity:.85;" alt="" />') +
       '<div style="font-size:22px;font-weight:700;color:' + BRAND_GREEN + ';font-family:\'Source Serif 4\',Georgia,serif;">' + escapeHTML(title) + '</div>' +
       (subtitle ? '<div style="font-size:13px;color:#5a6a60;margin-top:4px;font-family:system-ui,sans-serif;">' + escapeHTML(subtitle) + '</div>' : "");
     sheet.appendChild(header);
