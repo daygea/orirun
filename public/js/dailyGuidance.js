@@ -258,7 +258,7 @@ async function showGuidancePopup(lang, _retries) {
           id="dg-share-btn"
           style="border:1px solid #2e7d32;display:none;transform:none !important;"
           onclick="_shareDailyGuidance()">
-          📤 <span data-translate>Download / Share</span>
+          📤 <span data-translate>Share</span>
         </button>
       </div>
     </div>`;
@@ -349,11 +349,6 @@ async function _shareDailyGuidance() {
   const d = overlay._shareData;
   if (!d) { _shareDailyGuidanceText(); return; }
 
-  if (typeof html2canvas === "undefined") {
-    _shareDailyGuidanceText();
-    return;
-  }
-
   const originalHTML = btn ? btn.innerHTML : "";
   if (btn) btn.innerHTML = `<span class="spinner" style="width:14px;height:14px;margin-right:4px;"></span>`;
 
@@ -423,6 +418,18 @@ async function _shareDailyGuidance() {
 
   try {
     await ensureLib("html2canvas"); // lazy: loads on first share, not at boot
+    // Guard: the script's onload can resolve a tick before the global is
+    // attached. Wait briefly for it rather than falling back to text.
+    if (typeof html2canvas === "undefined") {
+      await new Promise(function (res) {
+        var n = 0;
+        (function poll() {
+          if (typeof html2canvas !== "undefined" || n++ > 25) return res();
+          setTimeout(poll, 80);
+        })();
+      });
+    }
+    if (typeof html2canvas === "undefined") throw new Error("html2canvas unavailable");
     const canvas = await html2canvas(capture, {
       backgroundColor: "#f0f7f0",
       scale:           2,
