@@ -678,13 +678,14 @@ const performUserDivination = async (
             📖 <span data-translate>Read the guide</span>
           </button>
         </div>
-        <div class="dv-hero">
-          <div class="dv-hero__band">
-            <h3 class="dv-hero__odu">${mainCast}</h3>
-            <div class="dv-hero__tags">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
+        <div class="ori-reading-card" style="background:var(--of-paper,#fffef9);border:1px solid var(--of-line,#dce8dc);border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(10,60,40,.10);margin-bottom:14px;">
+          <div class="ori-reading-head">
+            <div class="ori-reading-eyebrow" data-translate>· The Odù Speaks ·</div>
+            <div class="ori-reading-title">${mainCast}</div>
+            <div class="ori-reading-sub" style="font-family:system-ui,-apple-system,sans-serif;font-style:normal;letter-spacing:.02em;">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
           </div>
-          <div class="dv-hero__body">
-            <p data-translate>${rawMessage} ${solutionInfo}</p>
+          <div class="ori-reading-body" style="padding:18px 20px 20px;">
+            <p class="ori-section-text" data-translate>${rawMessage} ${solutionInfo}</p>
           </div>
         </div>
       `);
@@ -1074,15 +1075,19 @@ async function displayMeaning(number) {
     resultDiv.style.display = "none";
 
     resultEl.innerHTML = `
-      <h3 style="text-align:center;margin-top:14px;font-weight:bold;">
-        <span data-translate>Energy ${number} - ${label}</span>
-      </h3>
-      <hr/>
-      <p>${data.meaning || "No meaning found."}</p>
-      <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;" data-translate>
-        This content is inspired by collective scholarly works and community-preserved teachings,
-        shared for educational purposes only.
-      </p>`;
+      <div class="ori-reading-card" style="background:var(--of-paper,#fffef9);border:1px solid var(--of-line,#dce8dc);border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(10,60,40,.10);margin-bottom:14px;">
+        <div class="ori-reading-head">
+          <div class="ori-reading-eyebrow" data-translate>· Sacred Number ·</div>
+          <div class="ori-reading-title"><span data-translate>Energy ${number} - ${label}</span></div>
+        </div>
+        <div class="ori-reading-body" style="padding:18px 20px 20px;">
+          <p class="ori-section-text">${data.meaning || "No meaning found."}</p>
+          <p style="font-style:italic;font-size:0.85em;color:var(--of-ink-soft);text-align:center;margin-top:14px;" data-translate>
+            This content is inspired by collective scholarly works and community-preserved teachings,
+            shared for educational purposes only.
+          </p>
+        </div>
+      </div>`;
 
     _dedupeSectionHeadings(resultEl);
 
@@ -1524,20 +1529,18 @@ function parseEnergyAccordion(text) {
     /* If heading is empty but body exists, use a generic title */
     const displayTitle = heading || "Introduction";
 
-    const sid  = "ori-sec-" + (++_sid);
-    const open = idx === 0;
+    /* Sections read open and flowing (a reading is read top-to-bottom, not
+       clicked open one at a time). The first section carries the deep-green
+       rule; the rest use the softer sage rule for a quiet hierarchy. */
+    const secClass = idx === 0 ? "ori-section" : "ori-section ori-section-2";
 
     return `
-      <div style="border:1px solid #c8e6c9;border-radius:8px;margin-bottom:6px;overflow:hidden;background:#fafff9;">
-        <button class="acc-header"
-          onclick="var b=document.getElementById('${sid}');var a=this.querySelector('.acc-arrow');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';a.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';"
-          style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(135deg,#f5fbf5,#edf7ed);border:none;cursor:pointer;font-size:13px;font-weight:bold;color:#1b4332;text-align:left;gap:8px;">
-          <span data-translate>${displayTitle}</span>
-          <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
-        </button>
-        <div id="${sid}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
-          <span data-translate>${formatResponseAsHTML(body || heading)}</span>
+      <div class="${secClass}">
+        <div class="ori-section-head">
+          <span class="ori-section-rule"></span>
+          <span class="ori-section-label" data-translate>${displayTitle}</span>
         </div>
+        <p class="ori-section-text" data-translate>${formatResponseAsHTML(body || heading)}</p>
       </div>`;
   }).filter(Boolean).join("");
 }
@@ -1547,34 +1550,39 @@ function parseEnergyAccordion(text) {
     /* 🧿 Voice of Òrì — PRIMARY EXPERIENCE */
     const _oriName = (fullName || "").trim().split(/\s+/)[0] || "";
     const oriFirst = _oriName ? _oriName.charAt(0).toUpperCase() + _oriName.slice(1) : "";
-    parts.push(_acc(`🧿 ${oriFirst ? oriFirst + " — " : ""}The Voice of Your Òrì`, `
-      <div style="margin-bottom:8px;">
-        <small style="opacity:0.6;" data-translate>${oriFirst ? oriFirst + "\u2019s personal reading from name & birth date" : "Your personal reading from name & birth date"}</small>
-      </div>
+    parts.push(`
+      <div class="ori-reading-card" style="background:var(--of-paper,#fffef9);border:1px solid var(--of-line,#dce8dc);border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(10,60,40,.10);margin-bottom:14px;">
 
-      <div id="ori-voice-slot" style="border-left:4px solid var(--of-green);border-radius:6px;padding:14px;min-height:60px;">
-        <div style="display:flex;align-items:center;gap:9px;color:var(--of-green);margin-bottom:12px;">
-          <span class="spinner" style="width:16px;height:16px;flex-shrink:0;"></span>
-          <em style="font-size:13.5px;" data-translate>Your Òrì is composing this reading…</em>
+        <div class="ori-reading-head">
+          <div class="ori-reading-eyebrow" data-translate>· The Voice of Your Òrì ·</div>
+          <div class="ori-reading-title">${oriFirst ? oriFirst + " \u2014 " : ""}<span data-translate>the inner head speaks</span></div>
+          <div class="ori-reading-sub" data-translate>${oriFirst ? oriFirst + "\u2019s reading from name & birth date" : "Your reading from name & birth date"}</div>
         </div>
-        <!-- calm skeleton lines so the wait reads as intentional, not stalled -->
-        <div class="ori-skel" style="height:11px;width:92%;border-radius:6px;margin:9px 0;"></div>
-        <div class="ori-skel" style="height:11px;width:85%;border-radius:6px;margin:9px 0;"></div>
-        <div class="ori-skel" style="height:11px;width:96%;border-radius:6px;margin:9px 0;"></div>
-        <div class="ori-skel" style="height:11px;width:70%;border-radius:6px;margin:9px 0;"></div>
+
+        <div class="ori-reading-body">
+          <div id="ori-voice-slot" style="min-height:60px;">
+            <div style="display:flex;align-items:center;gap:9px;color:var(--of-green);margin-bottom:14px;">
+              <span class="spinner" style="width:16px;height:16px;flex-shrink:0;"></span>
+              <em style="font-size:13.5px;" data-translate>Your Òrì is composing this reading…</em>
+            </div>
+            <div class="ori-skel" style="height:11px;width:92%;border-radius:6px;margin:11px 0;"></div>
+            <div class="ori-skel" style="height:11px;width:85%;border-radius:6px;margin:11px 0;"></div>
+            <div class="ori-skel" style="height:11px;width:96%;border-radius:6px;margin:11px 0;"></div>
+            <div class="ori-skel" style="height:11px;width:70%;border-radius:6px;margin:11px 0;"></div>
+          </div>
+        </div>
+
+        <div style="padding:6px 20px 20px;">
+          <button id="energy-toggle-btn" onclick="toggleEnergyBreakdown(this)"
+            style="display:none;width:100%;padding:12px;border:1px dashed #cbdccb;background:transparent;color:var(--of-green-deep,#0a5a2c);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:8px;transition:background .2s,border-color .2s;">
+            <span class="etoggle-label" data-translate>Show the numbers behind this reading</span>
+            <span class="etoggle-caret" style="display:inline-block;transition:transform .25s;">▾</span>
+          </button>
+          <div id="energy-breakdown" style="display:none;margin-top:12px;padding:14px;background:#f7fcf7;border:1px solid var(--of-line,#e0efe0);border-radius:10px;font-size:13px;line-height:1.6;"></div>
+        </div>
+
       </div>
-
-      <!-- Deep-dive toggle: sits at the BOTTOM of the reading, styled as a
-           quiet full-width divider rather than a competing pill. Hidden until
-           the reading has finished composing (revealed in the .then() below). -->
-      <button id="energy-toggle-btn" onclick="toggleEnergyBreakdown(this)"
-        style="display:none;width:100%;margin-top:16px;padding:12px;border:1px dashed #c8e6c9;background:transparent;color:#0a5a2c;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:8px;transition:background .2s,border-color .2s;">
-        <span class="etoggle-label" data-translate>Show the numbers behind this reading</span>
-        <span class="etoggle-caret" style="display:inline-block;transition:transform .25s;">▾</span>
-      </button>
-
-      <div id="energy-breakdown" style="display:none;margin-top:12px;padding:14px;background:#f7fcf7;border:1px solid #e0efe0;border-radius:10px;font-size:13px;line-height:1.6;"></div>
-    `, true));
+    `);
 
 
     /* ⏳ Current Hour Influence is now rendered as a NESTED section inside
