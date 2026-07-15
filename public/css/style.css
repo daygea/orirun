@@ -2454,3 +2454,20 @@ body {
   -webkit-text-size-adjust: 100%;   /* stop iOS auto text inflation */
   text-size-adjust: 100%;
 }
+
+
+/* ── Skeleton shimmer for the "Òrì composing" reading state ──
+   A calm animated placeholder so the AI wait reads as intentional
+   (an elder composing) rather than a broken second load. */
+.ori-skel {
+  background: linear-gradient(90deg, #eaf4ea 25%, #f4faf4 37%, #eaf4ea 63%);
+  background-size: 400% 100%;
+  animation: ori-skel-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes ori-skel-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ori-skel { animation: none; background: #eef5ee; }
+}

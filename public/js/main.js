@@ -1233,7 +1233,8 @@ const prompt = `
 Interpret this life chart using African spiritual wisdom, with Yoruba cosmology as the primary lens.
 
 Speak as an elder who observes patterns clearly.
-Do not explain spirituality. Speak as if it is already understood.
+Speak as if this wisdom is already true and settled — never hedge or justify it.
+When you use a Yorùbá term (Òrì, Orí, Àṣẹ, Orisha), let its meaning show through how you use it in the sentence, so any reader anywhere feels it — without stopping to define it like a textbook.
 
 ------------------------
 HIERARCHY OF INTERPRETATION
@@ -1285,6 +1286,7 @@ COSMIC LAYER:
 STYLE:
 - Grounded, observational, certain — the voice of an elder, not a coach.
 - No motivational filler. No modern psychology.
+- Write for a person who may be meeting Yorùbá wisdom for the first time, yet never talk down. The reading should feel equally true to an elder in Yorùbáland and a seeker across the world.
 
 PROHIBITED:
 - No rituals, sacrifices, or ebo.
@@ -1411,6 +1413,40 @@ const performBirthChart = async () => {
     const { pinnaclePhases, currentPinnacleNumber, currentChallengeNumber } =
       extractPinnacles(data, age);
 
+    /* Kick off the AI interpretation IMMEDIATELY — the moment its inputs are
+       ready — so it runs in parallel with all the DOM building below instead
+       of starting only after the page is assembled. This meaningfully shortens
+       (often removes) the second "being prepared" wait. */
+    const _aiInterpretationPromise = getEnergyInterpretation({
+      fullName, birthdate, age,
+      birthdayGift:      data.birthdayGift?.number                  || 0,
+      lifepath:          data.vibrations?.lifepath?.number           || 0,
+      destiny:           data.destiny?.number                        || 0,
+      soulUrge:          data.soulUrge?.number                       || 0,
+      personality:       data.quiescent?.number                      || 0,
+      reality:           data.vibrations?.reality?.number            || 0,
+      pinnacleNumber:    currentPinnacleNumber,
+      challengeNumber:   currentChallengeNumber,
+      pinnaclePhases,
+      year:              data.vibrations?.year?.number               || 0,
+      month:             data.vibrations?.month?.number              || 0,
+      week:              data.vibrations?.week?.number               || 0,
+      day:               data.vibrations?.day?.number                || 0,
+      zodiac:            data.astrology?.name                        || "",
+      zodiacElement:     data.astrology?.element                     || "",
+      zodiacOrisha:      data.astrology?.orisha                      || "",
+      zodiacRuler:       data.astrology?.ruler                       || "",
+      zodiacYorubaMonth: data.astrology?.yorubaMonth                 || "",
+      zodiacStart:       data.astrology?.start                       || "",
+      zodiacEnd:         data.astrology?.end                         || "",
+      orishaDomain:      data.astrology?.orishaInfluence?.domain     || "",
+      orishaEffect:      data.astrology?.orishaInfluence?.effect     || "",
+      ifaWisdom:         data.astrology?.orishaInfluence?.ifaWisdom  || "",
+      planetaryHour:     planetaryHourData?.planet                   || "",
+      planetaryOrisha:   planetaryHourData?.orisha                   || "",
+      planetaryEnergy:   planetaryHourData?.energy                   || ""
+    });
+
     logSilently("/api/divination/log", { fullName, birthdate, age, lifepath, location: userLocation });
     const syncToken = localStorage.getItem("syncToken");
     logSilently("/api/history/save", {
@@ -1512,19 +1548,30 @@ function parseEnergyAccordion(text) {
     const _oriName = (fullName || "").trim().split(/\s+/)[0] || "";
     const oriFirst = _oriName ? _oriName.charAt(0).toUpperCase() + _oriName.slice(1) : "";
     parts.push(_acc(`🧿 ${oriFirst ? oriFirst + " — " : ""}The Voice of Your Òrì`, `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <div style="margin-bottom:8px;">
         <small style="opacity:0.6;" data-translate>${oriFirst ? oriFirst + "\u2019s personal reading from name & birth date" : "Your personal reading from name & birth date"}</small>
-        <button id="energy-toggle-btn" onclick="toggleEnergyBreakdown(this)"
-          style="font-size:12px;border:1px solid #c8e6c9;background:#e8f5e9;color:#1b4332;padding:6px 12px;border-radius:20px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:background .2s;">
-          <span class="etoggle-label" data-translate>View Energy Breakdown</span>
-          <span class="etoggle-caret" style="display:inline-block;transition:transform .25s;">▾</span>
-        </button>
       </div>
 
-      <div id="ori-voice-slot" style="border-left:4px solid var(--of-green);border-radius:6px;padding:12px;min-height:60px;display:flex;align-items:center;gap:10px;color:var(--of-green);">
-        <span class="spinner" style="width:18px;height:18px;"></span>
-        <em>Your reading is being prepared...</em>
+      <div id="ori-voice-slot" style="border-left:4px solid var(--of-green);border-radius:6px;padding:14px;min-height:60px;">
+        <div style="display:flex;align-items:center;gap:9px;color:var(--of-green);margin-bottom:12px;">
+          <span class="spinner" style="width:16px;height:16px;flex-shrink:0;"></span>
+          <em style="font-size:13.5px;" data-translate>Your Òrì is composing this reading…</em>
+        </div>
+        <!-- calm skeleton lines so the wait reads as intentional, not stalled -->
+        <div class="ori-skel" style="height:11px;width:92%;border-radius:6px;margin:9px 0;"></div>
+        <div class="ori-skel" style="height:11px;width:85%;border-radius:6px;margin:9px 0;"></div>
+        <div class="ori-skel" style="height:11px;width:96%;border-radius:6px;margin:9px 0;"></div>
+        <div class="ori-skel" style="height:11px;width:70%;border-radius:6px;margin:9px 0;"></div>
       </div>
+
+      <!-- Deep-dive toggle: sits at the BOTTOM of the reading, styled as a
+           quiet full-width divider rather than a competing pill. Hidden until
+           the reading has finished composing (revealed in the .then() below). -->
+      <button id="energy-toggle-btn" onclick="toggleEnergyBreakdown(this)"
+        style="display:none;width:100%;margin-top:16px;padding:12px;border:1px dashed #c8e6c9;background:transparent;color:#0a5a2c;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;align-items:center;justify-content:center;gap:8px;transition:background .2s,border-color .2s;">
+        <span class="etoggle-label" data-translate>Show the numbers behind this reading</span>
+        <span class="etoggle-caret" style="display:inline-block;transition:transform .25s;">▾</span>
+      </button>
 
       <div id="energy-breakdown" style="display:none;margin-top:12px;padding:14px;background:#f7fcf7;border:1px solid #e0efe0;border-radius:10px;font-size:13px;line-height:1.6;"></div>
     `, true));
@@ -1561,36 +1608,9 @@ function parseEnergyAccordion(text) {
 
     window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
 
-    /* AI interpretation in background */
-    getEnergyInterpretation({
-      fullName, birthdate, age,
-      birthdayGift:      data.birthdayGift?.number                  || 0,
-      lifepath:          data.vibrations?.lifepath?.number           || 0,
-      destiny:           data.destiny?.number                        || 0,
-      soulUrge:          data.soulUrge?.number                       || 0,
-      personality:       data.quiescent?.number                      || 0,
-      reality:           data.vibrations?.reality?.number            || 0,
-      pinnacleNumber:    currentPinnacleNumber,
-      challengeNumber:   currentChallengeNumber,
-      pinnaclePhases,
-      year:              data.vibrations?.year?.number               || 0,
-      month:             data.vibrations?.month?.number              || 0,
-      week:              data.vibrations?.week?.number               || 0,
-      day:               data.vibrations?.day?.number                || 0,
-      zodiac:            data.astrology?.name                        || "",
-      zodiacElement:     data.astrology?.element                     || "",
-      zodiacOrisha:      data.astrology?.orisha                      || "",
-      zodiacRuler:       data.astrology?.ruler                       || "",
-      zodiacYorubaMonth: data.astrology?.yorubaMonth                 || "",
-      zodiacStart:       data.astrology?.start                       || "",
-      zodiacEnd:         data.astrology?.end                         || "",
-      orishaDomain:      data.astrology?.orishaInfluence?.domain     || "",
-      orishaEffect:      data.astrology?.orishaInfluence?.effect     || "",
-      ifaWisdom:         data.astrology?.orishaInfluence?.ifaWisdom  || "",
-      planetaryHour:     planetaryHourData?.planet                   || "",
-      planetaryOrisha:   planetaryHourData?.orisha                   || "",
-      planetaryEnergy:   planetaryHourData?.energy                   || ""
-    }).then((aiInterpretation) => {
+    /* AI interpretation — already in flight (started right after the data
+       arrived, above). We just attach the render here. */
+    _aiInterpretationPromise.then((aiInterpretation) => {
       const slot = document.getElementById("ori-voice-slot");
       if (!slot) return;
       slot.style.display    = "block";
@@ -1621,6 +1641,10 @@ function parseEnergyAccordion(text) {
       /* Populate Energy Breakdown */
       const breakdown = document.getElementById("energy-breakdown");
       if (breakdown) {
+        // Reveal the deep-dive toggle now that the reading has composed and
+        // the numbers behind it are ready.
+        const _etBtn = document.getElementById("energy-toggle-btn");
+        if (_etBtn) _etBtn.style.display = "inline-flex";
         breakdown.innerHTML =
           `<div style="font-size:12px;color:var(--of-ink-soft);margin-bottom:10px;" data-translate>These are the numbers behind your reading. Tap Read more on any to understand its energy.</div>`
           + _energyGroup("Core Identity",
@@ -1645,6 +1669,13 @@ function parseEnergyAccordion(text) {
       const slot = document.getElementById("ori-voice-slot");
       if (slot) slot.innerHTML =
         `<em style="color:var(--of-muted);" data-translate>The spiritual interpretation could not be generated at this moment. Please try again later.</em>`;
+      // If the breakdown numbers did get populated before the failure,
+      // still let the user open them; otherwise leave the toggle hidden.
+      const _etBtn = document.getElementById("energy-toggle-btn");
+      const _bd = document.getElementById("energy-breakdown");
+      if (_etBtn && _bd && _bd.innerHTML.trim()) {
+        _etBtn.style.display = "inline-flex";
+      }
     });
 
   } catch (error) {
@@ -1723,9 +1754,11 @@ function toggleEnergyBreakdown(btn) {
   if (b) {
     const lbl = b.querySelector(".etoggle-label");
     const car = b.querySelector(".etoggle-caret");
-    if (lbl) lbl.textContent = opening ? "Hide Energy Breakdown" : "View Energy Breakdown";
+    if (lbl) lbl.textContent = opening ? "Hide the numbers" : "Show the numbers behind this reading";
     if (car) car.style.transform = opening ? "rotate(180deg)" : "rotate(0deg)";
-    b.style.background = opening ? "#d7eddf" : "#e8f5e9";
+    // Solidify the toggle when open so it reads as an active section header.
+    b.style.background  = opening ? "#eef7ef" : "transparent";
+    b.style.borderStyle = opening ? "solid" : "dashed";
   }
   if (opening) {
     requestAnimationFrame(function () { el.scrollIntoView({ behavior: "smooth", block: "nearest" }); });
