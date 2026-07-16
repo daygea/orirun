@@ -2402,7 +2402,7 @@ input#birthdate[type="date"]::-webkit-calendar-picker-indicator {
 #or-rotate-hint { display: none; }
 @media only screen and (orientation: landscape) and (max-height: 500px) {
   #or-rotate-hint {
-    display: flex;
+    display: flex !important;    /* beats the inline display:none guard */
     position: fixed;
     inset: 0;
     z-index: 2147483000;              /* above everything, incl. tour */
