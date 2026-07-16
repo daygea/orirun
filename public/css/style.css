@@ -1824,14 +1824,11 @@ input:checked + .slider:before {
 /* ==================================================================
    ORÍRÙN — Self-hosted body font (Source Sans 3)
    Subset includes Latin Extended Additional (U+1E00–1EFF) so the
-   Yorùbá marks ẹ ọ ṣ and stacks ọ̀ ẹ́ ṣẹ́ render natively, offline.
+   Yorùbá marks ẹ ọ ṣ and stacks ọ̀ ẹ́ ṣẹ́ render natively via Georgia.
    ================================================================== */
-@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:400; font-display:swap;
-  src:url('../fonts/SourceSans3-Regular.woff2') format('woff2'); }
-@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:500; font-display:swap;
-  src:url('../fonts/SourceSans3-Medium.woff2') format('woff2'); }
-@font-face{ font-family:'Source Sans 3'; font-style:normal; font-weight:700; font-display:swap;
-  src:url('../fonts/SourceSans3-Bold.woff2') format('woff2'); }
+/* (Self-hosted Source Sans 3 @font-face removed — the .woff2 files were never
+   added to the repo, so these rules 404'd on every load. Type falls back to
+   Georgia, which covers Yorùbá diacritics and needs no download.) */
 
 /* ==================================================================
    ORÍRÙN — UI refresh (v3.1) — cleaner & minimal
