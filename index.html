@@ -1042,25 +1042,6 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
     </div>
-<script>
-(function () {
-  // Baseline (English) fast-path reveal. Runs during HTML parse — BEFORE the
-  // ~20 deferred scripts execute — so the homage banner (the LCP element) paints
-  // at first paint instead of waiting on window.onload (~8s in the Lighthouse
-  // audit). Non-English visitors keep the existing hide -> translate -> reveal
-  // path in main.js, so there is still no flash of English before translation.
-  try {
-    var saved = localStorage.getItem('appLanguage');
-    var needsTranslation = saved && saved !== 'baseline' && saved !== 'en';
-    if (!needsTranslation) {
-      var pre = document.getElementById('preloader');
-      var app = document.getElementById('printArea');
-      if (pre) pre.style.display = 'none';
-      if (app) app.style.display = 'block';
-    }
-  } catch (e) {}
-})();
-</script>
 <script src="public/js/crypto-js.min.js" defer></script>
 <script src="public/js/config.js" defer></script>
 <script src="public/js/purify.js" defer></script>
