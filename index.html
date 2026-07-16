@@ -269,14 +269,10 @@ if (location.protocol !== 'file:') {
 </head>
 
 <body>
-<!-- Portrait preference: shown only on phones held in landscape (see CSS).
-     Hidden INLINE (not just via external CSS) so the text never flashes on
-     screen during first load before style.css applies. -->
-<div id="or-rotate-hint" aria-hidden="true" style="display:none;">
-  <div class="or-rotate-icon">📱</div>
-  <p class="or-rotate-title" data-translate>Please rotate your device</p>
-  <p class="or-rotate-sub" data-translate>Orírùn is designed for portrait mode. Turn your phone upright to continue.</p>
-</div>
+<!-- Portrait is handled by the PWA manifest ("orientation":"portrait") for the
+     installed app. In a plain browser tab the layout stays responsive; no
+     rotate-to-portrait message is shown. -->
+
     <div id="preloader" style="position:fixed;inset:0;z-index:9999;background:#fff;">
         <span id="flag"></span><br/>
         <img src="public/img/bird.gif" loading="lazy" decoding="async" alt="bird" style="display:none;" />

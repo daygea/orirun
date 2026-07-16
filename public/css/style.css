@@ -2392,46 +2392,9 @@ input#birthdate[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 
-/* ── Portrait-orientation preference ─────────────────────────────
-   The manifest locks installed PWAs to portrait, but browsers (and
-   iOS Safari, which ignores the manifest lock) can still land in
-   landscape. Rather than forcibly rotating the layout — which breaks
-   fixed elements, inputs and scrolling — we show a polite "rotate"
-   overlay on PHONES held in landscape. Only phones (max-height 500px
-   in landscape) are targeted, so tablets/desktop are unaffected. */
-#or-rotate-hint { display: none; }
-@media only screen and (orientation: landscape) and (max-height: 500px) {
-  #or-rotate-hint {
-    display: flex !important;    /* beats the inline display:none guard */
-    position: fixed;
-    inset: 0;
-    z-index: 2147483000;              /* above everything, incl. tour */
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 24px;
-    text-align: center;
-    background: #0c3d24;              /* brand green */
-    color: #fffef9;
-    font-family: 'Source Serif 4', Georgia, serif;
-  }
-  #or-rotate-hint .or-rotate-icon {
-    font-size: 44px;
-    animation: or-rotate-spin 2.4s ease-in-out infinite;
-  }
-  #or-rotate-hint .or-rotate-title { font-size: 20px; font-weight: 600; margin: 0; }
-  #or-rotate-hint .or-rotate-sub {
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 14px; opacity: .85; margin: 0; max-width: 320px; line-height: 1.5;
-  }
-  /* Keep the underlying page from scrolling behind the hint */
-  body { overflow: hidden; }
-}
-@keyframes or-rotate-spin {
-  0%, 45% { transform: rotate(0deg); }
-  55%, 100% { transform: rotate(-90deg); }
-}
+/* Portrait handling: the PWA manifest ("orientation":"portrait") locks the
+   installed app. In a plain browser tab the responsive layout adapts; no
+   rotate overlay is shown. (Previous #or-rotate-hint styles removed.) */
 
 
 /* ── Prevent pinch / gesture zoom-stretch (viewport-meta backup) ──
