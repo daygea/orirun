@@ -63,7 +63,26 @@
 <meta name="twitter:creator" content="@orirun_ng">
 
 <!-- Mobile & PWA -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta id="or-viewport" name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script>
+(function () {
+  // Web visitors keep pinch-zoom (accessibility / WCAG meta-viewport). Installed
+  // app shells — the iOS App Store wrapper (PWAShell), iOS "Add to Home Screen",
+  // and the Android Play Store TWA (display-mode: standalone) — disable zoom to
+  // preserve the native-app feel and prevent accidental stretch.
+  try {
+    var installed =
+      /PWAShell/.test(navigator.userAgent) ||
+      window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (installed) {
+      var m = document.getElementById('or-viewport');
+      if (m) m.setAttribute('content',
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+    }
+  } catch (e) {}
+})();
+</script>
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
 <meta name="author" content="Orírùn Cultural Foundation">
 <meta name="copyright" content="Orírùn Cultural Foundation 2026">
@@ -1023,6 +1042,25 @@ if (location.protocol !== 'file:') {
           </div>
         </div>
     </div>
+<script>
+(function () {
+  // Baseline (English) fast-path reveal. Runs during HTML parse — BEFORE the
+  // ~20 deferred scripts execute — so the homage banner (the LCP element) paints
+  // at first paint instead of waiting on window.onload (~8s in the Lighthouse
+  // audit). Non-English visitors keep the existing hide -> translate -> reveal
+  // path in main.js, so there is still no flash of English before translation.
+  try {
+    var saved = localStorage.getItem('appLanguage');
+    var needsTranslation = saved && saved !== 'baseline' && saved !== 'en';
+    if (!needsTranslation) {
+      var pre = document.getElementById('preloader');
+      var app = document.getElementById('printArea');
+      if (pre) pre.style.display = 'none';
+      if (app) app.style.display = 'block';
+    }
+  } catch (e) {}
+})();
+</script>
 <script src="public/js/crypto-js.min.js" defer></script>
 <script src="public/js/config.js" defer></script>
 <script src="public/js/purify.js" defer></script>

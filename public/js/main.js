@@ -949,7 +949,7 @@ const displayConfiguration = (oduName) => {
   });
 };
 
-window.onload = async () => {
+async function _oriBoot() {
   const printArea     = document.getElementById("printArea");
   const loadingScreen = document.getElementById("loading-screen");
   const preloader     = document.getElementById("preloader");
@@ -1008,7 +1008,14 @@ window.onload = async () => {
 
   initDailyGuidance().catch(err => console.warn("Daily guidance init failed:", err));
 
-};
+}
+
+// Boot on DOMContentLoaded instead of window.onload: reveal + setup no longer
+// wait for every image and late resource. main.js is a deferred script, so
+// DOMContentLoaded is guaranteed to fire AFTER it (and after translation.js,
+// which defines LANGUAGES) — never run _oriBoot synchronously here, or it would
+// execute mid-defer-chain before its dependencies exist.
+document.addEventListener("DOMContentLoaded", _oriBoot);
 
 /* ─────────────────────────────────────────────────────────────
  *  NUMEROLOGY CALCULATOR BUTTONS

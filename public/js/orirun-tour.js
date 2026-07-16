@@ -307,18 +307,19 @@ document.addEventListener("DOMContentLoaded", function () {
     var modal = document.createElement("div");
     modal.id = "or-onboard";
     modal.setAttribute("role", "dialog"); modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "or-ob-title");
     modal.style.cssText = "position:fixed;inset:0;z-index:100010;display:flex;align-items:center;justify-content:center;padding:16px;";
     modal.innerHTML =
       '<div class="or-ob-backdrop" style="position:absolute;inset:0;background:rgba(20,32,24,0.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);"></div>' +
       '<div style="position:relative;background:#fffef9;border:1px solid rgba(20,40,30,.14);border-top:3px solid #b8860b;border-radius:18px;padding:clamp(24px,5vw,38px) clamp(20px,5vw,32px);max-width:420px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(15,45,30,.34);">' +
         '<img src="public/img/logo.png" alt="Orírùn" width="270" height="115" style="height:48px;width:auto;margin-bottom:12px;" />' +
-        '<h2 style="font-family:\'Source Serif 4\',Georgia,serif;color:#0c3d24;font-size:clamp(18px,4vw,22px);margin:0 0 10px;" data-translate>Ekáàbọ̀ — Welcome to Orírùn</h2>' +
+        '<h2 id="or-ob-title" style="font-family:\'Source Serif 4\',Georgia,serif;color:#0c3d24;font-size:clamp(18px,4vw,22px);margin:0 0 10px;" data-translate>Ekáàbọ̀ — Welcome to Orírùn</h2>' +
         '<p style="font-family:system-ui,sans-serif;color:#4a5a50;font-size:clamp(13px,3vw,15px);line-height:1.6;margin:0 0 22px;" data-translate>Discover yourself through Ifá, numerology, astrology and ancestral wisdom. Take a quick tour to get the most from your experience.</p>' +
         '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">' +
           '<button id="or-ob-start" style="width:100%;max-width:300px;background:#0f7b3d;color:#fff;border:none;border-radius:11px;font-family:system-ui,sans-serif;font-weight:600;font-size:15px;padding:13px 24px;min-height:48px;cursor:pointer;box-shadow:0 4px 14px rgba(15,123,61,.3);display:flex;align-items:center;justify-content:center;gap:8px;">📖 <span data-translate>Take the Tour</span></button>' +
           '<button id="or-ob-skip" style="width:100%;max-width:300px;background:transparent;color:#5a6a60;border:1px solid rgba(20,40,30,.2);border-radius:11px;font-family:system-ui,sans-serif;font-weight:600;font-size:14px;padding:11px 24px;min-height:44px;cursor:pointer;" data-translate>Skip for now</button>' +
         '</div>' +
-        '<p style="font-family:system-ui,sans-serif;margin-top:16px;font-size:11px;color:#a5b0a8;font-style:italic;" data-translate>You can restart this tour any time from the footer.</p>' +
+        '<p style="font-family:system-ui,sans-serif;margin-top:16px;font-size:11px;color:#5a6a60;font-style:italic;" data-translate>You can restart this tour any time from the footer.</p>' +
       '</div>';
     document.body.appendChild(modal);
 

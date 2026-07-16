@@ -961,6 +961,7 @@ function renderNotifToggle(container) {
       <button
         role="switch"
         aria-checked="${enabled}"
+        aria-label="Toggle daily guidance notifications"
         tabindex="0"
         data-thumb="${thumbId}"
         data-status="${statusId}"
