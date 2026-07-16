@@ -217,7 +217,7 @@ const updateActiveServer = async () => {
  *  INITIAL SERVER CHECK
  * ───────────────────────────────────────────────────────────── */
 let serverReady = updateActiveServer().then(() => {
-  console.log("🚀 Server in use:", SERVER_URL);
+  // console.log("🚀 Server in use:", SERVER_URL);
 });
 
 /* ─────────────────────────────────────────────────────────────
@@ -290,7 +290,7 @@ async function wakeServer(targetUrl) {
           signal: AbortSignal.timeout ? AbortSignal.timeout(3000) : undefined
         });
         if (res.ok) {
-          console.log("🟢 Server awake");
+          // console.log("🟢 Server awake");
           wakingServer = null;
           return resolve(true);
         }
