@@ -257,14 +257,20 @@ if (location.protocol !== 'file:') {
         });
     });
     </script>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-FG6G5M8Z0S"></script>
+    <!-- Google tag (gtag.js) — loaded AFTER window load so it stays off the
+         critical render path. gtag() is stubbed immediately so any early
+         calls queue in dataLayer and replay once the script arrives. -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-FG6G5M8Z0S');
+      window.addEventListener('load', function () {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-FG6G5M8Z0S';
+        document.head.appendChild(s);
+      });
     </script>
 </head>
 
@@ -350,7 +356,7 @@ if (location.protocol !== 'file:') {
         </div>
         <div class="row app-section">
             <div id="configurationResult" class="col-sm-3 odusign" style="font-family: cursive;">
-                <img id="hiddenTapArea" class="moving-bg" src="public/img/bird.gif" alt="bird" />
+                <img id="hiddenTapArea" class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />
             </div>
 
             <div class="form-tabs col-12">
@@ -371,7 +377,7 @@ if (location.protocol !== 'file:') {
                 if(!document.querySelector('#driver-page-overlay') && !document.querySelector('#or-tour-dim')){
                   var r=document.getElementById('divinationResult'); if(r) r.innerHTML='';
                   var c=document.getElementById('configurationResult');
-                  if(c) c.innerHTML='<img class="moving-bg" src="public/img/bird.gif" alt="bird" />';
+                  if(c) c.innerHTML='<img class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />';
                 }
               };
               window.orNumMethod = function(which){

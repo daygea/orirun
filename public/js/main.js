@@ -1111,7 +1111,7 @@ async function displayMeaning(number) {
 
     _dedupeSectionHeadings(resultEl);
 
-    configEl.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" />`;
+    configEl.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />`;
 
     /* Download / Share the number reading as a branded PDF */
     if (window.orirunExport) {
@@ -1415,7 +1415,7 @@ const performBirthChart = async () => {
   }
 
   showPreloader('<span data-translate>Calculating your life energies…</span>');
-  configurationElement.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" />`;
+  configurationElement.innerHTML = `<img class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />`;
 
   try {
     const [numerologyRes, locationResult] = await Promise.all([
