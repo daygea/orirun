@@ -380,6 +380,13 @@ const updateSpecificOrientation = async () => {
     populateDropdown(dropdown, getDefaultOrientationOptions(orientation));
     return;
   }
+
+  // Populate sensible defaults IMMEDIATELY so the dropdown is never empty on a
+  // slow connection, then quietly refine with the server list when it arrives.
+  // Preserve the user's current pick if it still exists after refining.
+  populateDropdown(dropdown, getDefaultOrientationOptions(orientation));
+  const priorValue = dropdown.value;
+
   try {
     const response = await fetch(
       `/api/odu/orientations/${encodeURIComponent(mainCast)}/${encodeURIComponent(orientation)}`
@@ -387,10 +394,14 @@ const updateSpecificOrientation = async () => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data    = await response.json();
     const options = data[orientation] || [];
-    populateDropdown(dropdown, options.length ? options : getDefaultOrientationOptions(orientation));
+    if (options.length) {
+      populateDropdown(dropdown, options);
+      // Restore the earlier selection if the refined list still contains it.
+      if (priorValue && options.includes(priorValue)) dropdown.value = priorValue;
+    }
   } catch (error) {
     console.error("Orientation fetch error:", error);
-    populateDropdown(dropdown, getDefaultOrientationOptions(orientation));
+    // Defaults are already showing — nothing more to do.
   }
 };
 
@@ -403,6 +414,12 @@ const updateSolutionDetails = async () => {
     populateDropdown(dropdown, getDefaultSolutionOptions(solution));
     return;
   }
+
+  // Instant defaults, then refine — same pattern as orientation, so the
+  // dropdown is never blank while the server responds on a slow link.
+  populateDropdown(dropdown, getDefaultSolutionOptions(solution));
+  const priorValue = dropdown.value;
+
   try {
     const response = await fetch(
       `/api/odu/solutionDetails/${encodeURIComponent(mainCast)}/${encodeURIComponent(solution)}`
@@ -410,10 +427,13 @@ const updateSolutionDetails = async () => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data    = await response.json();
     const options = data[solution] || [];
-    populateDropdown(dropdown, options.length ? options : getDefaultSolutionOptions(solution));
+    if (options.length) {
+      populateDropdown(dropdown, options);
+      if (priorValue && options.includes(priorValue)) dropdown.value = priorValue;
+    }
   } catch (error) {
     console.error("Solution details fetch error:", error);
-    populateDropdown(dropdown, getDefaultSolutionOptions(solution));
+    // Defaults already showing.
   }
 };
 
