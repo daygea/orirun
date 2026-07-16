@@ -612,7 +612,7 @@ button:disabled{
 
 @media (max-width: 768px) {
   #chatbot-container {
-    width: 100vw;
+    width: 100%;
     height: 50vh;
     bottom: 0;
     right: 0;
@@ -2282,7 +2282,15 @@ html.ios-app body {
   overscroll-behavior: none;          /* no bounce/chaining at the edges */
 }
 html.ios-app body {
-  overflow-x: hidden;                 /* no sideways stretch */
+  overscroll-behavior: none;          /* belt-and-suspenders for the wrapper */
+}
+/* Sideways-stretch guard for ALL contexts (web + installed). Previously this
+   lived only under html.ios-app, so on the web RTL languages (e.g. Arabic set
+   dir="rtl") could overflow horizontally and let the page — and the fixed
+   background layer — scroll/stretch left-right. Clip it everywhere. */
+html,
+body {
+  overflow-x: hidden;
 }
 /* ==================================================================
    ORÍRÙN — v3.3 — typographic craft for the serif (Source Serif 4)
