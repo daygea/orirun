@@ -294,6 +294,15 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   }
   table.logs td:empty { display:none; }               /* hide blank fields */
   .log-tools .btn-osun { flex:1 1 100%; justify-content:center; }
+
+  /* Editor upgrade on phones: give the tree view real height (like the
+     textarea), keep the mode tabs on one tidy row, and reduce the
+     per-level indent so deep nesting doesn't scroll off-screen. */
+  .tree-view{min-height:44vh;font-size:14px}
+  .tree-view .tchild{padding-left:12px}
+  .editor-modes{flex-wrap:wrap;gap:8px}
+  .editor-modes .mode-tab{min-height:40px}
+  #prettifyBtn{min-height:40px}
 }
 
 /* ── Loader shown while a section's data is fetching ── */
