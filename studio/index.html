@@ -123,6 +123,28 @@ textarea#editor{
   border-radius:var(--radius);background:var(--white);color:var(--ink);
   font-family:var(--mono);font-size:12.5px;line-height:1.6;tab-size:2;min-height:200px}
 textarea#editor.invalid{border-color:var(--osun);box-shadow:0 0 0 3px rgba(166,58,34,.12)}
+
+/* View/Edit toggle + readable tree preview */
+.editor-modes{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.mode-tab{padding:5px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--line);background:var(--white);color:var(--ink-soft)}
+.mode-tab.is-active{background:var(--leaf-soft);border-color:var(--leaf);color:var(--igbo)}
+.btn-sm{padding:5px 12px;font-size:12.5px}
+.tree-view{flex:1;overflow:auto;background:var(--white);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px;font-family:var(--mono);font-size:12.5px;
+  line-height:1.7;min-height:200px}
+.tree-view .tk{color:var(--igbo);font-weight:700}          /* key */
+.tree-view .ts{color:#2f6b45}                               /* string */
+.tree-view .tn{color:var(--brass);font-weight:600}          /* number */
+.tree-view .tb{color:var(--osun);font-weight:600}           /* boolean/null */
+.tree-view .tmuted{color:var(--ink-soft)}                   /* punctuation/braces */
+.tree-view details{margin:0}
+.tree-view summary{cursor:pointer;list-style:none;user-select:none}
+.tree-view summary::-webkit-details-marker{display:none}
+.tree-view summary::before{content:"▸ ";color:var(--ink-soft)}
+.tree-view details[open]>summary::before{content:"▾ ";color:var(--ink-soft)}
+.tree-view .tchild{padding-left:18px;border-left:1px dashed var(--line);margin-left:4px}
+.tree-view .tcount{color:var(--ink-soft);font-weight:400;font-size:11.5px}
 .editor-actions{display:flex;gap:8px;align-items:center;padding:12px 22px;flex-wrap:wrap}
 .json-state{font-size:12px;font-weight:600}
 .json-state.ok{color:var(--leaf)} .json-state.bad{color:var(--osun)}
@@ -414,7 +436,14 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
 
       <div class="editor-body">
-        <textarea id="editor" spellcheck="false" aria-label="Item JSON editor"></textarea>
+        <div class="editor-modes" role="tablist" aria-label="Editor view mode">
+          <button class="mode-tab is-active" id="modeReadBtn" role="tab" aria-selected="true">Read</button>
+          <button class="mode-tab" id="modeEditBtn" role="tab" aria-selected="false">Edit</button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" id="prettifyBtn" title="Reformat the JSON with clean indentation">Prettify</button>
+        </div>
+        <div id="treeView" class="tree-view" aria-label="Content preview"></div>
+        <textarea id="editor" spellcheck="false" aria-label="Item JSON editor" style="display:none"></textarea>
       </div>
       <div class="editor-actions">
         <span class="json-state ok" id="jsonState">Valid JSON</span>
@@ -645,11 +674,68 @@ async function selectItem(key) {
     $("editor").value = JSON.stringify(body.data, null, 2);
     $("editor").classList.remove("invalid");
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    setEditorMode("read");
     paintProvenance();
     loadAudit();
   } catch (err) { toast(err.message, true); }
   finally { orTopbarDone(); }
 }
+/* ── Readable content view (tree) + editor modes ─────────────── */
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+// Render any JSON value as a collapsible, readable tree. Values are
+// HTML-escaped — content is data, never markup.
+function renderTree(value) {
+  if (value === null) return '<span class="tb">null</span>';
+  const t = typeof value;
+  if (t === "string") return '<span class="ts">"' + escHtml(value) + '"</span>';
+  if (t === "number") return '<span class="tn">' + escHtml(value) + '</span>';
+  if (t === "boolean") return '<span class="tb">' + value + '</span>';
+  if (Array.isArray(value)) {
+    if (!value.length) return '<span class="tmuted">[ ]</span>';
+    const items = value.map((v, i) =>
+      `<div><span class="tk">${i}</span><span class="tmuted">: </span>${renderTree(v)}</div>`).join("");
+    return `<details open><summary><span class="tmuted">[</span> <span class="tcount">${value.length} item(s)</span> <span class="tmuted">]</span></summary><div class="tchild">${items}</div></details>`;
+  }
+  if (t === "object") {
+    const keys = Object.keys(value);
+    if (!keys.length) return '<span class="tmuted">{ }</span>';
+    const rows = keys.map((k) =>
+      `<div><span class="tk">${escHtml(k)}</span><span class="tmuted">: </span>${renderTree(value[k])}</div>`).join("");
+    return `<details open><summary><span class="tmuted">{</span> <span class="tcount">${keys.length} field(s)</span> <span class="tmuted">}</span></summary><div class="tchild">${rows}</div></details>`;
+  }
+  return '<span class="tmuted">' + escHtml(String(value)) + '</span>';
+}
+function refreshTree() {
+  try {
+    $("treeView").innerHTML = renderTree(JSON.parse($("editor").value));
+  } catch (e) {
+    $("treeView").innerHTML = '<span class="tb">This item isn\'t valid JSON yet — switch to Edit to fix it.</span>';
+  }
+}
+function setEditorMode(mode) {
+  const read = mode === "read";
+  $("treeView").style.display = read ? "" : "none";
+  $("editor").style.display = read ? "none" : "";
+  $("modeReadBtn").classList.toggle("is-active", read);
+  $("modeEditBtn").classList.toggle("is-active", !read);
+  $("modeReadBtn").setAttribute("aria-selected", read);
+  $("modeEditBtn").setAttribute("aria-selected", !read);
+  if (read) refreshTree();
+}
+// Locate a JSON syntax error as a line:column, so the message is actionable.
+function jsonErrorDetail(text, err) {
+  const m = /position (\d+)/.exec(err.message);
+  if (!m) return err.message;
+  const pos = +m[1];
+  const upto = text.slice(0, pos);
+  const line = upto.split("\n").length;
+  const col = pos - upto.lastIndexOf("\n");
+  return `Invalid JSON at line ${line}, column ${col}`;
+}
+
 function paintProvenance() {
   const src = String(activeCol.source || "");
   const dbLit = src.includes("db");
@@ -666,15 +752,27 @@ $("editor").addEventListener("input", () => {
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
   } catch (e) {
     $("editor").classList.add("invalid");
-    $("jsonState").textContent = "Invalid JSON — fix before saving"; $("jsonState").className = "json-state bad";
+    $("jsonState").textContent = jsonErrorDetail($("editor").value, e); $("jsonState").className = "json-state bad";
   }
 });
+$("modeReadBtn").onclick = () => setEditorMode("read");
+$("modeEditBtn").onclick = () => setEditorMode("edit");
+$("prettifyBtn").onclick = () => {
+  try {
+    const formatted = JSON.stringify(JSON.parse($("editor").value), null, 2);
+    $("editor").value = formatted;
+    $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    $("editor").classList.remove("invalid");
+    if ($("treeView").style.display !== "none") refreshTree();
+    toast("Formatted");
+  } catch (e) { toast(jsonErrorDetail($("editor").value, e), true); }
+};
 
 /* ── Actions ───────────────────────────────────────────────── */
 $("saveBtn").onclick = async () => {
   let value;
   try { value = JSON.parse($("editor").value); }
-  catch { return toast("The editor holds invalid JSON.", true); }
+  catch (e) { return toast(jsonErrorDetail($("editor").value, e), true); }
   try {
     const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(activeKey)}`, {
       method: "PUT", body: JSON.stringify({ value }),
