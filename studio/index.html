@@ -353,6 +353,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <div class="log-count" id="backupNote" style="margin-bottom:8px"></div>
       <div id="backupList" style="font-size:13px"></div>
     </div>
+    <div class="panel">
+      <h3>Recent admin actions</h3>
+      <div class="log-count" style="margin-bottom:8px">Destructive operations — who cleared or restored what, and when.</div>
+      <div id="opsAudit" style="font-size:13px"></div>
+    </div>
   </section>
 
   <section class="ops" id="area-logs" aria-label="Logs">
@@ -821,7 +826,7 @@ window.showArea = function (area) {
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
-    Promise.all([loadDashboard(), loadBackups()]).finally(orTopbarDone);
+    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit()]).finally(orTopbarDone);
   } else if (area === "logs") {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
@@ -975,6 +980,38 @@ async function loadDashboard() {
   }
 }
 
+// Recent destructive operational actions (clear logs, delete/restore backups).
+const OPS_LABEL = {
+  "logs.clear": "Cleared log", "logs.clear-all": "Cleared ALL logs",
+  "backup.delete": "Deleted backup", "backup.delete-all": "Deleted ALL backups",
+  "backup.restore": "Restored backup",
+};
+async function loadOpsAudit() {
+  const wrap = $("opsAudit");
+  if (!wrap) return;
+  try {
+    const res = await fetch(API_BASE + "/api/ops-audit", { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "HTTP " + res.status);
+    const rows = d.rows || [];
+    wrap.innerHTML = rows.length ? rows.map((r) => {
+      const when = r.at ? new Date(r.at).toLocaleString() : "";
+      const what = OPS_LABEL[r.action] || r.action;
+      const tgt = r.target ? ` · ${r.target}` : "";
+      const cnt = (r.count != null) ? ` · ${r.count} item(s)` : "";
+      return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--line);flex-wrap:wrap">
+        <strong style="color:var(--osun)">${what}</strong>
+        <span class="log-count">${tgt}${cnt}</span>
+        <span style="flex:1"></span>
+        <span class="log-count">${r.actor || "?"} · ${when}</span>
+      </div>`;
+    }).join("") : '<span class="log-count">No destructive actions recorded yet.</span>';
+  } catch (err) {
+    wrap.innerHTML = '<span class="log-count">Could not load admin actions: ' + err.message + '</span>';
+  }
+}
+
 /* ── Backups ── */
 async function loadBackups() {
   const wrap = $("backupList");
@@ -1053,13 +1090,14 @@ window.clearAllBackups = async function () {
 
 /* ── Logs ── */
 const LOG_TYPES = ["divination", "chat", "feedback", "payment", "contribution"];
-const logState = { type: "divination", rows: [], filtered: [], page: 1, per: 50, loadedOnce: false };
+const logState = { type: "divination", rows: [], page: 1, per: 50, total: 0, pages: 1, loadedOnce: false };
 
 $("logPills").innerHTML = LOG_TYPES.map((t) =>
   `<button class="log-pill${t === "divination" ? " is-active" : ""}" data-log="${t}" onclick="loadLogs('${t}')">${t[0].toUpperCase() + t.slice(1)}</button>`).join("");
 
-window.loadLogs = async function (type) {
+window.loadLogs = async function (type, page) {
   logState.type = type; logState.loadedOnce = true;
+  if (page == null) { logState.page = 1; $("logSearch").value = ""; }
   document.querySelectorAll(".log-pill").forEach((p) => p.classList.toggle("is-active", p.dataset.log === type));
   const clearBtn = $("clearLogBtn");
   if (clearBtn) {
@@ -1069,13 +1107,17 @@ window.loadLogs = async function (type) {
   }
   $("logHead").innerHTML = ""; $("logBody").innerHTML = '<tr><td colspan="99">' + orLoaderHTML("Loading logs…") + '</td></tr>'; $("logDetail").style.display = "none";
   try {
-    const res = await fetch(API_BASE + "/api/" + type + "/logs", { credentials: "include" });
-    if (res.status === 401 || res.status === 403) return showAuth();
+    const q = $("logSearch").value.trim();
+    const params = new URLSearchParams({ page: logState.page, limit: logState.per });
+    if (q) params.set("q", q);
+    // Server-side pagination: only the current page is fetched, not the whole log.
+    const res = await fetch(API_BASE + "/api/logs/" + type + "?" + params.toString(), { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const data = await res.json();
-    const rows = Array.isArray(data) ? data : data.logs || data.contributions || [];
-    rows.sort((a, b) => new Date(b.timestamp || b.createdAt || 0) - new Date(a.timestamp || a.createdAt || 0));
-    logState.rows = rows; logState.page = 1;
-    $("logSearch").value = "";
+    if (!res.ok) throw new Error(data.error || "HTTP " + res.status);
+    logState.rows = data.rows || [];
+    logState.total = data.total || 0;
+    logState.pages = data.pages || 1;
     renderLogs();
   } catch (err) {
     $("logBody").innerHTML = `<tr><td>Failed to load ${type} logs: ${err.message}</td></tr>`;
@@ -1109,35 +1151,35 @@ function cellText(v) {
   return /\d{4}-\d{2}-\d{2}T/.test(s) ? new Date(s).toLocaleString() : s.slice(0, 140);
 }
 
+// Renders the current server-provided page (no client-side slicing).
 window.renderLogs = function () {
-  const q = $("logSearch").value.trim().toLowerCase();
-  logState.filtered = q
-    ? logState.rows.filter((r) => JSON.stringify(r).toLowerCase().includes(q))
-    : logState.rows;
-  const cols = logColumns(logState.filtered.length ? logState.filtered : logState.rows);
-  const start = (logState.page - 1) * logState.per;
-  const pageRows = logState.filtered.slice(start, start + logState.per);
+  const rows = logState.rows;
+  const cols = logColumns(rows);
   $("logHead").innerHTML = "<tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr>";
-  $("logBody").innerHTML = pageRows.length ? pageRows.map((r, i) => {
+  $("logBody").innerHTML = rows.length ? rows.map((r, i) => {
     const f = flat(r);
-    return `<tr class="row" onclick="showLogDetail(${start + i})">` + cols.map((c) => `<td data-label="${c}">${cellText(f[c])}</td>`).join("") + "</tr>";
+    return `<tr class="row" onclick="showLogDetail(${i})">` + cols.map((c) => `<td data-label="${c}">${cellText(f[c])}</td>`).join("") + "</tr>";
   }).join("") : '<tr><td colspan="6">Nothing here.</td></tr>';
-  const pages = Math.max(1, Math.ceil(logState.filtered.length / logState.per));
-  $("logPage").textContent = `Page ${logState.page} of ${pages}`;
-  $("logCount").textContent = `${logState.filtered.length} entries`;
+  $("logPage").textContent = `Page ${logState.page} of ${logState.pages}`;
+  $("logCount").textContent = `${logState.total} entries`;
   $("logPrev").disabled = logState.page <= 1;
-  $("logNext").disabled = logState.page >= pages;
+  $("logNext").disabled = logState.page >= logState.pages;
 };
 window.showLogDetail = function (idx) {
-  const row = logState.filtered[idx];
+  const row = logState.rows[idx];
   if (!row) return;
   $("logDetailBody").textContent = JSON.stringify(row, null, 2);
   $("logDetail").style.display = "block";
   $("logDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
 };
-$("logSearch").addEventListener("input", () => { logState.page = 1; renderLogs(); });
-$("logPrev").onclick = () => { logState.page--; renderLogs(); };
-$("logNext").onclick = () => { logState.page++; renderLogs(); };
+// Search re-queries the server (debounced) so it searches ALL entries, not just the page.
+let logSearchTimer;
+$("logSearch").addEventListener("input", () => {
+  clearTimeout(logSearchTimer);
+  logSearchTimer = setTimeout(() => { logState.page = 1; loadLogs(logState.type, 1); }, 350);
+});
+$("logPrev").onclick = () => { if (logState.page > 1) { logState.page--; loadLogs(logState.type, logState.page); } };
+$("logNext").onclick = () => { if (logState.page < logState.pages) { logState.page++; loadLogs(logState.type, logState.page); } };
 
 /* Clear logs — destructive, double-confirmed. 'contribution' is not
    clearable (babaláwo submissions are not disposable telemetry). */
@@ -1147,7 +1189,7 @@ $("clearLogBtn").onclick = async () => {
   if (NON_CLEARABLE.includes(type)) {
     return toast("Contribution submissions can't be bulk-cleared here.", true);
   }
-  const n = logState.rows.length;
+  const n = logState.total;
   if (!confirmAct(`Delete ALL ${n} ${type} log entries from the database?\n\nThis cannot be undone.`)) return;
   if (!confirmAct(`Second confirmation — permanently clear the ${type} log?`)) return;
   try {
@@ -1218,11 +1260,11 @@ function setLoggedOutChrome(loggedOut) {
 function clearAllSurfaces() {
   activeCol = null; activeKey = null; collections = [];
   ["colList","itemList","statGrid","trendBars","topOdu","feedbackPanel",
-   "latestFeedback","backupList","logHead","logBody","contribList","auditList"]
+   "latestFeedback","backupList","opsAudit","logHead","logBody","contribList","auditList"]
     .forEach((id) => { const el = $(id); if (el) el.innerHTML = ""; });
   $("countNote").textContent = ""; $("logCount").textContent = "";
   $("logPage").textContent = ""; $("backupNote").textContent = "";
-  logState.rows = []; logState.filtered = []; logState.loadedOnce = false;
+  logState.rows = []; logState.total = 0; logState.pages = 1; logState.page = 1; logState.loadedOnce = false;
   $("editorWrap").style.display = "none";
   $("emptyState").style.display = "none";
   $("logDetail").style.display = "none";
