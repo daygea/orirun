@@ -307,6 +307,8 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .editor-modes{flex-wrap:wrap;gap:8px}
   .editor-modes .mode-tab{min-height:40px}
   #prettifyBtn{min-height:40px}
+  /* Clear the sticky header when scrolling the editor into view on tap. */
+  #editorWrap{scroll-margin-top:120px}
 }
 
 /* ── Loader shown while a section's data is fetching ── */
@@ -690,6 +692,13 @@ async function selectItem(key) {
     setEditorMode("read");
     paintProvenance();
     loadAudit();
+    // On phones the editor stacks below the collection/item lists, so a tap
+    // loads content off-screen. Bring the editor into view. (No-op on desktop,
+    // where the editor is a side pane that's already visible.)
+    if (window.matchMedia("(max-width:900px)").matches) {
+      requestAnimationFrame(() =>
+        $("editorWrap").scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   } catch (err) { toast(err.message, true); }
   finally { orTopbarDone(); }
 }
