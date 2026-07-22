@@ -6,9 +6,6 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Orírùn · Content Studio</title>
 <link rel="icon" href="public/img/favicon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
 <style>
 /* ─────────────────────────────────────────────────────────────
    Orírùn Content Studio
@@ -251,6 +248,30 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .audit-row{flex-wrap:wrap}
   .audit-row .who{margin-left:0;width:100%}
   input,select,button,textarea{font-size:16px}
+
+  /* Logs become stacked cards on phones — every field fully visible,
+     no horizontal scroll, no truncation. Each row is a card; each cell
+     shows its column name (via data-label) beside the full value. */
+  table.logs, table.logs tbody, table.logs tr, table.logs td { display:block; width:100%; }
+  table.logs thead { display:none; }                 /* headers move into each cell */
+  table.logs { border:none; background:transparent; }
+  table.logs tr.row {
+    background:var(--white); border:1px solid var(--line); border-left:3px solid var(--leaf);
+    border-radius:12px; margin-bottom:10px; padding:6px 4px;
+  }
+  table.logs tr.row:hover td { background:transparent; }
+  table.logs td {
+    max-width:none; white-space:normal; word-break:break-word; overflow:visible;
+    text-overflow:clip; border-top:none; padding:6px 12px;
+    display:flex; gap:10px; align-items:baseline;
+  }
+  table.logs td::before {
+    content:attr(data-label); flex:0 0 40%; max-width:40%;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-soft);
+  }
+  table.logs td:empty { display:none; }               /* hide blank fields */
+  .log-tools .btn-osun { flex:1 1 100%; justify-content:center; }
 }
 
 /* ── Loader shown while a section's data is fetching ── */
@@ -339,6 +360,8 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="log-tools">
       <input type="search" id="logSearch" placeholder="Search this log…" aria-label="Search logs">
       <span class="log-count" id="logCount"></span>
+      <button class="btn btn-osun" id="clearLogBtn" title="Delete every entry of the log type currently shown">Clear this log</button>
+      <button class="btn btn-osun" id="clearAllLogsBtn" title="Delete every entry of every clearable log type">Clear ALL logs</button>
     </div>
     <div style="overflow-x:auto"><table class="logs"><thead id="logHead"></thead><tbody id="logBody"></tbody></table></div>
     <div class="log-pager">
@@ -439,17 +462,16 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
       <div class="odu-caption">Ọ̀sá Ọ̀wọ́nrín</div>
       <h3>Sign in to the Studio</h3>
-      <p>Talking to <code id="apiBaseShow"></code>. Sessions last 2 hours.</p>
+      <p>Authorised access only. Sessions last 2 hours.</p>
       <form id="loginForm" style="width:min(340px,90vw);margin-top:16px;text-align:left" autocomplete="on">
         <label for="loginUser" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Username</label>
-        <input id="loginUser" autocomplete="username" placeholder="superadmin"
+        <input id="loginUser" autocomplete="username"
           style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
         <label for="loginPass" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Password</label>
         <input id="loginPass" type="password" autocomplete="current-password"
           style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px">
         <div id="loginError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
         <button type="submit" class="btn btn-green" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
-        <p style="font-size:11.5px;color:var(--ink-soft);margin-top:10px">Leave username empty to use the old password-only sign-in while it remains enabled.</p>
       </form>
     </div>
   </main>
@@ -485,7 +507,6 @@ const API_BASE = localStorage.getItem("orirun_admin_api")
   || (location.protocol.startsWith("http")
         ? (STATIC_HOSTS.includes(location.hostname) ? BACKEND_URL : location.origin)
         : BACKEND_URL);
-document.getElementById("apiBaseShow").textContent = API_BASE;
 const api = (p, opts = {}) =>
   fetch(API_BASE + "/api/admin" + p, { credentials: "include",
     headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, ...opts });
@@ -496,6 +517,7 @@ let activeCol = null;      // registry entry
 let colPayload = null;     // { keys, data?, truncated }
 let activeKey = null;
 let itemDirty = false;
+let isAuthed = false;      // true only after a confirmed superadmin session
 
 /* ── Helpers ───────────────────────────────────────────────── */
 const $ = (id) => document.getElementById(id);
@@ -779,6 +801,10 @@ function orTopbarDone() {
 }
 
 window.showArea = function (area) {
+  // Never leave the content/login area while unauthenticated — the other
+  // areas fetch admin data. isAuthed is set true only after a confirmed
+  // superadmin session (see boot / revealApp).
+  if (!isAuthed && area !== "content") return;
   document.querySelectorAll(".area-tab").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.area === area));
   // content area = the original three grid panes. The rail is the nav
@@ -1009,6 +1035,12 @@ $("logPills").innerHTML = LOG_TYPES.map((t) =>
 window.loadLogs = async function (type) {
   logState.type = type; logState.loadedOnce = true;
   document.querySelectorAll(".log-pill").forEach((p) => p.classList.toggle("is-active", p.dataset.log === type));
+  const clearBtn = $("clearLogBtn");
+  if (clearBtn) {
+    const blocked = NON_CLEARABLE.includes(type);
+    clearBtn.disabled = blocked;
+    clearBtn.title = blocked ? "Contribution submissions can't be bulk-cleared" : "Delete every entry of the log type currently shown";
+  }
   $("logHead").innerHTML = ""; $("logBody").innerHTML = '<tr><td colspan="99">' + orLoaderHTML("Loading logs…") + '</td></tr>'; $("logDetail").style.display = "none";
   try {
     const res = await fetch(API_BASE + "/api/" + type + "/logs", { credentials: "include" });
@@ -1028,9 +1060,12 @@ function logColumns(rows) {
   const preferred = ["timestamp", "createdAt", "name", "fullname", "contributorName", "email", "type", "category", "title", "oduName", "reference", "amount", "status", "message", "feedback", "text"];
   const keys = new Set();
   rows.slice(0, 40).forEach((r) => Object.keys(flat(r)).forEach((k) => keys.add(k)));
+  // On phones the log renders as stacked cards (no width limit), so we can
+  // surface many more fields per entry; on desktop we keep a tidy 6-col table.
+  const cap = window.matchMedia("(max-width:560px)").matches ? 14 : 6;
   const cols = preferred.filter((p) => keys.has(p));
-  [...keys].forEach((k) => { if (cols.length < 6 && !cols.includes(k) && k !== "_id" && k !== "__v") cols.push(k); });
-  return cols.slice(0, 6);
+  [...keys].forEach((k) => { if (cols.length < cap && !cols.includes(k) && k !== "_id" && k !== "__v") cols.push(k); });
+  return cols.slice(0, cap);
 }
 function flat(o) {
   const out = {};
@@ -1059,7 +1094,7 @@ window.renderLogs = function () {
   $("logHead").innerHTML = "<tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr>";
   $("logBody").innerHTML = pageRows.length ? pageRows.map((r, i) => {
     const f = flat(r);
-    return `<tr class="row" onclick="showLogDetail(${start + i})">` + cols.map((c) => `<td>${cellText(f[c])}</td>`).join("") + "</tr>";
+    return `<tr class="row" onclick="showLogDetail(${start + i})">` + cols.map((c) => `<td data-label="${c}">${cellText(f[c])}</td>`).join("") + "</tr>";
   }).join("") : '<tr><td colspan="6">Nothing here.</td></tr>';
   const pages = Math.max(1, Math.ceil(logState.filtered.length / logState.per));
   $("logPage").textContent = `Page ${logState.page} of ${pages}`;
@@ -1078,7 +1113,42 @@ $("logSearch").addEventListener("input", () => { logState.page = 1; renderLogs()
 $("logPrev").onclick = () => { logState.page--; renderLogs(); };
 $("logNext").onclick = () => { logState.page++; renderLogs(); };
 
-/* ── Session ───────────────────────────────────────────────── */
+/* Clear logs — destructive, double-confirmed. 'contribution' is not
+   clearable (babaláwo submissions are not disposable telemetry). */
+const NON_CLEARABLE = ["contribution"];
+$("clearLogBtn").onclick = async () => {
+  const type = logState.type;
+  if (NON_CLEARABLE.includes(type)) {
+    return toast("Contribution submissions can't be bulk-cleared here.", true);
+  }
+  const n = logState.rows.length;
+  if (!confirmAct(`Delete ALL ${n} ${type} log entries from the database?\n\nThis cannot be undone.`)) return;
+  if (!confirmAct(`Second confirmation — permanently clear the ${type} log?`)) return;
+  try {
+    const res = await fetch(API_BASE + "/api/" + type + "/logs", { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast(`Cleared ${b.deleted} ${type} log(s)`);
+    loadLogs(type);
+  } catch (err) { toast("Clear failed: " + err.message, true); }
+};
+$("clearAllLogsBtn").onclick = async () => {
+  if (!confirmAct("Delete EVERY entry of EVERY clearable log type (divination, chat, feedback, payment)?\n\nThis cannot be undone.")) return;
+  if (!confirmAct("Final confirmation — permanently clear ALL logs?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/logs/all", { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast(`Cleared ${b.total} log entries across all types`);
+    loadLogs(logState.type);
+  } catch (err) { toast("Clear-all failed: " + err.message, true); }
+};
+
+/* ── Session & auth gating ─────────────────────────────────────
+   The app stays fully hidden until we confirm a superadmin session.
+   Nothing is fetched or shown pre-login except the sign-in card. */
 async function whoAmI() {
   try {
     const res = await fetch(API_BASE + "/api/auth/me", { credentials: "include" });
@@ -1097,6 +1167,56 @@ async function refreshSessionChip() {
   }
   return me;
 }
+
+// Toggle the pieces of chrome that must never show while logged out.
+function setLoggedOutChrome(loggedOut) {
+  // Hide the collections rail, items pane, area tabs, db-badge and refresh
+  // until authenticated — none of it should hint at content pre-login.
+  $("colList").innerHTML = "";
+  $("itemList").innerHTML = "";
+  $("countNote").textContent = "";
+  document.querySelector('.shell > nav[aria-label="Content collections"]').style.visibility = loggedOut ? "hidden" : "";
+  document.querySelector('section.items').style.visibility = loggedOut ? "hidden" : "";
+  $("dbBadge").style.display = loggedOut ? "none" : "";
+  $("refreshBtn").style.display = loggedOut ? "none" : "";
+  // Area tabs: hide the whole nav until signed in (and keep them inert).
+  const areaNav = document.querySelector("nav.area-nav");
+  if (areaNav) areaNav.style.display = loggedOut ? "none" : "";
+  document.querySelectorAll(".area-tab").forEach((t) => {
+    t.disabled = loggedOut;
+    t.style.pointerEvents = loggedOut ? "none" : "";
+  });
+}
+
+// Wipe every data surface — used on logout so nothing stale lingers.
+function clearAllSurfaces() {
+  activeCol = null; activeKey = null; collections = [];
+  ["colList","itemList","statGrid","trendBars","topOdu","feedbackPanel",
+   "latestFeedback","backupList","logHead","logBody","contribList","auditList"]
+    .forEach((id) => { const el = $(id); if (el) el.innerHTML = ""; });
+  $("countNote").textContent = ""; $("logCount").textContent = "";
+  $("logPage").textContent = ""; $("backupNote").textContent = "";
+  logState.rows = []; logState.filtered = []; logState.loadedOnce = false;
+  $("editorWrap").style.display = "none";
+  $("emptyState").style.display = "none";
+  $("logDetail").style.display = "none";
+}
+
+function gateToLogin() {
+  isAuthed = false;
+  clearAllSurfaces();
+  setLoggedOutChrome(true);
+  showArea("content");
+  showAuth();
+}
+
+async function revealApp() {
+  isAuthed = true;
+  setLoggedOutChrome(false);
+  $("authState").style.display = "none";
+  await loadCollections();
+}
+
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("loginError").textContent = "";
@@ -1116,7 +1236,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     $("loginPass").value = "";
     toast("Signed in as " + (data.username || data.role));
     await refreshSessionChip();
-    await loadCollections();
+    await revealApp();
   } catch (err) {
     $("loginError").textContent = err.message;
   } finally { $("loginBtn").disabled = false; }
@@ -1124,21 +1244,27 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
 $("logoutBtn").onclick = async () => {
   await fetch(API_BASE + "/api/auth/logout", { method: "POST", credentials: "include" });
   toast("Signed out");
-  activeCol = null; activeKey = null;
-  $("editorWrap").style.display = "none";
-  $("emptyState").style.display = "none";
   await refreshSessionChip();
-  showAuth();
+  gateToLogin();
 };
 
 $("refreshBtn").onclick = loadCollections;
-refreshSessionChip();
 window.addEventListener("beforeunload", (e) => { if (itemDirty) e.preventDefault(); });
 
 if (location.protocol === "file:") {
-  toast("Opened as a file — sessions may not stick. Open " + API_BASE + "/studio instead.", true);
+  toast("Opened as a file — sessions may not stick. Open the served /studio URL instead.", true);
 }
-loadCollections();
+
+/* Boot: confirm session BEFORE showing anything but the login card. */
+(async function boot() {
+  setLoggedOutChrome(true);
+  const me = await refreshSessionChip();
+  if (me?.authenticated && me.role === "superadmin") {
+    await revealApp();
+  } else {
+    gateToLogin();
+  }
+})();
 </script>
 </body>
 </html>
