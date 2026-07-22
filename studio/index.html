@@ -347,6 +347,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <span style="display:flex;gap:8px">
           <button class="btn btn-ghost" onclick="runBackup(false)">Snapshot now</button>
           <button class="btn btn-ghost" onclick="runBackup(true)">Snapshot + email</button>
+          <button class="btn btn-osun" onclick="clearAllBackups()">Clear all backups</button>
         </span>
       </h3>
       <div class="log-count" id="backupNote" style="margin-bottom:8px"></div>
@@ -981,16 +982,18 @@ async function loadBackups() {
     const res = await fetch(API_BASE + "/api/admin/backups", { credentials: "include" });
     if (!res.ok) { wrap.innerHTML = '<span class="log-count">Backups unavailable.</span>'; return; }
     const d = await res.json();
-    $("backupNote").textContent = `Daily automatic snapshots · keeping the last ${d.retention} · Sunday snapshots are emailed offsite.`;
+    $("backupNote").textContent = `Automatic monthly snapshots · keeping the last ${d.retention} · each is emailed offsite.`;
     wrap.innerHTML = d.snapshots.length ? d.snapshots.map((b) => {
       const when = new Date(b.takenAt).toLocaleString();
       const kb = ((b.stats?.gzBytes || 0) / 1024).toFixed(0);
+      const safeWhen = when.replace(/'/g, "");
       return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);flex-wrap:wrap">
         <strong style="color:var(--igbo)">${when}</strong>
         <span class="log-count">${b.trigger} · ${b.stats?.totalItems ?? "?"} items · ${kb} KB</span>
         <span style="flex:1"></span>
         <a class="btn btn-ghost" href="${API_BASE}/api/admin/backups/${b._id}/export" target="_blank" rel="noopener">Download</a>
-        <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${when.replace(/'/g, "")}')">Restore…</button>
+        <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${safeWhen}')">Restore…</button>
+        <button class="btn btn-osun" onclick="deleteBackup('${b._id}','${safeWhen}')">Delete</button>
       </div>`;
     }).join("") : '<span class="log-count">No snapshots yet — the first runs within an hour of boot, or take one now.</span>';
   } catch (err) { wrap.innerHTML = '<span class="log-count">Could not load backups: ' + err.message + "</span>"; }
@@ -1023,6 +1026,29 @@ window.restoreBackup = async function (id, when) {
     toast("Restored " + Object.keys(b.restored).length + " collections from " + when);
     loadBackups(); loadCollections();
   } catch (err) { toast("Restore failed: " + err.message, true); }
+};
+window.deleteBackup = async function (id, when) {
+  if (!confirmAct(`Delete the snapshot from ${when}?\n\nThis removes it from the database permanently and cannot be undone.`)) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups/" + id, { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast("Snapshot deleted");
+    loadBackups();
+  } catch (err) { toast("Delete failed: " + err.message, true); }
+};
+window.clearAllBackups = async function () {
+  if (!confirmAct("Delete EVERY snapshot from the database?\n\nYou will have no restore points left. This cannot be undone.")) return;
+  if (!confirmAct("Final confirmation — permanently delete ALL backups?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups", { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast(`Deleted ${b.deleted} snapshot(s)`);
+    loadBackups();
+  } catch (err) { toast("Clear-all failed: " + err.message, true); }
 };
 
 /* ── Logs ── */
