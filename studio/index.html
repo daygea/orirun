@@ -233,7 +233,7 @@ table.logs td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:t
 table.logs tr.row{cursor:pointer}
 table.logs tr.row:hover td{background:var(--leaf-soft)}
 .log-pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:12px 0}
-.log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none}
+.log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;scroll-margin-top:120px}
 .log-detail pre{font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin-top:8px}
 
 /* ── Responsive ─────────────────────────────────────────────────
@@ -1290,7 +1290,7 @@ window.showLogDetail = function (idx) {
   if (!row) return;
   $("logDetailBody").textContent = JSON.stringify(row, null, 2);
   $("logDetail").style.display = "block";
-  $("logDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  $("logDetail").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 // Search re-queries the server (debounced) so it searches ALL entries, not just the page.
 let logSearchTimer;
