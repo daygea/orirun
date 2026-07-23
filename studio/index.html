@@ -307,8 +307,9 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .editor-modes{flex-wrap:wrap;gap:8px}
   .editor-modes .mode-tab{min-height:40px}
   #prettifyBtn{min-height:40px}
-  /* Clear the sticky header when scrolling the editor into view on tap. */
+  /* Clear the sticky header when scrolling into view on tap. */
   #editorWrap{scroll-margin-top:120px}
+  section.items{scroll-margin-top:120px}
 }
 
 /* ── Loader shown while a section's data is fetching ── */
@@ -590,7 +591,7 @@ async function loadCollections() {
   $("colList").innerHTML = orLoaderHTML("Loading collections…");
   try {
     const res = await api("/content");
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     if (res.status === 404) throw new Error("backend reached at " + API_BASE + ", but the content routes are not deployed there yet");
     if (!res.ok) throw new Error("HTTP " + res.status);
     const body = await res.json();
@@ -644,9 +645,16 @@ async function selectCollection(c) {
   $("countNote").textContent = "";
   try {
     const res = await api(`/content/${c.key}`);
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     colPayload = await res.json();
     renderItems();
+    // On phones the item list stacks below the collections rail, so tapping a
+    // collection loads its items off-screen. Bring the list into view.
+    if (window.matchMedia("(max-width:900px)").matches) {
+      const itemsPane = document.querySelector("section.items");
+      if (itemsPane) requestAnimationFrame(() =>
+        itemsPane.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   } catch (err) {
     $("itemList").innerHTML = "";
     toast("Failed to load items: " + err.message, true);
@@ -962,7 +970,7 @@ async function loadContributions() {
   list.innerHTML = orLoaderHTML("Loading contributions…");
   try {
     const res = await api("/verses/pending-contributions");
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const rows = d.contributions || [];
     const pending = rows.filter((r) => r.status === "pending").length;
@@ -1054,7 +1062,7 @@ async function loadDashboard() {
   grid.innerHTML = '<div class="stat-card" style="grid-column:1/-1">' + orLoaderHTML("Loading dashboard…") + '</div>';
   try {
     const res = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const stats = [
       ["Divinations", d.divinationCount], ["Chats", d.chatCount],
