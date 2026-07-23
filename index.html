@@ -100,6 +100,33 @@ if (location.protocol !== 'file:') {
   link.href = 'manifest.json';
   document.head.appendChild(link);
 }
+
+/* Portrait lock.
+   The manifest ("orientation":"portrait") locks the installed app on
+   Android. This adds the Screen Orientation API on top, which also holds
+   in fullscreen and re-asserts if anything releases the lock.
+   Note: iOS/WebKit implements neither the manifest orientation field nor
+   screen.orientation.lock(), so this is a no-op on iPhone — no web API
+   can force portrait there. */
+(function () {
+  function lockPortrait() {
+    try {
+      var so = window.screen && window.screen.orientation;
+      if (so && typeof so.lock === 'function') {
+        so.lock('portrait').catch(function () { /* not permitted here — fine */ });
+      }
+    } catch (e) { /* unsupported — fine */ }
+  }
+  lockPortrait();
+  // Re-assert if the platform drops the lock (e.g. leaving fullscreen).
+  if (window.screen && window.screen.orientation) {
+    window.screen.orientation.addEventListener &&
+      window.screen.orientation.addEventListener('change', lockPortrait);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) lockPortrait();
+  });
+})();
 </script>
 <link rel="icon" href="public/img/favicon.png" type="image/png">
 
