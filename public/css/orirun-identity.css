@@ -264,6 +264,11 @@ body.bg-ready::before { opacity: 1; }
   max-height: 88vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Positioning context for the absolutely-placed ✕ close button.
+     Without this the ✕ anchors to the fixed full-screen backdrop and
+     renders detached at the top of the viewport, effectively invisible
+     against the dark overlay. */
+  position: relative;
   animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
 }
 @keyframes or-modal-rise {
