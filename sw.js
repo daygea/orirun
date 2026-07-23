@@ -5,7 +5,7 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 // instead of the previously cached ones.
 // CI stamps this on every push to main (date-shortsha). Manual deploys
 // can still edit it by hand; the workflow overwrites it either way.
-const BUILD           = "2026-07-16-e-rtl-offscreen-fix";
+const BUILD           = "2026-07-16-e-rtl-offscreen-fix-castifa";
 const APP_SHELL_CACHE = "orirun-shell-v2";
 const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";
@@ -30,6 +30,7 @@ workbox.precaching.precacheAndRoute([
   { url: "./public/js/orirun-tour.js", revision: BUILD },
   { url: "./public/js/dailyGuidance.js", revision: BUILD },
   { url: "./public/js/orirun-export.js", revision: BUILD },
+  { url: "./public/js/orirun-cast.js", revision: BUILD },
   { url: "./public/js/offline-resilience.js", revision: BUILD }
 ]);
 

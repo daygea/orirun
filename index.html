@@ -657,6 +657,12 @@ if (location.protocol !== 'file:') {
             <span data-translate>Today's Guidance</span>
           </a>
           <span style="color:#ccc;">|</span>
+          <a href="#" id="or-cast-link"
+             style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="orirunCastIfa(); return false;">
+            <span data-translate>Cast Ifá</span>
+          </a>
+          <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="showAboutModal()">
             <span data-translate="aboutUs">About Us</span>
@@ -1063,6 +1069,7 @@ if (location.protocol !== 'file:') {
 <script src="public/js/translation.js" defer></script>
 <script src="public/js/analytics.js" defer></script>
 <script src="public/js/dailyGuidance.js" defer></script>
+<script src="public/js/orirun-cast.js" defer></script>
 <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {

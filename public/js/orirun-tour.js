@@ -60,7 +60,9 @@ document.addEventListener("DOMContentLoaded", function () {
       { target: "#chatbot-toggle", title: "Learning Corner",
         body: "Have questions about Ifá, Orishas, or Yorùbá spirituality? Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. You can also type <b>Help</b> in the chat to see the resources available." },
       { target: "#tour-guidance-link", title: "Today's Guidance",
-        body: "Tap here any time to receive your personalised daily guidance — rooted in your numerology, your Orisha alignment, and the energy of the current hour." }
+        body: "Tap here any time to receive your personalised daily guidance — rooted in your numerology, your Orisha alignment, and the energy of the current hour." },
+      { target: "#or-cast-link", title: "Cast Ifá",
+        body: "You've seen how to set each part of a reading yourself. <strong>Cast Ifá</strong> is the other way: tap it and the cast falls as it does with the opèlè — the Odù, its orientation, and the prescribed offering all settle on their own, and the wisdom is revealed. Use it when you'd rather let Ifá speak first." }
     ];
 
     if (window.innerWidth < 576) {
