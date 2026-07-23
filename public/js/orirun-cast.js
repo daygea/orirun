@@ -18,6 +18,9 @@
 
   var CAST_LABEL = "Cast Ifá";
   var BUSY_LABEL = "Casting…";
+  // Shortest time the casting veil stays up, so a fast connection still
+  // feels like a cast rather than a flicker.
+  var MIN_CAST_MS = 900;
 
   /* ── helpers ─────────────────────────────────────────────── */
   function $(id) { return document.getElementById(id); }
@@ -30,11 +33,44 @@
     });
   }
 
-  // Choose one option at random and select it.
+  /* An unbiased random integer in [0, n), drawn from the operating
+   * system's cryptographic entropy pool.
+   *
+   * Two deliberate choices:
+   *
+   *  • crypto.getRandomValues, not Math.random. Math.random is a
+   *    *pseudo*-random generator — deterministic from a hidden seed and
+   *    never designed to resist prediction. getRandomValues draws on the
+   *    OS entropy pool, which is not reproducible or foreseeable.
+   *
+   *  • Rejection sampling, not modulo. Taking `value % n` would make the
+   *    first few options fractionally likelier than the rest, because
+   *    2^32 does not divide evenly by n. We discard draws that fall in
+   *    the final incomplete range so every Odù is exactly equally
+   *    likely — no thumb on the scale, however slight.
+   */
+  function randomInt(n) {
+    if (!n || n <= 0) return 0;
+    var c = window.crypto || window.msCrypto;
+    if (c && c.getRandomValues) {
+      var limit = Math.floor(0x100000000 / n) * n;
+      var buf = new Uint32Array(1);
+      var v;
+      do { c.getRandomValues(buf); v = buf[0]; } while (v >= limit);
+      return v % n;
+    }
+    // Only reached on browsers without Web Crypto, which this app's
+    // secure/PWA context effectively rules out.
+    return Math.floor(Math.random() * n);
+  }
+
+  // Choose one option and select it. Every option carries equal weight,
+  // and nothing about the previous cast influences this one — a repeat is
+  // as legitimate an outcome as any other.
   function pickRandom(sel) {
     var opts = realOptions(sel);
     if (!opts.length) return null;
-    var choice = opts[Math.floor(Math.random() * opts.length)];
+    var choice = opts[randomInt(opts.length)];
     sel.value = choice.value;
     return choice.value;
   }
@@ -91,23 +127,30 @@
     if (label) { label.textContent = BUSY_LABEL; }
     if (link) { link.style.opacity = ".65"; link.style.pointerEvents = "none"; }
 
+    // Cover the screen FIRST. The fields are then set behind the veil, so the
+    // moment reads as a cast being thrown rather than dropdowns twitching.
+    // performUserDivination() takes ownership of the preloader once the
+    // button is clicked; if we never get there, we lift it ourselves.
+    var handedOff = false;
+    var startedAt = Date.now();
+    if (typeof window.showPreloader === "function") {
+      window.showPreloader('<span data-translate>Casting Ifá…</span>');
+    }
+
     try {
       // Make sure the Ifá form is the visible flow.
       if (typeof window.orFormTab === "function") window.orFormTab("discover");
 
-      // Bring the form into view so the cast is seen falling into place.
+      // Scroll now so the reading is what greets them when the veil lifts.
       var form = $("main-content");
       if (form && form.scrollIntoView) {
         form.scrollIntoView({ behavior: "smooth", block: "start" });
       }
-      await sleep(260);
 
-      // Let the fields land one after another — a cast resolving, not a
-      // form snapping shut.
+      // Set the three independent fields. No artificial stagger — these are
+      // hidden behind the preloader, so a delay here would just be dead time.
       pickRandom(mainCast);
-      await sleep(180);
       pickRandom(orientation);
-      await sleep(180);
       pickRandom(solution);
 
       // Clear the dependent dropdowns so we can tell when the app has
@@ -126,17 +169,27 @@
 
       pickRandom(specific);
       pickRandom(details);
-      await sleep(140);
+
+      // Let the cast be felt. On a fast connection the work above can finish
+      // in a blink; hold just long enough that the moment registers, without
+      // adding any wait when the network was already slow.
+      var elapsed = Date.now() - startedAt;
+      if (elapsed < MIN_CAST_MS) await sleep(MIN_CAST_MS - elapsed);
 
       // Reveal through the real button, exactly as a person would.
       var btn = $("divination-btn");
-      if (btn) btn.click();
+      if (btn) { handedOff = true; btn.click(); }
     } catch (err) {
       console.error("Cast Ifá failed:", err);
     } finally {
       casting = false;
       if (label) { label.textContent = original || CAST_LABEL; }
       if (link) { link.style.opacity = ""; link.style.pointerEvents = ""; }
+      // Only lift the veil if the reading never took over — otherwise
+      // performUserDivination() hides it when the wisdom is ready.
+      if (!handedOff && typeof window.hidePreloader === "function") {
+        window.hidePreloader();
+      }
     }
   }
 
