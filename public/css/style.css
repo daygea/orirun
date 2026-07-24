@@ -1936,6 +1936,39 @@ select.form-control{
   background:var(--of-green) !important; color:#fff !important; border-color:var(--of-green) !important;
 }
 
+/* Master numbers (11 / 22) — sit at bottom-left and bottom-right under
+   the wheel. Deliberately OUTSIDE .calculator: that container rotates,
+   so children of it would be carried around the orbit instead of
+   staying put. Same styling as the 1–9 buttons, and they spin on their
+   own axis at the same 333s rate — rotating in one spot.
+   No extra height: margin is 0, so nothing is pushed down. */
+.master-numbers{
+  width:200px;
+  margin:0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.master-num{
+  width:50px; height:50px;
+  border-radius:50%;
+  border:1px solid var(--of-line);
+  background:#fff;
+  color:var(--of-green-deep);
+  font-family:var(--font-body);
+  font-weight:700;
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+  box-shadow:none;
+  animation:rotate 333s linear infinite;
+  transition:background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+.master-num:hover, .master-num:focus, .master-num.clicked{
+  background:var(--of-green); color:#fff; border-color:var(--of-green);
+}
+.master-num:focus-visible{ outline:2px solid var(--of-green); outline-offset:2px; }
+
 /* result cards: flatter */
 .dv-hero{ box-shadow:0 1px 4px rgba(20,40,30,.08); }
 .dv-card{ box-shadow:none; }

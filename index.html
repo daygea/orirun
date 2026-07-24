@@ -549,6 +549,14 @@ if (location.protocol !== 'file:') {
                     </div>
                      <div class="calculator" id="calculator" style="margin-bottom: 10px;">    
                     </div>
+                    <!-- Master numbers: sit OUTSIDE .calculator so they stay
+                         upright (that container is on a slow rotation). -->
+                    <div class="master-numbers" role="group" aria-label="Master numbers">
+                      <button type="button" class="master-num" data-number="11"
+                              onclick="displayMeaning(11)" aria-label="Master number 11">11</button>
+                      <button type="button" class="master-num" data-number="22"
+                              onclick="displayMeaning(22)" aria-label="Master number 22">22</button>
+                    </div>
                     </div>
             </div>
         </div>
