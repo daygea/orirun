@@ -1936,18 +1936,30 @@ select.form-control{
   background:var(--of-green) !important; color:#fff !important; border-color:var(--of-green) !important;
 }
 
-/* Master numbers (11 / 22) — sit at bottom-left and bottom-right under
-   the wheel. Deliberately OUTSIDE .calculator: that container rotates,
-   so children of it would be carried around the orbit instead of
-   staying put. Same styling as the 1–9 buttons, and they spin on their
-   own axis at the same 333s rate — rotating in one spot.
-   No extra height: margin is 0, so nothing is pushed down. */
+/* Master numbers (11 / 22) — a centred pair sitting close under the
+   wheel, with a quiet label so their separation from the 1–9 ring reads
+   as intentional (they ARE a distinct category in numerology, not part
+   of the wheel). OUTSIDE .calculator so the container's rotation doesn't
+   carry them around its orbit; they spin on their own axis instead. */
 .master-numbers{
-  width:200px;
-  margin:0 auto;
   display:flex;
-  justify-content:space-between;
+  flex-direction:column;
   align-items:center;
+  gap:6px;
+  margin:0 auto;
+}
+.master-numbers__label{
+  font-family:var(--font-body);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--of-ink-soft, #5a6a60);
+}
+.master-numbers__pair{
+  display:flex;
+  justify-content:center;
+  gap:20px;
 }
 .master-num{
   width:50px; height:50px;
