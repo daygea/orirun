@@ -167,4 +167,45 @@
 
   // Ensure initial state is correct if the modal is opened directly.
   document.addEventListener("DOMContentLoaded", syncBabalawoFields);
+
+  /* ── Yorùbá tone-mark bar for the contribution textarea ──────────────
+     A babaláwo entering a verse needs the tone marks (à á ẹ ẹ̀ ọ ọ̀ ṣ ń …)
+     that carry the meaning. This inserts them at the cursor of
+     #contributionText. Self-contained and additive: it builds the bar once,
+     just above the textarea, and does nothing if the field isn't present. */
+  function buildContribDiacritics() {
+    var ta = $("contributionText");
+    if (!ta || $("contribDiacriticBar")) return; // absent or already built
+    var MARKS = ["à","á","è","é","ẹ","ẹ̀","ẹ́","ì","í","ò","ó","ọ","ọ̀","ọ́","ù","ú","ṣ","ń","gb"];
+    var bar = document.createElement("div");
+    bar.id = "contribDiacriticBar";
+    bar.setAttribute("aria-label", "Yorùbá tone marks");
+    bar.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px;";
+    MARKS.forEach(function (ch) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = ch;
+      b.setAttribute("aria-label", "Insert " + ch);
+      b.style.cssText =
+        "min-width:30px;height:30px;padding:0 7px;border:1px solid var(--of-line,#d8e0d8);" +
+        "background:#fff;color:var(--of-green-deep,#0b3d22);border-radius:6px;cursor:pointer;" +
+        "font-size:16px;line-height:1;font-family:Georgia,serif;";
+      // mousedown so the textarea keeps its selection/focus
+      b.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        var s = ta.selectionStart, en = ta.selectionEnd;
+        ta.value = ta.value.slice(0, s) + ch + ta.value.slice(en);
+        ta.selectionStart = ta.selectionEnd = s + ch.length;
+        ta.focus();
+        ta.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      bar.appendChild(b);
+    });
+    // Place the bar directly above the textarea.
+    ta.parentNode.insertBefore(bar, ta);
+  }
+  document.addEventListener("DOMContentLoaded", buildContribDiacritics);
+  // Also try when the modal is shown, in case it's injected later.
+  var _openBtn = document.querySelector('[onclick*="showContributionModal"]');
+  if (_openBtn) _openBtn.addEventListener("click", buildContribDiacritics);
 })();
