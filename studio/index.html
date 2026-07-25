@@ -126,6 +126,12 @@ textarea#editor.invalid{border-color:var(--osun);box-shadow:0 0 0 3px rgba(166,5
 
 /* View/Edit toggle + readable tree preview */
 .editor-modes{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.diacritic-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:10px}
+.diacritic-hint{font-size:11px;color:var(--brass);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.diacritic-bar button{min-width:30px;height:30px;padding:0 7px;border:1px solid var(--line,#dce8dc);
+  background:#fff;color:var(--ink);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;font-family:Georgia,serif}
+.diacritic-bar button:hover{background:var(--leaf-soft);border-color:var(--leaf)}
+.diacritic-bar button:active{transform:translateY(1px)}
 .mode-tab{padding:5px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
   border:1px solid var(--line);background:var(--white);color:var(--ink-soft)}
 .mode-tab.is-active{background:var(--leaf-soft);border-color:var(--leaf);color:var(--igbo)}
@@ -458,6 +464,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           <span class="spacer"></span>
           <button class="btn btn-ghost btn-sm" id="prettifyBtn" title="Reformat the JSON with clean indentation">Prettify</button>
         </div>
+        <!-- Yorùbá tone-mark helper: inserts diacritics at the cursor in the
+             editor. Shown only in Edit mode; works for every collection. -->
+        <div class="diacritic-bar" id="diacriticBar" aria-label="Yorùbá tone marks" style="display:none">
+          <span class="diacritic-hint">Tone marks</span>
+        </div>
         <div id="treeView" class="tree-view" aria-label="Content preview"></div>
         <textarea id="editor" spellcheck="false" aria-label="Item JSON editor" style="display:none"></textarea>
       </div>
@@ -749,12 +760,39 @@ function setEditorMode(mode) {
   const read = mode === "read";
   $("treeView").style.display = read ? "" : "none";
   $("editor").style.display = read ? "none" : "";
+  $("diacriticBar").style.display = read ? "none" : "flex";
   $("modeReadBtn").classList.toggle("is-active", read);
   $("modeEditBtn").classList.toggle("is-active", !read);
   $("modeReadBtn").setAttribute("aria-selected", read);
   $("modeEditBtn").setAttribute("aria-selected", !read);
   if (read) refreshTree();
 }
+
+// Build the Yorùbá tone-mark helper once. Clicking a mark inserts it at the
+// cursor in #editor and re-runs the editor's own input validation, so JSON
+// state and the dirty flag stay correct.
+(function buildDiacriticBar() {
+  const MARKS = ["à","á","è","é","ẹ","ẹ̀","ẹ́","ì","í","ò","ó","ọ","ọ̀","ọ́","ù","ú","ṣ","ń","gb"];
+  const bar = $("diacriticBar");
+  if (!bar) return;
+  MARKS.forEach((ch) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = ch;
+    b.setAttribute("aria-label", "Insert " + ch);
+    // mousedown (not click) so the textarea doesn't lose its selection first.
+    b.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const ta = $("editor");
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + ch + ta.value.slice(en);
+      ta.selectionStart = ta.selectionEnd = s + ch.length;
+      ta.focus();
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    bar.appendChild(b);
+  });
+})();
 // Locate a JSON syntax error as a line:column, so the message is actionable.
 function jsonErrorDetail(text, err) {
   const m = /position (\d+)/.exec(err.message);
