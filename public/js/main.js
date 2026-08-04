@@ -1261,6 +1261,27 @@ function parseEnergyAccordion(text) {
 
 async function getEnergyInterpretation(payload) {
 
+// Build the pinnacle arc as past/present/future chapters for the prompt.
+// pinnaclePhases is the full four-chapter array already computed upstream;
+// we mark each relative to the current one so the reading can speak in the
+// right tense for each. Falls back silently if phases are unavailable.
+function buildPinnacleArc(phases, currentNumber, age) {
+  if (!Array.isArray(phases) || !phases.length) return "";
+  const lines = phases.map((p) => {
+    const [start, end] = String(p.ageRange).split("–").map(Number);
+    let status = "future (not yet entered)";
+    if (age != null && !isNaN(start)) {
+      if (age > (end || Infinity)) status = "past (already lived)";
+      else if (age >= start && age <= (end || Infinity)) status = "PRESENT (living now)";
+    }
+    const meaning = p.pinnacleMeaning ? ` — ${p.pinnacleMeaning}` : "";
+    const chal = p.challengeMeaning ? `; challenge: ${p.challengeMeaning}` : "";
+    return `- Ages ${p.ageRange}: ${status}${meaning}${chal}`;
+  });
+  return lines.join("\n");
+}
+const pinnacleArc = buildPinnacleArc(payload.pinnaclePhases, payload.pinnacleNumber, payload.age);
+
 const prompt = `
 Interpret this life chart using African spiritual wisdom, with Yoruba cosmology as the primary lens.
 
@@ -1283,9 +1304,12 @@ EXPRESSION LAYER
 - Reality: ${payload.reality}
 
 TIMING LAYER (CONTEXT ONLY)
-- Pinnacle: ${payload.pinnacleNumber}
 - Challenge: ${payload.challengeNumber}
 - Year: ${payload.year}, Month: ${payload.month}, Week: ${payload.week}, Day: ${payload.day}
+
+PINNACLE ARC — the life-chapters, past to future${pinnacleArc ? `
+${pinnacleArc}` : `
+- Pinnacle: ${payload.pinnacleNumber}`}
 
 COSMIC LAYER (SUPPORT ONLY)
 - Zodiac: ${payload.zodiac} (${payload.zodiacElement})
@@ -1351,9 +1375,12 @@ STRUCTURE (use these exact titles, in this order)
 - How you give and receive closeness.
 - Name what you need from others, and the tension that keeps returning in your bonds.
 
-7️⃣ Present Season
-- From Pinnacle, Challenge, and current timing: the lesson of this chapter.
-- State the tension between pressure and opportunity, then say plainly: act, wait, adjust, or observe.
+7️⃣ The Chapter You Are Living
+- Speak the arc of life-chapters in three voices, but keep the PRESENT dominant (most of the words go here).
+- PAST chapters (already lived): speak with the certainty of hindsight — name what they shaped in you, what they asked and how it marked you. Never guess at events; speak to the pattern they built.
+- PRESENT chapter (the one whose ages you are now within): this is the heart of the section. Name its opportunity and its tension. Then say plainly: act, wait, adjust, or observe.
+- FUTURE chapter (not yet entered): speak ONLY as theme and preparation, never as prophecy or event. Say what it will ask of you and how the present readies you for it. Never predict what will happen. Never name gain or loss as fixed.
+- Do not turn this into a list or timeline. It must read as one flowing passage, elder to seeker.
 
 8️⃣ Guidance of Òrì
 - Direct, practical guidance for habits, decisions, and mindset now.
@@ -1691,8 +1718,7 @@ function parseEnergyAccordion(text) {
             + _energyRow("Birthday Gift", data.birthdayGift?.number,        data.birthdayGift?.label,        "birthdaygift")
             + _energyRow("Reality",       data.vibrations?.reality?.number, data.vibrations?.reality?.label, "reality"))
           + _energyGroup("Current Cycle",
-              _energyRow("Pinnacle",  currentPinnacleNumber,  "", "pinnacle")
-            + _energyRow("Challenge", currentChallengeNumber, "", "challenge"))
+              _pinnacleArcSpine(pinnaclePhases, age))
           + _energyGroup("Time Flow",
               _energyRow("Personal Year",  data.vibrations?.year?.number,  "", "year")
             + _energyRow("Personal Month", data.vibrations?.month?.number, "", "month")
@@ -1777,6 +1803,90 @@ function _energyGroup(title, rows) {
   return `<div style="background:#fff;border:1px solid #d9ebd9;border-radius:10px;padding:4px 14px 12px;margin-bottom:10px;">`
     + `<div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#0a5a2c;background:#e8f5e9;padding:4px 10px;border-radius:20px;margin:12px 0 2px;" data-translate>${title}</div>`
     + rows
+    + `</div>`;
+}
+
+/* Pinnacle arc-spine: a slim row of the four life-chapters with the current
+   one lit, ages beneath. A "you are here" map, not four cards of content —
+   the reading carries the meaning; this only orients the person on the path.
+   Each node is tappable: it reveals that chapter's pinnacle + challenge
+   meaning in a shared panel below, so a person can look back at chapters
+   lived and ahead at the one coming, without four cards cluttering the view. */
+function _pinnacleArcSpine(phases, age) {
+  if (!Array.isArray(phases) || !phases.length) return "";
+  const gid = "parc-" + Math.random().toString(36).slice(2, 7);
+  let presentIdx = -1;
+
+  const meta = phases.map((p, i) => {
+    const [start, end] = String(p.ageRange).split("\u2013").map(Number);
+    let state = "future";
+    if (age != null && !isNaN(start)) {
+      if (age > (end || Infinity)) state = "past";
+      else if (age >= start && age <= (end || Infinity)) { state = "present"; presentIdx = i; }
+    }
+    return { p, i, state };
+  });
+
+  // Detail text per chapter: pinnacle meaning + challenge meaning, framed by
+  // whether the chapter is lived, current, or coming. Each shows its own
+  // number badge, so clicking a chapter updates the pinnacle AND challenge.
+  const badge = (num) => {
+    const b = (num || num === 0) ? num : "\u2013";
+    return `<div style="flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#0f7b3d,#0a5a2c);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${b}</div>`;
+  };
+  const detailRow = (title, num, meaning) =>
+      `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid #e3efe7;">`
+    +   badge(num)
+    +   `<div style="flex:1 1 auto;min-width:0;">`
+    +     `<div style="font-weight:600;color:#1b4332;font-size:13px;" data-translate>${title}</div>`
+    +     (meaning ? `<div style="font-size:12.5px;line-height:1.5;color:var(--of-ink);margin-top:3px;" data-translate>${meaning}</div>` : "")
+    +   `</div>`
+    + `</div>`;
+
+  const details = meta.map(({ p, i, state }) => {
+    const pin = energyMeaning("pinnacle", p.pinnacleNumber);
+    const cha = energyMeaning("challenge", p.challengeNumber);
+    const frame = state === "past"
+        ? "A chapter you have already lived."
+      : state === "present"
+        ? "The chapter you are living now."
+        : "A chapter still ahead of you.";
+    return `<div id="${gid}-d${i}" class="parc-detail" style="display:${i === presentIdx ? "block" : "none"};">`
+      + `<div style="font-size:12px;font-weight:700;color:#0a5a2c;margin-bottom:2px;" data-translate>Ages ${p.ageRange}</div>`
+      + `<div style="font-size:12px;color:var(--of-ink-soft);font-style:italic;margin-bottom:4px;" data-translate>${frame}</div>`
+      + detailRow("Pinnacle", p.pinnacleNumber, pin)
+      + detailRow("Challenge", p.challengeNumber, cha)
+      + `</div>`;
+  }).join("");
+
+  const nodes = meta.map(({ p, state, i }) => {
+    const isNow = state === "present";
+    const dot = isNow ? "#0f7b3d" : (state === "past" ? "#9cc4a8" : "#d4e6d8");
+    const ring = isNow ? "box-shadow:0 0 0 4px rgba(15,123,61,.15);" : "";
+    const num = (p.pinnacleNumber || p.pinnacleNumber === 0) ? p.pinnacleNumber : "\u2013";
+    const txtColor = isNow ? "#0a5a2c" : "var(--of-ink-soft)";
+    const weight = isNow ? "700" : "500";
+    // Clicking selects this chapter: show its detail, hide others, lift its node.
+    const onclick =
+      `var g='${gid}';` +
+      `document.querySelectorAll('#'+g+' .parc-node').forEach(function(n){n.style.outline='none';});` +
+      `document.querySelectorAll('#'+g+' .parc-detail').forEach(function(d){d.style.display='none';});` +
+      `var d=document.getElementById(g+'-d${i}'); if(d) d.style.display='block';` +
+      `this.querySelector('.parc-node').style.outline='2px solid #0f7b3d';` +
+      `this.querySelector('.parc-node').style.outlineOffset='2px';`;
+    return `<div role="button" tabindex="0" aria-label="Chapter, ages ${p.ageRange}" onclick="${onclick}" `
+      + `onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" `
+      + `style="flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0;cursor:pointer;">`
+      + `<div class="parc-node" style="width:${isNow ? 30 : 22}px;height:${isNow ? 30 : 22}px;border-radius:50%;background:${dot};${ring}${i === presentIdx ? "outline:2px solid #0f7b3d;outline-offset:2px;" : ""}display:flex;align-items:center;justify-content:center;color:${isNow ? "#fff" : "#3a5c47"};font-weight:700;font-size:${isNow ? 13 : 11}px;">${num}</div>`
+      + `<div style="font-size:10.5px;color:${txtColor};font-weight:${weight};white-space:nowrap;">${p.ageRange}</div>`
+      + (isNow ? `<div style="font-size:9.5px;color:#0f7b3d;font-weight:700;text-transform:uppercase;letter-spacing:.04em;" data-translate>now</div>` : "")
+      + `</div>`;
+  }).join(`<div style="flex:0 0 auto;height:2px;width:14px;background:#d4e6d8;margin-top:11px;"></div>`);
+
+  return `<div id="${gid}">`
+    + `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:2px;padding:12px 2px 6px;">${nodes}</div>`
+    + `<div style="font-size:11px;color:var(--of-ink-soft);text-align:center;padding-bottom:8px;" data-translate>Tap any chapter to look back or ahead. You are in the lit one.</div>`
+    + `<div style="background:#f6faf6;border:1px solid #e3efe7;border-radius:8px;padding:10px 12px;">${details}</div>`
     + `</div>`;
 }
 function toggleEnergyBreakdown(btn) {
