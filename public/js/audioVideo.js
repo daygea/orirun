@@ -69,7 +69,7 @@ function openAudioModal(url) {
         </div>
         <iframe id="audioIframe" allow="autoplay"
             style="display:none; width:100%; border:none;"
-            height="100"></iframe>
+            height="250"></iframe>
     `;
 
     const iframe = document.getElementById("audioIframe");
