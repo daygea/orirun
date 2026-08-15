@@ -945,39 +945,39 @@ function showTermsModal() {
 
 const aboutHtml = `
 <h3 class="title"><b><span>ABOUT US</span></b></h3>
-<p>Orírùn Cultural Foundation is a not-for-profit, non-political organisation dedicated to the preservation, promotion, and advancement of African ancestral wisdom, spirituality, and cultural heritage. Through innovative programs and technology, we connect communities with the richness of Africa's traditions while creating modern pathways for education, empowerment, and sustainable development.</p>
+<p>Orírùn Cultural Foundation is a not-for-profit, non-political organisation dedicated to preserving, promoting, and advancing African ancestral wisdom, spirituality, and cultural heritage. We connect communities with the richness of Africa's traditions while creating modern pathways for education, empowerment, and sustainable development.</p>
 
-<h3>Mission</h3>
-<p>To preserve and promote African ancestral wisdom, spirituality, and cultural heritage by integrating traditional knowledge with modern innovation for the empowerment, education, and advancement of communities across Africa and beyond.</p>
-
-<h3>Vision</h3>
-<p>To safeguard Africa's ancestral legacy, inspire cultural pride, and create pathways for future generations to thrive through heritage, knowledge, and innovation.</p>
+<h3>Mission & Vision</h3>
+<p>To safeguard African ancestral wisdom, spirituality, and cultural heritage by uniting traditional knowledge with modern innovation — inspiring cultural pride and creating pathways for future generations to thrive through heritage, knowledge, and innovation.</p>
 
 <h3>Core Values</h3>
 <p>
 <strong>Heritage</strong> – Safeguarding Africa's ancestral knowledge and traditions.<br><br>
-<strong>Wisdom</strong> – Promoting cultural and spiritual insights for human development.<br><br>
+<strong>Wisdom</strong> – Promoting cultural and spiritual insight for human development.<br><br>
 <strong>Innovation</strong> – Integrating tradition with modern tools and technology.<br><br>
 <strong>Community</strong> – Empowering people through education and collective growth.<br><br>
 <strong>Integrity</strong> – Operating with transparency, accountability, and respect.
 </p>
 
-<h3>Objectives</h3>
+<h3>What We Do</h3>
 <p>
-Establish cultural centres, libraries, and archives while promoting peaceful coexistence, intercultural dialogue, and lawful charitable activities.<br><br>
-Safeguard and disseminate African indigenous knowledge, cultural heritage, spirituality, and ancestral wisdom.<br><br>
-Organise workshops, seminars, and conferences on African heritage, values, and spirituality.<br><br>
-Integrate ancestral knowledge with modern innovation for social, cultural, and economic development.<br><br>
-Work with cultural institutions, traditional leaders, academia, and international organisations to advance African heritage.<br><br>
-Support and encourage youth interested in African culture, spirituality, and innovation.
+We safeguard and share African indigenous knowledge through cultural centres, libraries, and archives; convene workshops, seminars, and conferences on heritage and spirituality; and integrate ancestral knowledge with modern innovation for social, cultural, and economic development. We work alongside traditional leaders, academia, cultural institutions, and international partners, and we support young people reconnecting with their roots.
 </p>
 
 <h3>Programs & Initiatives</h3>
 <p>
-<strong>Orírùn Application</strong> – A digital tool for cultural preservation, Ifá divination, and ancestral wisdom, making heritage accessible to communities across Africa and the diaspora.<br><br>
-<strong>Heritage Education & Research</strong> – Workshops, seminars, and publications that document and promote African traditions, values, and spirituality.<br><br>
-<strong>Youth Empowerment</strong> – Supporting young people in reconnecting with their cultural roots, fostering innovation, and sustaining African indigenous knowledge for future generations.<br><br>
-<strong>Cultural Exchange Platforms</strong> – Collaborations across Africa and the diaspora to strengthen cultural identity, unity, and intercultural dialogue.
+<strong>Orírùn Application</strong> – A digital tool for cultural preservation, Ifá divination, and ancestral wisdom, making heritage accessible across Africa and the diaspora.<br><br>
+<strong>Heritage Education & Research</strong> – Workshops, seminars, and publications documenting African traditions, values, and spirituality.<br><br>
+<strong>Youth Empowerment</strong> – Helping young people reconnect with their cultural roots and sustain indigenous knowledge for future generations.<br><br>
+<strong>Cultural Exchange</strong> – Collaborations across Africa and the diaspora that strengthen cultural identity, unity, and dialogue.
+</p>
+
+<h3>The Science in the Tradition</h3>
+<p>
+Ifá is one of the world's oldest binary systems. Each cast falls one of two ways — a single mark or a double — repeated until eight marks form an Odù. Two possibilities across eight positions give exactly 2⁸ = 256 Odù: a complete map of the human condition, held centuries before the digital age.<br><br>
+Its structure is a computer's own. Each Odù is two columns of four marks — in computing, four bits form a <em>nibble</em> and eight a <em>byte</em>, so every Odù is a byte built of two nibbles, just as the tradition already paired its two columns as one whole. Reading a single mark as 1 and a double as 0, Èjì Ogbè becomes 11111111 and Ọ̀yẹ̀kú Méjì 00000000 — the same binary logic that runs every device today.<br><br>
+This was set out formally by <strong>Professor Olu Longe (1932–2020)</strong>, Nigeria's first Professor of Computer Science, whose 1983 University of Ibadan inaugural lecture, <em>Ifá Divination and Computer Science</em>, showed the byte, the nibble, Boolean logic, and memory addressing already alive within Ifá. Yet Ifá's meaning has never lived in books alone: for centuries the babaláwo have carried its verses in an unbroken oral lineage, and they carry them still — the living voices, including those honoured in this app, through whom the tradition keeps itself. Scholars such as <strong>Professor Wándé Abímbọ́lá</strong> have documented that corpus for the wider world; the babaláwo have kept it alive.<br><br>
+Beneath it lies one idea the Yorùbá named long ago — <em>Ìbí</em> and <em>Ire</em>, shadow and light, the two poles whose meeting weaves all of experience. It is the same intuition mathematics writes in Euler's formula and machines run in silicon: from exactly two, held in balance, everything follows. <em>Èjèèjì ni mo gbè</em> — "I support two" — as the first Odù says.
 </p>
 
 <h3>Contact Information</h3>
