@@ -345,6 +345,44 @@ function _oduBinaryHTML(oduName) {
     + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
 }
 
+/* The Odù's numerology now flows from its own binary value (its actual marks),
+   not its list position. Reduce the 0–255 value to a single digit, preserving
+   master numbers 11 and 22. The all-double Odù reduces to 0, which is not a
+   valid numerology number — we map it to 9 (completion/endings), which fits
+   its meaning. Returns the lookup number (1–9, 11, 22). */
+function _oduBinaryValue(oduName) {
+  const bit = (m) => (m === "|" ? "1" : "0");
+  let rows;
+  const base = baseOdus[oduName];
+  if (base) {
+    rows = base.map((l) => [l, l]);
+  } else {
+    const [p1, p2] = oduName.split(" ");
+    const fC = baseOdus[p1 === "Ogbe" ? "Ejiogbe" : `${p1} Meji`];
+    const sC = baseOdus[p2 === "Ogbe" ? "Ejiogbe" : `${p2} Meji`];
+    if (!fC || !sC) return null;
+    rows = fC.map((l, i) => [sC[i], l]);
+  }
+  return parseInt(rows.map((r) => bit(r[1]) + bit(r[0])).join(""), 2);
+}
+function _oduNumerology(oduName) {
+  const v = _oduBinaryValue(oduName);
+  if (v === null) return null;
+  let n = v;
+  while (n > 9 && n !== 11 && n !== 22) {
+    n = n.toString().split("").reduce((s, d) => s + parseInt(d, 10), 0);
+  }
+  if (n === 0) n = 9; // all-double Odù (Ọ̀yẹ̀kú etc.) → 9
+  return n;
+}
+/* Master numbers show as "11/2" and "22/4" — the master number and its root —
+   while the tap still fetches the master number's own meaning. */
+function _numerologyLabel(n) {
+  if (n === 11) return "11/2";
+  if (n === 22) return "22/4";
+  return String(n);
+}
+
 const getNumerologyNumber = (number) => {
   while (number > 9 && number !== 11 && number !== 22) {
     number = number.toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
@@ -969,8 +1007,12 @@ const displayConfiguration = (oduName) => {
   parts.push(
     `<img src="public/img/opeleFooter.png" alt="Odu Footer" class="odu-footer"></div>`,
     _oduBinaryHTML(oduName),
-    `<br/><p><a style="cursor:pointer;" class="btn btn-sm"
-       onclick="displayMeaning(${numerology})">Numerology: ${numerology}</a></p>`
+    (() => {
+      const num = _oduNumerology(oduName);
+      const n = (num === null) ? numerology : num; // fallback to index-based if unresolved
+      return `<br/><p><a style="cursor:pointer;" class="btn btn-sm"
+       onclick="displayMeaning(${n})">Numerology: ${_numerologyLabel(n)}</a></p>`;
+    })()
   );
 
   const html = parts.join("");
