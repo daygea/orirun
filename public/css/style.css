@@ -995,16 +995,21 @@ button:hover {
     width: 64px;
     height: 64px;
     border-radius: 50%;
-    background: transparent;
-    border: none;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
     padding: 0;
     cursor: pointer;
 }
 .calculator button.calc-center:hover,
-.calculator button.calc-center:focus {
-    background: transparent;
-    border: none;
-    outline: none;
+.calculator button.calc-center:focus,
+.calculator button.calc-center.clicked {
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
 }
 
 .app-btn {
