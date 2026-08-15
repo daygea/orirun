@@ -313,6 +313,36 @@ const imageMap = {
 const getOduImages = (symbols) =>
   symbols.map(s => `<img src="${imageMap[s]}" alt="${s}" class="odu-line">`).join("");
 
+/* Binary value of a cast Odù — derived from the SAME marks that render above,
+   so the number always matches the picture. Convention (single mark = 1,
+   double mark = 0), the framing credited to Prof. Olu Longe: each Odù is 8
+   marks = two columns of four = two nibbles = one byte. Bits are read per row,
+   left mark then right, top to bottom. */
+function _oduBinaryHTML(oduName) {
+  const bit = (m) => (m === "|" ? "1" : "0");
+  let rows;
+  const base = baseOdus[oduName];
+  if (base) {
+    rows = base.map((l) => [l, l]);
+  } else {
+    const [p1, p2] = oduName.split(" ");
+    const firstPart  = p1 === "Ogbe" ? "Ejiogbe" : `${p1} Meji`;
+    const secondPart = p2 === "Ogbe" ? "Ejiogbe" : `${p2} Meji`;
+    const fC = baseOdus[firstPart], sC = baseOdus[secondPart];
+    if (!fC || !sC) return ""; // unknown odu → show nothing rather than guess
+    rows = fC.map((l, i) => [sC[i], l]); // [left = second figure, right = first]
+  }
+  const leftNibble  = rows.map((r) => bit(r[0])).join("");
+  const rightNibble = rows.map((r) => bit(r[1])).join("");
+  const byte = rows.map((r) => bit(r[0]) + bit(r[1])).join("");
+  const value = parseInt(byte, 2);
+  return `<p class="odu-binary" style="margin:6px 0 0;font-size:13px;color:var(--of-ink-soft,#5a6a60);">`
+    + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${leftNibble} ${rightNibble}</span>`
+    + ` <span data-translate>· binary</span> `
+    + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
+    + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
+}
+
 const getNumerologyNumber = (number) => {
   while (number > 9 && number !== 11 && number !== 22) {
     number = number.toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
@@ -936,6 +966,7 @@ const displayConfiguration = (oduName) => {
 
   parts.push(
     `<img src="public/img/opeleFooter.png" alt="Odu Footer" class="odu-footer"></div>`,
+    _oduBinaryHTML(oduName),
     `<br/><p><a style="cursor:pointer;" class="btn btn-sm"
        onclick="displayMeaning(${numerology})">Numerology: ${numerology}</a></p>`
   );
