@@ -959,19 +959,6 @@ const aboutHtml = `
 <strong>Integrity</strong> – Operating with transparency, accountability, and respect.
 </p>
 
-<h3>What We Do</h3>
-<p>
-We safeguard and share African indigenous knowledge through cultural centres, libraries, and archives; convene workshops, seminars, and conferences on heritage and spirituality; and integrate ancestral knowledge with modern innovation for social, cultural, and economic development. We work alongside traditional leaders, academia, cultural institutions, and international partners, and we support young people reconnecting with their roots.
-</p>
-
-<h3>Programs & Initiatives</h3>
-<p>
-<strong>Orírùn Application</strong> – A digital tool for cultural preservation, Ifá divination, and ancestral wisdom, making heritage accessible across Africa and the diaspora.<br><br>
-<strong>Heritage Education & Research</strong> – Workshops, seminars, and publications documenting African traditions, values, and spirituality.<br><br>
-<strong>Youth Empowerment</strong> – Helping young people reconnect with their cultural roots and sustain indigenous knowledge for future generations.<br><br>
-<strong>Cultural Exchange</strong> – Collaborations across Africa and the diaspora that strengthen cultural identity, unity, and dialogue.
-</p>
-
 <h3>The Science in the Tradition</h3>
 <p>
 Ifá is one of the world's oldest binary systems. Each cast falls one of two ways — a single mark or a double — repeated until eight marks form an Odù. Two possibilities across eight positions give exactly 2⁸ = 256 Odù: a complete map of the human condition, held centuries before the digital age.<br><br>
