@@ -316,8 +316,9 @@ const getOduImages = (symbols) =>
 /* Binary value of a cast Odù — derived from the SAME marks that render above,
    so the number always matches the picture. Convention (single mark = 1,
    double mark = 0), the framing credited to Prof. Olu Longe: each Odù is 8
-   marks = two columns of four = two nibbles = one byte. Bits are read per row,
-   left mark then right, top to bottom. */
+   marks = two columns of four = two nibbles = one byte. Following the Yorùbá
+   right-to-left reading, each row is read right mark then left mark, top to
+   bottom. */
 function _oduBinaryHTML(oduName) {
   const bit = (m) => (m === "|" ? "1" : "0");
   let rows;
@@ -332,12 +333,13 @@ function _oduBinaryHTML(oduName) {
     if (!fC || !sC) return ""; // unknown odu → show nothing rather than guess
     rows = fC.map((l, i) => [sC[i], l]); // [left = second figure, right = first]
   }
-  const leftNibble  = rows.map((r) => bit(r[0])).join("");
+  // Right-to-left per row: right mark before left. Nibbles shown right | left.
   const rightNibble = rows.map((r) => bit(r[1])).join("");
-  const byte = rows.map((r) => bit(r[0]) + bit(r[1])).join("");
+  const leftNibble  = rows.map((r) => bit(r[0])).join("");
+  const byte = rows.map((r) => bit(r[1]) + bit(r[0])).join("");
   const value = parseInt(byte, 2);
   return `<p class="odu-binary" style="margin:6px 0 0;font-size:13px;color:var(--of-ink-soft,#5a6a60);">`
-    + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${leftNibble} ${rightNibble}</span>`
+    + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${rightNibble} ${leftNibble}</span>`
     + ` <span data-translate>· binary</span> `
     + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
     + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
