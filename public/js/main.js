@@ -340,9 +340,9 @@ function _oduBinaryHTML(oduName) {
   const value = parseInt(byte, 2);
   return `<p class="odu-binary" style="margin:6px 0 0;font-size:13px;color:var(--of-ink-soft,#5a6a60);">`
     + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${rightNibble} ${leftNibble}</span>`
-    + ` <span data-translate>· binary</span> `
-    + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
-    + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
+    // + ` <span data-translate>· binary</span> `
+    // + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
+    // + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
 }
 
 /* The Odù's numerology now flows from its own binary value (its actual marks),
