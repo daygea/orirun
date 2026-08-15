@@ -338,8 +338,10 @@ function _oduBinaryHTML(oduName) {
   const leftNibble  = rows.map((r) => bit(r[0])).join("");
   const byte = rows.map((r) => bit(r[1]) + bit(r[0])).join("");
   const value = parseInt(byte, 2);
+  // Display reads right-to-left: left-column nibble shown first on screen. The
+  // value is unchanged — this only flips the visual order of the two nibbles.
   return `<p class="odu-binary" style="margin:6px 0 0;font-size:13px;color:var(--of-ink-soft,#5a6a60);">`
-    + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${rightNibble} ${leftNibble}</span>`
+    + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${leftNibble} ${rightNibble}</span>`
     // + ` <span data-translate>· binary</span> `
     // + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
     // + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
