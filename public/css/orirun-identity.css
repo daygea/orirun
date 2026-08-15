@@ -405,14 +405,13 @@ body.bg-ready::before { opacity: 1; }
 #audioModal, #videoModal {
   /* Center the card without transform, so a fixed backdrop can anchor to the
      viewport (a transformed ancestor would re-anchor position:fixed to itself).
-     inset:0 + margin:auto + a fit-content block size centers a fixed element. */
+     inset:0 + margin:auto centers a fixed element. */
   top: 0 !important;
   left: 0 !important;
   right: 0;
   bottom: 0;
   margin: auto !important;
   width: min(560px, 92vw) !important;
-  height: fit-content !important;
   max-height: 88vh;
   border: 1px solid rgba(20,40,30,.14) !important;
   border-top: 3px solid var(--or-brass, #b8860b) !important;
@@ -420,6 +419,15 @@ body.bg-ready::before { opacity: 1; }
   box-shadow: 0 20px 48px rgba(15,45,30,.28) !important;
   background: #fffef9 !important;
   animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
+}
+/* Audio sizes to its content (its player is a fixed 250px). */
+#audioModal { height: fit-content !important; }
+/* Video gets a stable stage — the loader (position:absolute, height:90%) and
+   the iframe both need a defined height to fill, so fit-content won't do. */
+#videoModal {
+  height: min(64vh, 520px) !important;
+  position: fixed;         /* positioning context for the absolute loader */
+  overflow: hidden;
 }
 /* Full-screen dark backdrop behind the card. Fixed to the viewport; not
    inside a transformed ancestor, so it covers the whole screen reliably. */
@@ -432,15 +440,37 @@ body.bg-ready::before { opacity: 1; }
   z-index: -1;
   pointer-events: none;
 }
-/* The video iframe fills the card width at a sensible height. */
+/* The video iframe fills the stage below the close bar. */
 #videoModal #videoFrame {
   width: 100% !important;
-  height: 52vh !important;
-  max-height: 60vh;
+  height: calc(100% - 52px) !important;
+  border: none;
   border-radius: 0 0 14px 14px;
+  display: block;
 }
-/* The audio container gets room so the 250px player iframe fits inside. */
-#audioPlayerContainer { min-height: 260px; }
+/* Loader overlays — identical treatment for BOTH audio and video, so the
+   spinner + "Loading…" sit centered in the player area in the same way.
+   Video fills its stage below the close bar; audio fills its container. */
+#videoModal #videoLoader {
+  position: absolute !important;
+  inset: 52px 0 0 0 !important;
+  height: auto !important;
+  padding-top: 0 !important;
+}
+#videoModal #videoLoader,
+#audioPlayerContainer #audioLoader {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-style: italic;
+  color: gray;
+  text-align: center;
+}
+/* The audio container gets room so the player + centered loader sit nicely. */
+#audioPlayerContainer { min-height: 140px; display: flex; flex-direction: column; justify-content: center; }
+#audioPlayerContainer #audioLoader { min-height: 120px; }
 /* The video iframe should fill the card width and keep a sensible ratio. */
 #videoModal #videoFrame {
   width: 100% !important;
@@ -448,8 +478,6 @@ body.bg-ready::before { opacity: 1; }
   max-height: 60vh;
   border-radius: 0 0 14px 14px;
 }
-/* The audio player container: give it room so the 250px iframe fits. */
-#audioPlayerContainer { min-height: 260px; }
 #audioModal button, #videoModal button {
   background: #0f7b3d !important;
   color: #fff !important;
