@@ -342,9 +342,9 @@ function _oduBinaryHTML(oduName) {
   // value is unchanged — this only flips the visual order of the two nibbles.
   return `<p class="odu-binary" style="margin:6px 0 0;font-size:13px;color:var(--of-ink-soft,#5a6a60);">`
     + `<span style="font-family:monospace;letter-spacing:1px;color:var(--of-green-deep,#0b3d22);font-weight:600;">${leftNibble} ${rightNibble}</span>`
-    // + ` <span data-translate>· binary</span> `
-    // + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
-    // + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
+    + ` <span data-translate>· binary</span> `
+    + `<span style="font-weight:600;color:var(--of-green-deep,#0b3d22);">${value}</span>`
+    + ` <span style="opacity:.7;" data-translate>of 256</span></p>`;
 }
 
 /* The Odù's numerology now flows from its own binary value (its actual marks),
@@ -374,8 +374,7 @@ function _oduNumerology(oduName) {
   while (n > 9 && n !== 11 && n !== 22) {
     n = n.toString().split("").reduce((s, d) => s + parseInt(d, 10), 0);
   }
-  if (n === 0) n = 9; // all-double Odù (Ọ̀yẹ̀kú etc.) → 9
-  return n;
+  return n; // 0 (Ọ̀yẹ̀kú, all-double) keeps its true value — it has its own meaning
 }
 /* Master numbers show as "11/2" and "22/4" — the master number and its root —
    while the tap still fetches the master number's own meaning. */
@@ -1129,6 +1128,21 @@ function generateCircularButtons() {
     };
     frag.appendChild(button);
   });
+
+  /* Center target: the image the numbers rotate around is now tappable and
+     reveals the 0 reading (Ọ̀yẹ̀kú's void / infinite potential). Sits at dead
+     centre, so the container's slow rotation spins it in place invisibly. */
+  const center = document.createElement("button");
+  center.className        = "calc-center";
+  center.dataset.number   = 0;
+  center.setAttribute("aria-label", "Reveal the meaning of zero");
+  center.onclick = function () {
+    if (!canClick) return;
+    this.classList.add("clicked");
+    displayMeaning(0);
+    setTimeout(generateCircularButtons, 1000);
+  };
+  frag.appendChild(center);
 
   calculatorDiv.innerHTML = "";
   calculatorDiv.appendChild(frag);

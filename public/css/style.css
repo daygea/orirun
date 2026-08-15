@@ -984,6 +984,29 @@ button:hover {
     font-weight: bold;
 }
 
+/* Center target over the wheel image — fully invisible, leaves the image
+   exactly as-is; only makes the centre clickable to reveal the 0 (Ọ̀yẹ̀kú)
+   reading. No border, no hover change. */
+.calculator button.calc-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+.calculator button.calc-center:hover,
+.calculator button.calc-center:focus {
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
 .app-btn {
     border: 1px solid green; 
     color: green; 
