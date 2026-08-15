@@ -403,6 +403,17 @@ body.bg-ready::before { opacity: 1; }
    These are inline-styled; we override key surface props and restyle
    the green close button to match. Kept centered and responsive. ── */
 #audioModal, #videoModal {
+  /* Center the card without transform, so a fixed backdrop can anchor to the
+     viewport (a transformed ancestor would re-anchor position:fixed to itself).
+     inset:0 + margin:auto + a fit-content block size centers a fixed element. */
+  top: 0 !important;
+  left: 0 !important;
+  right: 0;
+  bottom: 0;
+  margin: auto !important;
+  width: min(560px, 92vw) !important;
+  height: fit-content !important;
+  max-height: 88vh;
   border: 1px solid rgba(20,40,30,.14) !important;
   border-top: 3px solid var(--or-brass, #b8860b) !important;
   border-radius: 16px !important;
@@ -410,6 +421,35 @@ body.bg-ready::before { opacity: 1; }
   background: #fffef9 !important;
   animation: or-modal-rise .26s cubic-bezier(.2,.7,.3,1);
 }
+/* Full-screen dark backdrop behind the card. Fixed to the viewport; not
+   inside a transformed ancestor, so it covers the whole screen reliably. */
+#audioModal::before, #videoModal::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(12,28,20,.55);
+  z-index: -1;
+  pointer-events: none;
+}
+/* The video iframe fills the card width at a sensible height. */
+#videoModal #videoFrame {
+  width: 100% !important;
+  height: 52vh !important;
+  max-height: 60vh;
+  border-radius: 0 0 14px 14px;
+}
+/* The audio container gets room so the 250px player iframe fits inside. */
+#audioPlayerContainer { min-height: 260px; }
+/* The video iframe should fill the card width and keep a sensible ratio. */
+#videoModal #videoFrame {
+  width: 100% !important;
+  height: 52vh !important;
+  max-height: 60vh;
+  border-radius: 0 0 14px 14px;
+}
+/* The audio player container: give it room so the 250px iframe fits. */
+#audioPlayerContainer { min-height: 260px; }
 #audioModal button, #videoModal button {
   background: #0f7b3d !important;
   color: #fff !important;
@@ -447,8 +487,8 @@ body.bg-ready::before { opacity: 1; }
     padding: 22px 18px 20px !important;
     max-height: 92vh;
   }
-  #audioModal { width: 90% !important; left: 5% !important; }
-  #videoModal { width: 92% !important; left: 4% !important; }
+  #audioModal { width: 92vw !important; }
+  #videoModal { width: 94vw !important; }
 }
 
 /* ── Ifá guide & onboarding modals: bring their backdrop + card into the
