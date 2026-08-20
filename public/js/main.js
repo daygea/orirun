@@ -937,7 +937,11 @@ const performUserDivination = async (
 
       renderFeedbackSection("Divination", {
         oduName: mainCast, orientationText: orientation,
-        specificOrientation, solution, solutionDetails, hasAccess: true
+        specificOrientation, solution, solutionDetails, hasAccess: true,
+        // Step 5: attach the verse that led this reading, so feedback attaches
+        // to the specific interpretation shown — letting rank improve per verse
+        // over time. Absent when the reading fell back to the placeholder Message.
+        verseId: verseReading?.lead?.verseId || null
       }, resultElement);
 
       document.getElementById("readMoreAse")?.addEventListener("click", e => {
