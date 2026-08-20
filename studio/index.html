@@ -477,9 +477,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
              raw JSON. Shown only for the eseIfa collection, in Edit mode. Writes
              through the same validated save path — the schema gate still applies. -->
         <div id="interpPanel" style="display:none;margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:#fff;flex:0 0 auto;max-height:46vh;overflow-y:auto;box-sizing:border-box">
-          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px;display:flex;align-items:center;gap:10px">
+          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             Interpretations by orientation
-            <button type="button" id="aiDraftBtn" class="btn btn-ghost btn-sm" style="margin-left:auto" title="Generate AI draft notes for a babaláwo to correct — never verified, never shown to users">✨ Draft with AI</button>
+            <span id="verseStatusChip" style="font-size:11px;padding:2px 9px;border-radius:20px;background:#eee;color:#666">verse: —</span>
+            <button type="button" id="verifyVerseBtn" class="btn btn-ghost btn-sm" style="margin-left:auto" title="Verify the VERSE itself (separate from interpretations) — required before any reading shows">Verify verse ✓</button>
+            <button type="button" id="aiDraftBtn" class="btn btn-ghost btn-sm" title="Generate AI draft notes for a babaláwo to correct — never verified, never shown to users">✨ Draft with AI</button>
           </div>
           <div style="font-size:12px;opacity:.75;margin-bottom:12px;max-width:74ch">
             Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
@@ -855,6 +857,43 @@ function interpPanelPopulate(verse) {
   // "Draft with AI" — fetch draft notes, load them into empty orientations.
   // Drafts are status:"draft", author "AI draft" — never verified here. The
   // babaláwo reviews the reasoning (in each draft's notes), edits, and verifies.
+  // Verse status chip + verify-verse button. The VERSE itself must be verified
+  // (separate from interpretations) before any reading shows — this is the
+  // action that was missing. Calls the existing /verses/:id/verify endpoint.
+  const chip = $("verseStatusChip");
+  const vstatus = (verse && verse.verification && verse.verification.status) || "draft";
+  if (chip) {
+    chip.textContent = "verse: " + vstatus;
+    chip.style.background = vstatus === "verified" ? "#e6f4ea" : "#fdf3e3";
+    chip.style.color = vstatus === "verified" ? "#0a5a2c" : "#8a5a2b";
+  }
+  const vbtn = $("verifyVerseBtn");
+  if (vbtn) {
+    vbtn.style.display = vstatus === "verified" ? "none" : "";
+    vbtn.onclick = async () => {
+      if (!activeKey) return;
+      const actor = interpActorName();
+      if (!actor) { toast("No signed-in name to verify with — verification needs a named elder", true); return; }
+      if (!confirmAct(`Verify this verse as ${actor}? This makes it eligible to appear in readings (once an interpretation is also verified).`)) return;
+      vbtn.disabled = true; vbtn.textContent = "Verifying…";
+      try {
+        const res = await api(`/verses/${encodeURIComponent(activeKey)}/verify`, {
+          method: "POST", body: JSON.stringify({ name: actor }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Verify failed");
+        itemDirty = false;
+        toast("Verse verified — reload the item to see it updated");
+        // Refresh the editor with the now-verified verse.
+        selectItem(activeKey);
+      } catch (err) {
+        toast("Verify failed: " + err.message, true);
+      } finally {
+        vbtn.disabled = false; vbtn.textContent = "Verify verse ✓";
+      }
+    };
+  }
+
   const aiBtn = $("aiDraftBtn");
   if (aiBtn) {
     aiBtn.onclick = async () => {
