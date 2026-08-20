@@ -477,7 +477,10 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
              raw JSON. Shown only for the eseIfa collection, in Edit mode. Writes
              through the same validated save path — the schema gate still applies. -->
         <div id="interpPanel" style="display:none;margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:#fff">
-          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px">Interpretations by orientation</div>
+          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px;display:flex;align-items:center;gap:10px">
+            Interpretations by orientation
+            <button type="button" id="aiDraftBtn" class="btn btn-ghost btn-sm" style="margin-left:auto" title="Generate AI draft notes for a babaláwo to correct — never verified, never shown to users">✨ Draft with AI</button>
+          </div>
           <div style="font-size:12px;opacity:.75;margin-bottom:12px;max-width:74ch">
             Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
             Verifying stamps your name and today's date; an AI draft becomes yours the moment you verify it. Nothing reaches app users until it is <b>verified</b>.
@@ -848,6 +851,42 @@ function interpPanelPopulate(verse) {
   host.querySelectorAll(".interp-text,.interp-by").forEach((el) => {
     el.addEventListener("input", interpMergeIntoEditor);
   });
+
+  // "Draft with AI" — fetch draft notes, load them into empty orientations.
+  // Drafts are status:"draft", author "AI draft" — never verified here. The
+  // babaláwo reviews the reasoning (in each draft's notes), edits, and verifies.
+  const aiBtn = $("aiDraftBtn");
+  if (aiBtn) {
+    aiBtn.onclick = async () => {
+      if (!activeKey) return;
+      aiBtn.disabled = true; aiBtn.textContent = "✨ Drafting…";
+      try {
+        const res = await api(`/verses/${encodeURIComponent(activeKey)}/draft-interpretations`, {
+          method: "POST", body: JSON.stringify({}),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Draft failed");
+        // Merge drafts into the verse JSON (do NOT overwrite an existing
+        // verified/edited interpretation — drafts only fill empty slots).
+        let verse; try { verse = JSON.parse($("editor").value); } catch { verse = {}; }
+        const cur = verse.interpretations || {};
+        let added = 0;
+        for (const [o, it] of Object.entries(body.interpretations || {})) {
+          if (!cur[o]) { cur[o] = it; added++; }   // fill only empty orientations
+        }
+        verse.interpretations = cur;
+        $("editor").value = JSON.stringify(verse, null, 2);
+        itemDirty = true;
+        interpPanelPopulate(verse);
+        const silent = (body.silent || []).length;
+        toast(`AI drafted ${added} orientation(s); it judged ${silent} silent. Review, edit, and verify each before it reaches users.`);
+      } catch (err) {
+        toast("AI draft failed: " + err.message, true);
+      } finally {
+        aiBtn.disabled = false; aiBtn.textContent = "✨ Draft with AI";
+      }
+    };
+  }
 }
 
 function interpReadRows() {
