@@ -86,6 +86,41 @@ function hidePreloader() {
   if (preloader) preloader.style.display = "none";
 }
 
+/* Render a verse-based reading (step 2). Leads with the most-specific verified
+   interpretation, then offers the other verified analyses beneath ("Ifá also
+   speaks…"). Every interpretation shows its named provenance — the verse
+   contributor and the babaláwo who verified it — so the seeker sees whose
+   wisdom this is. Only reached when the corpus HAS a verified interpretation;
+   otherwise the caller shows the oduData Message. */
+function _verseReadingHTML(vr, solutionInfo) {
+  const esc = (s) => String(s == null ? "" : s);
+  const credit = (r) => {
+    const bits = [];
+    if (r.interpretedBy) bits.push(`interpreted by ${esc(r.interpretedBy)}`);
+    if (r.verifiedBy) bits.push(`verified by ${esc(r.verifiedBy)}`);
+    if (r.provenance?.contributor) bits.push(`verse from ${esc(r.provenance.contributor)}`);
+    return bits.length
+      ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`
+      : "";
+  };
+  const block = (r, lead) => `
+    <div style="${lead ? "" : "border-top:1px solid var(--of-line,#e0efe0);margin-top:16px;padding-top:14px;"}">
+      ${r.title ? `<div style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:13.5px;margin-bottom:6px;" data-translate>${esc(r.title)}</div>` : ""}
+      <p class="ori-section-text" data-translate>${esc(r.interpretation)}</p>
+      ${credit(r)}
+    </div>`;
+
+  const lead = block(vr.lead, true);
+  const others = (vr.others || []).length
+    ? `<div style="margin-top:16px;">
+         <div style="font-size:12px;font-weight:600;color:var(--of-ink-soft);text-transform:uppercase;letter-spacing:.04em;" data-translate>Ifá also speaks on this through…</div>
+         ${vr.others.map((r) => block(r, false)).join("")}
+       </div>`
+    : "";
+  const sol = solutionInfo ? `<p class="ori-section-text" style="margin-top:12px;" data-translate>${solutionInfo}</p>` : "";
+  return lead + others + sol;
+}
+
 function logSilently(path, body) {
   fetch(path, {
     method:  "POST",
@@ -672,13 +707,32 @@ const performUserDivination = async (
       `&solution=${encodeURIComponent(solution)}` +
       `&detail=${encodeURIComponent(solutionDetails)}`;
 
-    const [oduRes, fbRes] = await Promise.all([
+    // Verse-based reading (step 2): composed from the VERIFIED ẹsẹ corpus.
+    // Returns { hasReading:false } when no verified interpretation exists yet,
+    // in which case we keep the existing oduData Message below (graceful fallback).
+    const verseReadingUrl =
+      `/api/verses/reading/${encodeURIComponent(mainCast)}/${encodeURIComponent(specificOrientation)}` +
+      `?spec=${encodeURIComponent(specificOrientation)}` +
+      `&solution=${encodeURIComponent(solution)}` +
+      `&detail=${encodeURIComponent(solutionDetails)}`;
+
+    const [oduRes, fbRes, verseRes] = await Promise.all([
       fetch(`/api/odu/${encodeURIComponent(mainCast)}`),
-      fetch(feedbackUrl).catch(() => null)
+      fetch(feedbackUrl).catch(() => null),
+      fetch(verseReadingUrl).catch(() => null)
     ]);
 
     if (!oduRes.ok) throw new Error("Failed to fetch Odu data");
     const oduData = await oduRes.json();
+
+    // Verse reading, if the corpus has a verified interpretation for this cast.
+    let verseReading = null;
+    if (verseRes?.ok) {
+      try {
+        const vr = await verseRes.json();
+        if (vr && vr.hasReading) verseReading = vr;
+      } catch { /* fall back to Message */ }
+    }
 
     let visibilityScore = 1;
     if (fbRes?.ok) {
@@ -776,7 +830,7 @@ const performUserDivination = async (
             <div class="ori-reading-sub" style="font-family:system-ui,-apple-system,sans-serif;font-style:normal;letter-spacing:.02em;">${orientationText} (${specificOrientation}) &middot; ${solution} ${solutionDetails}</div>
           </div>
           <div class="ori-reading-body" style="padding:18px 20px 20px;">
-            <p class="ori-section-text" data-translate>${rawMessage} ${solutionInfo}</p>
+            ${verseReading ? _verseReadingHTML(verseReading, solutionInfo) : `<p class="ori-section-text" data-translate>${rawMessage} ${solutionInfo}</p>`}
           </div>
         </div>
       `);
