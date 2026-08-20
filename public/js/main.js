@@ -140,7 +140,9 @@ function _verseReadingHTML(vr, solutionInfo) {
 
   const credit2 = (r) => credit(r); // reuse
 
-  // Lead interpretation — expanded, the primary answer.
+  // Lead interpretation — expanded, the primary answer. (No separate verdict
+  // box above it: with the interpretation leading, a summary box would just
+  // repeat these same words.)
   const leadR = vr.lead;
   const leadHTML = `
     <div>
@@ -149,14 +151,6 @@ function _verseReadingHTML(vr, solutionInfo) {
       ${credit(leadR)}
       ${verseDisc(leadR)}
     </div>`;
-
-  // Verdict — extractive: the lead verified interpretation IS the through-line,
-  // so no AI summary is introduced. Shown as Ifá's word at the top.
-  const verdict = leadR.interpretation ? `
-    <div style="background:var(--of-green-wash,#eef6ee);border-left:3px solid var(--of-green,#0f7b3d);border-radius:6px;padding:10px 12px;margin-bottom:16px;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-green-deep,#0a5a2c);font-weight:700;margin-bottom:3px;" data-translate>Ifá's word</div>
-      <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(leadR.interpretation)}</div>
-    </div>` : "";
 
   // Ẹbọ — the actionable heart, surfaced into its own box rather than buried.
   const eboBox = solutionInfo && solutionInfo !== "No solution info available." ? `
@@ -208,7 +202,7 @@ function _verseReadingHTML(vr, solutionInfo) {
       </div>`;
   }
 
-  return verdict + leadHTML + eboBox + othersHTML;
+  return leadHTML + eboBox + othersHTML;
 }
 
 function logSilently(path, body) {
