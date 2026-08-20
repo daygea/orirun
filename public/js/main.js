@@ -138,23 +138,77 @@ function _verseReadingHTML(vr, solutionInfo) {
       </details>`;
   };
 
-  const block = (r, lead) => `
-    <div style="${lead ? "" : "border-top:1px solid var(--of-line,#e0efe0);margin-top:16px;padding-top:14px;"}">
-      ${r.title ? `<div style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:13.5px;margin-bottom:6px;" data-translate>${esc(r.title)}</div>` : ""}
-      <p class="ori-section-text" data-translate>${esc(r.interpretation)}</p>
-      ${credit(r)}
-      ${verseDisc(r)}
+  const credit2 = (r) => credit(r); // reuse
+
+  // Lead interpretation — expanded, the primary answer.
+  const leadR = vr.lead;
+  const leadHTML = `
+    <div>
+      ${leadR.title ? `<div style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:14px;margin-bottom:6px;" data-translate>${esc(leadR.title)}</div>` : ""}
+      <p class="ori-section-text" data-translate>${esc(leadR.interpretation)}</p>
+      ${credit(leadR)}
+      ${verseDisc(leadR)}
     </div>`;
 
-  const lead = block(vr.lead, true);
-  const others = (vr.others || []).length
-    ? `<div style="margin-top:16px;">
-         <div style="font-size:12px;font-weight:600;color:var(--of-ink-soft);text-transform:uppercase;letter-spacing:.04em;" data-translate>Ifá also speaks on this through…</div>
-         ${vr.others.map((r) => block(r, false)).join("")}
-       </div>`
-    : "";
-  const sol = solutionInfo ? `<p class="ori-section-text" style="margin-top:12px;" data-translate>${solutionInfo}</p>` : "";
-  return lead + others + sol;
+  // Verdict — extractive: the lead verified interpretation IS the through-line,
+  // so no AI summary is introduced. Shown as Ifá's word at the top.
+  const verdict = leadR.interpretation ? `
+    <div style="background:var(--of-green-wash,#eef6ee);border-left:3px solid var(--of-green,#0f7b3d);border-radius:6px;padding:10px 12px;margin-bottom:16px;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-green-deep,#0a5a2c);font-weight:700;margin-bottom:3px;" data-translate>Ifá's word</div>
+      <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(leadR.interpretation)}</div>
+    </div>` : "";
+
+  // Ẹbọ — the actionable heart, surfaced into its own box rather than buried.
+  const eboBox = solutionInfo && solutionInfo !== "No solution info available." ? `
+    <div style="background:var(--of-brass-wash,#fbf5e9);border:1px solid var(--of-brass-line,#e7d6a8);border-radius:8px;padding:11px 13px;margin:16px 0;">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-brass,#8a5a2b);font-weight:700;margin-bottom:4px;" data-translate>◈ The ẹbọ to make</div>
+      <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(solutionInfo)}</div>
+    </div>` : "";
+
+  // Supporting verses — collapsed cards, counted, paginated. Each shows a
+  // one-line teaser (first sentence of its interpretation, truncated) and
+  // expands on tap to the full interpretation + verse. This is what lets the
+  // reading survive dozens of verses per Odù.
+  const others = vr.others || [];
+  const teaser = (t) => {
+    const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
+    return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+  };
+  const card = (r, i) => `
+    <details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;${i >= 3 ? "display:none;" : ""}" data-idx="${i}">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+        <span style="flex:1;min-width:0;">
+          <span style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:13px;display:block;" data-translate>${esc(r.title || "Ifá speaks")}</span>
+          <span style="font-size:12px;color:var(--of-ink-soft,#7a8a80);display:block;" data-translate>${esc(teaser(r.interpretation))}</span>
+        </span>
+        ${r.provenance?.contributor ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : ""}
+      </summary>
+      <div style="padding:0 12px 12px;">
+        <p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>
+        ${credit(r)}
+        ${verseDisc(r)}
+      </div>
+    </details>`;
+
+  let othersHTML = "";
+  if (others.length) {
+    const count = others.length;
+    const cards = others.map(card).join("");
+    const moreBtn = count > 3
+      ? `<div style="text-align:center;margin-top:10px;">
+           <span class="verse-show-more" style="font-size:12px;color:var(--of-green,#0f7b3d);font-weight:600;cursor:pointer;"
+             onclick="this.closest('.verse-others').querySelectorAll('.verse-card[style*=none]').forEach(function(c){c.style.display='';});this.style.display='none';" data-translate>Show ${count - 3} more ↓</span>
+         </div>`
+      : "";
+    othersHTML = `
+      <div class="verse-others" style="margin-top:18px;">
+        <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Ifá also speaks through ${count} more verse${count > 1 ? "s" : ""}</div>
+        ${cards}
+        ${moreBtn}
+      </div>`;
+  }
+
+  return verdict + leadHTML + eboBox + othersHTML;
 }
 
 function logSilently(path, body) {
