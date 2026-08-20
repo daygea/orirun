@@ -482,6 +482,18 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
             <span id="verseStatusChip" style="font-size:11px;padding:2px 9px;border-radius:20px;background:#eee;color:#666">verse: —</span>
             <button type="button" id="verifyVerseBtn" class="btn btn-ghost btn-sm" style="margin-left:auto" title="Verify the VERSE itself (separate from interpretations) — required before any reading shows">Verify verse ✓</button>
             <button type="button" id="aiDraftBtn" class="btn btn-ghost btn-sm" title="Generate AI draft notes for a babaláwo to correct — never verified, never shown to users">✨ Draft with AI</button>
+            <button type="button" id="diacriticBtn" class="btn btn-ghost btn-sm" title="Propose Yorùbá tone marks for you to review and correct — never saved automatically">◌́ Suggest diacritics</button>
+          </div>
+          <!-- Diacritic suggestion review area (human approves before saving) -->
+          <div id="diacriticReview" style="display:none;margin:8px 0 4px;border:1px solid var(--brass,#b8860b);border-radius:8px;padding:10px;background:#fffdf5">
+            <div style="font-size:12px;font-weight:700;color:#8a5a2b;margin-bottom:4px">AI-suggested tone marks — review every mark, then apply</div>
+            <div style="font-size:11px;opacity:.75;margin-bottom:8px">Yorùbá is tonal; the AI can be wrong. Correct anything below before applying — nothing is saved until you tap Apply, and even then you must Save the verse.</div>
+            <textarea id="diacriticText" rows="4" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px"></textarea>
+            <div id="diacriticUnsure" style="font-size:11px;color:#8a5a2b;margin-top:6px"></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button type="button" id="diacriticApply" class="btn btn-green btn-sm">Apply to verse text</button>
+              <button type="button" id="diacriticCancel" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
           </div>
           <div style="font-size:12px;opacity:.75;margin-bottom:12px;max-width:74ch">
             Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
@@ -893,6 +905,48 @@ function interpPanelPopulate(verse) {
       }
     };
   }
+
+  // "Suggest diacritics" — AI proposes tone marks into a review field. It NEVER
+  // writes to the verse; the human corrects and taps Apply, then still must Save.
+  const dBtn = $("diacriticBtn");
+  if (dBtn) {
+    dBtn.onclick = async () => {
+      if (!activeKey) return;
+      dBtn.disabled = true; dBtn.textContent = "◌́ Suggesting…";
+      try {
+        let verse; try { verse = JSON.parse($("editor").value); } catch { verse = {}; }
+        const res = await api(`/verses/${encodeURIComponent(activeKey)}/suggest-diacritics`, {
+          method: "POST", body: JSON.stringify({ yoruba: verse.yoruba || [] }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Suggestion failed");
+        $("diacriticText").value = (body.suggestion || []).join("\n");
+        $("diacriticUnsure").textContent = body.unsure && body.unsure !== "none"
+          ? "AI was unsure about: " + body.unsure : "AI flagged no uncertainties — still check every mark.";
+        $("diacriticReview").style.display = "block";
+      } catch (err) {
+        toast("Diacritic suggestion failed: " + err.message, true);
+      } finally {
+        dBtn.disabled = false; dBtn.textContent = "◌́ Suggest diacritics";
+      }
+    };
+  }
+  const dApply = $("diacriticApply");
+  if (dApply) {
+    dApply.onclick = () => {
+      const text = $("diacriticText").value;
+      const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (!lines.length) { toast("Nothing to apply", true); return; }
+      let verse; try { verse = JSON.parse($("editor").value); } catch { toast("Editor JSON invalid", true); return; }
+      verse.yoruba = lines;
+      $("editor").value = JSON.stringify(verse, null, 2);
+      itemDirty = true;
+      $("diacriticReview").style.display = "none";
+      toast("Applied to verse text — review it, then Save changes to persist");
+    };
+  }
+  const dCancel = $("diacriticCancel");
+  if (dCancel) dCancel.onclick = () => { $("diacriticReview").style.display = "none"; };
 
   const aiBtn = $("aiDraftBtn");
   if (aiBtn) {
