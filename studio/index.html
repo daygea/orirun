@@ -471,6 +471,22 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         </div>
         <div id="treeView" class="tree-view" aria-label="Content preview"></div>
         <textarea id="editor" spellcheck="false" aria-label="Item JSON editor" style="display:none"></textarea>
+
+        <!-- Interpretation panel (step 3): structured per-orientation editing for
+             eseIfa verses, so a babaláwo writes interpretations without touching
+             raw JSON. Shown only for the eseIfa collection, in Edit mode. Writes
+             through the same validated save path — the schema gate still applies. -->
+        <div id="interpPanel" style="display:none;margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:#fff">
+          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px;display:flex;align-items:center;gap:10px">
+            Interpretations by orientation
+            <button type="button" id="aiDraftBtn" class="btn btn-ghost btn-sm" style="margin-left:auto" title="Generate AI draft notes for a babaláwo to correct — never verified, never shown to users">✨ Draft with AI</button>
+          </div>
+          <div style="font-size:12px;opacity:.75;margin-bottom:12px;max-width:74ch">
+            Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
+            Verifying stamps your name and today's date; an AI draft becomes yours the moment you verify it. Nothing reaches app users until it is <b>verified</b>.
+          </div>
+          <div id="interpRows" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
       </div>
       <div class="editor-actions">
         <span class="json-state ok" id="jsonState">Valid JSON</span>
@@ -708,6 +724,7 @@ async function selectItem(key) {
     $("editor").value = JSON.stringify(body.data, null, 2);
     $("editor").classList.remove("invalid");
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    interpPanelPopulate(body.data);
     setEditorMode("read");
     paintProvenance();
     loadAudit();
@@ -766,6 +783,157 @@ function setEditorMode(mode) {
   $("modeReadBtn").setAttribute("aria-selected", read);
   $("modeEditBtn").setAttribute("aria-selected", !read);
   if (read) refreshTree();
+  // Interpretation panel: only for eseIfa, only in Edit mode.
+  const showInterp = !read && activeCol && activeCol.key === "eseIfa";
+  const ip = $("interpPanel");
+  if (ip) ip.style.display = showInterp ? "block" : "none";
+}
+
+/* ── Interpretation panel (step 3) ─────────────────────────────
+   Structured per-orientation editing for eseIfa verses. Reads the
+   verse's interpretations into rows, renders inputs, and on save
+   merges them back into the editor JSON — which then persists
+   through the existing validated save path (schema gate intact). */
+const INTERP_IRE   = ["Aiku", "Aje", "Isegun", "Igbale Ese", "Gbogbo Ire"];
+const INTERP_AYEWO = ["Iku", "Arun", "Ejo", "Ofo", "Okutagbunilese"];
+const INTERP_ORIENTATIONS = [...INTERP_IRE, ...INTERP_AYEWO];
+
+function interpActorName() {
+  // Best-effort current user for authorship/verification stamping.
+  return (window.__STAFF_NAME__ || "").trim();
+}
+
+function interpPanelPopulate(verse) {
+  const host = $("interpRows");
+  if (!host) return;
+  if (!activeCol || activeCol.key !== "eseIfa") { host.innerHTML = ""; return; }
+  const existing = (verse && verse.interpretations) || {};
+  host.innerHTML = INTERP_ORIENTATIONS.map((o) => {
+    const it = existing[o] || {};
+    const grp = INTERP_IRE.includes(o) ? "Ire" : "Ayewo";
+    const status = it.status || "none";
+    const badge = status === "verified" ? "#0a5a2c" : status === "reviewed" ? "#b8860b" : status === "draft" ? "#888" : "#ccc";
+    return `
+      <div class="interp-row" data-ori="${o}" style="border:1px solid var(--line);border-radius:8px;padding:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-weight:700;color:#1b4332">${o}</span>
+          <span style="font-size:10px;text-transform:uppercase;color:#fff;background:${grp==="Ire"?"#0f7b3d":"#8a5a2b"};padding:1px 7px;border-radius:20px">${grp}</span>
+          <span class="interp-status" style="font-size:11px;color:${badge};margin-left:auto">${status==="none"?"— not set":status}</span>
+        </div>
+        <textarea class="interp-text" data-ori="${o}" rows="2" placeholder="Interpretation for ${o} — leave blank if the verse doesn't speak here" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px">${(it.text||"").replace(/</g,"&lt;")}</textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+          <input class="interp-by" data-ori="${o}" value="${(it.interpretedBy?.name||"").replace(/"/g,"&quot;")}" placeholder="interpreted by…" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;flex:1 1 140px">
+          <button type="button" class="btn btn-ghost btn-sm interp-verify" data-ori="${o}">Verify ✓</button>
+          ${it.verifiedBy?.name ? `<span style="font-size:11px;color:#0a5a2c">verified by ${it.verifiedBy.name}${it.verifiedAt?" · "+it.verifiedAt:""}</span>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+
+  // Verify buttons: mark this orientation verified (human takes authorship).
+  host.querySelectorAll(".interp-verify").forEach((btn) => {
+    btn.onclick = () => {
+      const o = btn.getAttribute("data-ori");
+      const row = host.querySelector(`.interp-row[data-ori="${o}"]`);
+      const txt = row.querySelector(".interp-text").value.trim();
+      if (!txt) { toast("Write the interpretation before verifying", true); return; }
+      const actor = interpActorName();
+      if (!actor) { toast("No signed-in name to verify with — verification needs a named elder", true); return; }
+      row.querySelector(".interp-by").value = actor;
+      row.dataset.verify = "1";
+      row.querySelector(".interp-status").textContent = "verified (on save)";
+      row.querySelector(".interp-status").style.color = "#0a5a2c";
+      interpMergeIntoEditor();
+      toast(`${o} will be verified as ${actor} on save`);
+    };
+  });
+
+  // Any edit merges back into the JSON editor so Save persists it.
+  host.querySelectorAll(".interp-text,.interp-by").forEach((el) => {
+    el.addEventListener("input", interpMergeIntoEditor);
+  });
+
+  // "Draft with AI" — fetch draft notes, load them into empty orientations.
+  // Drafts are status:"draft", author "AI draft" — never verified here. The
+  // babaláwo reviews the reasoning (in each draft's notes), edits, and verifies.
+  const aiBtn = $("aiDraftBtn");
+  if (aiBtn) {
+    aiBtn.onclick = async () => {
+      if (!activeKey) return;
+      aiBtn.disabled = true; aiBtn.textContent = "✨ Drafting…";
+      try {
+        const res = await api(`/verses/${encodeURIComponent(activeKey)}/draft-interpretations`, {
+          method: "POST", body: JSON.stringify({}),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Draft failed");
+        // Merge drafts into the verse JSON (do NOT overwrite an existing
+        // verified/edited interpretation — drafts only fill empty slots).
+        let verse; try { verse = JSON.parse($("editor").value); } catch { verse = {}; }
+        const cur = verse.interpretations || {};
+        let added = 0;
+        for (const [o, it] of Object.entries(body.interpretations || {})) {
+          if (!cur[o]) { cur[o] = it; added++; }   // fill only empty orientations
+        }
+        verse.interpretations = cur;
+        $("editor").value = JSON.stringify(verse, null, 2);
+        itemDirty = true;
+        interpPanelPopulate(verse);
+        const silent = (body.silent || []).length;
+        toast(`AI drafted ${added} orientation(s); it judged ${silent} silent. Review, edit, and verify each before it reaches users.`);
+      } catch (err) {
+        toast("AI draft failed: " + err.message, true);
+      } finally {
+        aiBtn.disabled = false; aiBtn.textContent = "✨ Draft with AI";
+      }
+    };
+  }
+}
+
+function interpReadRows() {
+  const host = $("interpRows");
+  return INTERP_ORIENTATIONS.map((o) => {
+    const row = host.querySelector(`.interp-row[data-ori="${o}"]`);
+    if (!row) return { orientation: o, text: "" };
+    return {
+      orientation: o,
+      text: row.querySelector(".interp-text").value,
+      interpretedBy: row.querySelector(".interp-by").value,
+      verify: row.dataset.verify === "1",
+    };
+  });
+}
+
+function interpMergeIntoEditor() {
+  let verse;
+  try { verse = JSON.parse($("editor").value); } catch { return; } // don't clobber invalid JSON
+  const actor = interpActorName();
+  const out = { ...(verse.interpretations || {}) };
+  for (const row of interpReadRows()) {
+    const o = row.orientation;
+    if (!row.text || !row.text.trim()) { delete out[o]; continue; }
+    const prev = out[o] || {};
+    const next = {
+      text: row.text.trim(),
+      status: prev.status && prev.status !== "verified" ? prev.status : (prev.status || "draft"),
+      interpretedBy: { name: (row.interpretedBy || "").trim() || prev.interpretedBy?.name || "AI draft" },
+    };
+    if (row.verify) {
+      const authoredByAI = /^ai\b|ai draft/i.test(next.interpretedBy.name);
+      if (authoredByAI && actor) next.interpretedBy = { name: actor };
+      if (actor) {
+        next.status = "verified";
+        next.verifiedBy = { name: actor };
+        next.verifiedAt = new Date().toISOString().slice(0, 10);
+      }
+    } else if (next.status === "verified") {
+      // Edited an already-verified one without re-verifying → keep prior verification.
+      next.verifiedBy = prev.verifiedBy; next.verifiedAt = prev.verifiedAt;
+    }
+    out[o] = next;
+  }
+  verse.interpretations = out;
+  $("editor").value = JSON.stringify(verse, null, 2);
+  itemDirty = true;
 }
 
 // Build the Yorùbá tone-mark helper once. Clicking a mark inserts it at the
@@ -1394,6 +1562,7 @@ async function refreshSessionChip() {
   const me = await whoAmI();
   if (me?.authenticated) {
     $("whoami").textContent = (me.username || me.role) + " · " + me.role;
+    window.__STAFF_NAME__ = me.username || me.role || "";
     $("logoutBtn").style.display = "";
   } else {
     $("whoami").textContent = "";
