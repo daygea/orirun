@@ -96,7 +96,7 @@ nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-s
 .count-note{padding:8px 14px;font-size:11px;color:var(--ink-soft)}
 
 /* ── Editor ── */
-main{display:flex;flex-direction:column;min-height:0;background:var(--efun)}
+main{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--efun)}
 .editor-head{padding:16px 22px 0}
 .editor-head h1{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--igbo);
   word-break:break-word}
@@ -117,12 +117,44 @@ main{display:flex;flex-direction:column;min-height:0;background:var(--efun)}
 .prov-meta{margin-left:auto;font-size:11.5px;color:var(--ink-soft);display:flex;gap:14px}
 .prov-meta b{color:var(--ink)}
 
-.editor-body{flex:1;display:flex;flex-direction:column;padding:14px 22px 0;min-height:0}
+.editor-body{flex:1;display:flex;flex-direction:column;padding:14px 22px 0;min-height:0;min-width:0}
 textarea#editor{
   flex:1;width:100%;resize:none;padding:16px;border:1px solid var(--line);
   border-radius:var(--radius);background:var(--white);color:var(--ink);
   font-family:var(--mono);font-size:12.5px;line-height:1.6;tab-size:2;min-height:200px}
 textarea#editor.invalid{border-color:var(--osun);box-shadow:0 0 0 3px rgba(166,58,34,.12)}
+
+/* View/Edit toggle + readable tree preview */
+.editor-modes{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.diacritic-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-bottom:10px}
+.diacritic-hint{font-size:11px;color:var(--brass);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.diacritic-bar button{min-width:30px;height:30px;padding:0 7px;border:1px solid var(--line,#dce8dc);
+  background:#fff;color:var(--ink);border-radius:6px;cursor:pointer;font-size:16px;line-height:1;font-family:Georgia,serif}
+.diacritic-bar button:hover{background:var(--leaf-soft);border-color:var(--leaf)}
+.diacritic-bar button:active{transform:translateY(1px)}
+.mode-tab{padding:5px 14px;border-radius:99px;font-size:12.5px;font-weight:600;
+  border:1px solid var(--line);background:var(--white);color:var(--ink-soft)}
+.mode-tab.is-active{background:var(--leaf-soft);border-color:var(--leaf);color:var(--igbo)}
+.btn-sm{padding:5px 12px;font-size:12.5px}
+.tree-view{flex:1;overflow:auto;background:var(--white);border:1px solid var(--line);
+  border-radius:var(--radius);padding:14px 16px;font-family:var(--mono);font-size:12.5px;
+  line-height:1.7;min-height:200px;overflow-wrap:anywhere;word-break:break-word}
+.tree-view .ts,.tree-view .tk,.tree-view .tn,.tree-view .tb,.tree-view .tmuted{
+  white-space:pre-wrap;overflow-wrap:anywhere}
+.tree-view details{margin:0;min-width:0}
+.tree-view>div,.tree-view details>div{min-width:0}
+.tree-view .tk{color:var(--igbo);font-weight:700}          /* key */
+.tree-view .ts{color:#2f6b45}                               /* string */
+.tree-view .tn{color:var(--brass);font-weight:600}          /* number */
+.tree-view .tb{color:var(--osun);font-weight:600}           /* boolean/null */
+.tree-view .tmuted{color:var(--ink-soft)}                   /* punctuation/braces */
+.tree-view details{margin:0}
+.tree-view summary{cursor:pointer;list-style:none;user-select:none}
+.tree-view summary::-webkit-details-marker{display:none}
+.tree-view summary::before{content:"▸ ";color:var(--ink-soft)}
+.tree-view details[open]>summary::before{content:"▾ ";color:var(--ink-soft)}
+.tree-view .tchild{padding-left:18px;border-left:1px dashed var(--line);margin-left:4px}
+.tree-view .tcount{color:var(--ink-soft);font-weight:400;font-size:11.5px}
 .editor-actions{display:flex;gap:8px;align-items:center;padding:12px 22px;flex-wrap:wrap}
 .json-state{font-size:12px;font-weight:600}
 .json-state.ok{color:var(--leaf)} .json-state.bad{color:var(--osun)}
@@ -207,7 +239,7 @@ table.logs td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:t
 table.logs tr.row{cursor:pointer}
 table.logs tr.row:hover td{background:var(--leaf-soft)}
 .log-pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:12px 0}
-.log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none}
+.log-detail{background:var(--white);border:1px solid var(--line);border-left:4px solid var(--brass);border-radius:12px;padding:14px 16px;margin-top:12px;display:none;scroll-margin-top:120px}
 .log-detail pre{font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:320px;overflow-y:auto;margin-top:8px}
 
 /* ── Responsive ─────────────────────────────────────────────────
@@ -272,6 +304,18 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   }
   table.logs td:empty { display:none; }               /* hide blank fields */
   .log-tools .btn-osun { flex:1 1 100%; justify-content:center; }
+
+  /* Editor upgrade on phones: give the tree view real height (like the
+     textarea), keep the mode tabs on one tidy row, and reduce the
+     per-level indent so deep nesting doesn't scroll off-screen. */
+  .tree-view{min-height:44vh;font-size:14px}
+  .tree-view .tchild{padding-left:12px}
+  .editor-modes{flex-wrap:wrap;gap:8px}
+  .editor-modes .mode-tab{min-height:40px}
+  #prettifyBtn{min-height:40px}
+  /* Clear the sticky header when scrolling into view on tap. */
+  #editorWrap{scroll-margin-top:120px}
+  section.items{scroll-margin-top:120px}
 }
 
 /* ── Loader shown while a section's data is fetching ── */
@@ -347,10 +391,16 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <span style="display:flex;gap:8px">
           <button class="btn btn-ghost" onclick="runBackup(false)">Snapshot now</button>
           <button class="btn btn-ghost" onclick="runBackup(true)">Snapshot + email</button>
+          <button class="btn btn-osun" onclick="clearAllBackups()">Clear all backups</button>
         </span>
       </h3>
       <div class="log-count" id="backupNote" style="margin-bottom:8px"></div>
       <div id="backupList" style="font-size:13px"></div>
+    </div>
+    <div class="panel">
+      <h3>Recent admin actions</h3>
+      <div class="log-count" style="margin-bottom:8px">Destructive operations — who cleared or restored what, and when.</div>
+      <div id="opsAudit" style="font-size:13px"></div>
     </div>
   </section>
 
@@ -390,7 +440,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   </section>
 
   <main>
-    <div id="editorWrap" style="display:none;flex:1;flex-direction:column;min-height:0">
+    <div id="editorWrap" style="display:none;flex:1;flex-direction:column;min-height:0;min-width:0">
       <div class="editor-head">
         <h1 id="itemTitle">—</h1>
         <div class="sub" id="itemSub"></div>
@@ -408,7 +458,32 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
 
       <div class="editor-body">
-        <textarea id="editor" spellcheck="false" aria-label="Item JSON editor"></textarea>
+        <div class="editor-modes" role="tablist" aria-label="Editor view mode">
+          <button class="mode-tab is-active" id="modeReadBtn" role="tab" aria-selected="true">Read</button>
+          <button class="mode-tab" id="modeEditBtn" role="tab" aria-selected="false">Edit</button>
+          <span class="spacer"></span>
+          <button class="btn btn-ghost btn-sm" id="prettifyBtn" title="Reformat the JSON with clean indentation">Prettify</button>
+        </div>
+        <!-- Yorùbá tone-mark helper: inserts diacritics at the cursor in the
+             editor. Shown only in Edit mode; works for every collection. -->
+        <div class="diacritic-bar" id="diacriticBar" aria-label="Yorùbá tone marks" style="display:none">
+          <span class="diacritic-hint">Tone marks</span>
+        </div>
+        <div id="treeView" class="tree-view" aria-label="Content preview"></div>
+        <textarea id="editor" spellcheck="false" aria-label="Item JSON editor" style="display:none"></textarea>
+
+        <!-- Interpretation panel (step 3): structured per-orientation editing for
+             eseIfa verses, so a babaláwo writes interpretations without touching
+             raw JSON. Shown only for the eseIfa collection, in Edit mode. Writes
+             through the same validated save path — the schema gate still applies. -->
+        <div id="interpPanel" style="display:none;margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:14px;background:#fff">
+          <div style="font-weight:700;color:#0a5a2c;margin-bottom:4px">Interpretations by orientation</div>
+          <div style="font-size:12px;opacity:.75;margin-bottom:12px;max-width:74ch">
+            Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
+            Verifying stamps your name and today's date; an AI draft becomes yours the moment you verify it. Nothing reaches app users until it is <b>verified</b>.
+          </div>
+          <div id="interpRows" style="display:flex;flex-direction:column;gap:10px"></div>
+        </div>
       </div>
       <div class="editor-actions">
         <span class="json-state ok" id="jsonState">Valid JSON</span>
@@ -540,7 +615,7 @@ async function loadCollections() {
   $("colList").innerHTML = orLoaderHTML("Loading collections…");
   try {
     const res = await api("/content");
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     if (res.status === 404) throw new Error("backend reached at " + API_BASE + ", but the content routes are not deployed there yet");
     if (!res.ok) throw new Error("HTTP " + res.status);
     const body = await res.json();
@@ -594,9 +669,16 @@ async function selectCollection(c) {
   $("countNote").textContent = "";
   try {
     const res = await api(`/content/${c.key}`);
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     colPayload = await res.json();
     renderItems();
+    // On phones the item list stacks below the collections rail, so tapping a
+    // collection loads its items off-screen. Bring the list into view.
+    if (window.matchMedia("(max-width:900px)").matches) {
+      const itemsPane = document.querySelector("section.items");
+      if (itemsPane) requestAnimationFrame(() =>
+        itemsPane.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   } catch (err) {
     $("itemList").innerHTML = "";
     toast("Failed to load items: " + err.message, true);
@@ -639,11 +721,218 @@ async function selectItem(key) {
     $("editor").value = JSON.stringify(body.data, null, 2);
     $("editor").classList.remove("invalid");
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    interpPanelPopulate(body.data);
+    setEditorMode("read");
     paintProvenance();
     loadAudit();
+    // On phones the editor stacks below the collection/item lists, so a tap
+    // loads content off-screen. Bring the editor into view. (No-op on desktop,
+    // where the editor is a side pane that's already visible.)
+    if (window.matchMedia("(max-width:900px)").matches) {
+      requestAnimationFrame(() =>
+        $("editorWrap").scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
   } catch (err) { toast(err.message, true); }
   finally { orTopbarDone(); }
 }
+/* ── Readable content view (tree) + editor modes ─────────────── */
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+// Render any JSON value as a collapsible, readable tree. Values are
+// HTML-escaped — content is data, never markup.
+function renderTree(value) {
+  if (value === null) return '<span class="tb">null</span>';
+  const t = typeof value;
+  if (t === "string") return '<span class="ts">"' + escHtml(value) + '"</span>';
+  if (t === "number") return '<span class="tn">' + escHtml(value) + '</span>';
+  if (t === "boolean") return '<span class="tb">' + value + '</span>';
+  if (Array.isArray(value)) {
+    if (!value.length) return '<span class="tmuted">[ ]</span>';
+    const items = value.map((v, i) =>
+      `<div><span class="tk">${i}</span><span class="tmuted">: </span>${renderTree(v)}</div>`).join("");
+    return `<details open><summary><span class="tmuted">[</span> <span class="tcount">${value.length} item(s)</span> <span class="tmuted">]</span></summary><div class="tchild">${items}</div></details>`;
+  }
+  if (t === "object") {
+    const keys = Object.keys(value);
+    if (!keys.length) return '<span class="tmuted">{ }</span>';
+    const rows = keys.map((k) =>
+      `<div><span class="tk">${escHtml(k)}</span><span class="tmuted">: </span>${renderTree(value[k])}</div>`).join("");
+    return `<details open><summary><span class="tmuted">{</span> <span class="tcount">${keys.length} field(s)</span> <span class="tmuted">}</span></summary><div class="tchild">${rows}</div></details>`;
+  }
+  return '<span class="tmuted">' + escHtml(String(value)) + '</span>';
+}
+function refreshTree() {
+  try {
+    $("treeView").innerHTML = renderTree(JSON.parse($("editor").value));
+  } catch (e) {
+    $("treeView").innerHTML = '<span class="tb">This item isn\'t valid JSON yet — switch to Edit to fix it.</span>';
+  }
+}
+function setEditorMode(mode) {
+  const read = mode === "read";
+  $("treeView").style.display = read ? "" : "none";
+  $("editor").style.display = read ? "none" : "";
+  $("diacriticBar").style.display = read ? "none" : "flex";
+  $("modeReadBtn").classList.toggle("is-active", read);
+  $("modeEditBtn").classList.toggle("is-active", !read);
+  $("modeReadBtn").setAttribute("aria-selected", read);
+  $("modeEditBtn").setAttribute("aria-selected", !read);
+  if (read) refreshTree();
+  // Interpretation panel: only for eseIfa, only in Edit mode.
+  const showInterp = !read && activeCol && activeCol.key === "eseIfa";
+  const ip = $("interpPanel");
+  if (ip) ip.style.display = showInterp ? "block" : "none";
+}
+
+/* ── Interpretation panel (step 3) ─────────────────────────────
+   Structured per-orientation editing for eseIfa verses. Reads the
+   verse's interpretations into rows, renders inputs, and on save
+   merges them back into the editor JSON — which then persists
+   through the existing validated save path (schema gate intact). */
+const INTERP_IRE   = ["Aiku", "Aje", "Isegun", "Igbale Ese", "Gbogbo Ire"];
+const INTERP_AYEWO = ["Iku", "Arun", "Ejo", "Ofo", "Okutagbunilese"];
+const INTERP_ORIENTATIONS = [...INTERP_IRE, ...INTERP_AYEWO];
+
+function interpActorName() {
+  // Best-effort current user for authorship/verification stamping.
+  return (window.__STAFF_NAME__ || "").trim();
+}
+
+function interpPanelPopulate(verse) {
+  const host = $("interpRows");
+  if (!host) return;
+  if (!activeCol || activeCol.key !== "eseIfa") { host.innerHTML = ""; return; }
+  const existing = (verse && verse.interpretations) || {};
+  host.innerHTML = INTERP_ORIENTATIONS.map((o) => {
+    const it = existing[o] || {};
+    const grp = INTERP_IRE.includes(o) ? "Ire" : "Ayewo";
+    const status = it.status || "none";
+    const badge = status === "verified" ? "#0a5a2c" : status === "reviewed" ? "#b8860b" : status === "draft" ? "#888" : "#ccc";
+    return `
+      <div class="interp-row" data-ori="${o}" style="border:1px solid var(--line);border-radius:8px;padding:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-weight:700;color:#1b4332">${o}</span>
+          <span style="font-size:10px;text-transform:uppercase;color:#fff;background:${grp==="Ire"?"#0f7b3d":"#8a5a2b"};padding:1px 7px;border-radius:20px">${grp}</span>
+          <span class="interp-status" style="font-size:11px;color:${badge};margin-left:auto">${status==="none"?"— not set":status}</span>
+        </div>
+        <textarea class="interp-text" data-ori="${o}" rows="2" placeholder="Interpretation for ${o} — leave blank if the verse doesn't speak here" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px">${(it.text||"").replace(/</g,"&lt;")}</textarea>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+          <input class="interp-by" data-ori="${o}" value="${(it.interpretedBy?.name||"").replace(/"/g,"&quot;")}" placeholder="interpreted by…" style="font-size:12px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;flex:1 1 140px">
+          <button type="button" class="btn btn-ghost btn-sm interp-verify" data-ori="${o}">Verify ✓</button>
+          ${it.verifiedBy?.name ? `<span style="font-size:11px;color:#0a5a2c">verified by ${it.verifiedBy.name}${it.verifiedAt?" · "+it.verifiedAt:""}</span>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+
+  // Verify buttons: mark this orientation verified (human takes authorship).
+  host.querySelectorAll(".interp-verify").forEach((btn) => {
+    btn.onclick = () => {
+      const o = btn.getAttribute("data-ori");
+      const row = host.querySelector(`.interp-row[data-ori="${o}"]`);
+      const txt = row.querySelector(".interp-text").value.trim();
+      if (!txt) { toast("Write the interpretation before verifying", true); return; }
+      const actor = interpActorName();
+      if (!actor) { toast("No signed-in name to verify with — verification needs a named elder", true); return; }
+      row.querySelector(".interp-by").value = actor;
+      row.dataset.verify = "1";
+      row.querySelector(".interp-status").textContent = "verified (on save)";
+      row.querySelector(".interp-status").style.color = "#0a5a2c";
+      interpMergeIntoEditor();
+      toast(`${o} will be verified as ${actor} on save`);
+    };
+  });
+
+  // Any edit merges back into the JSON editor so Save persists it.
+  host.querySelectorAll(".interp-text,.interp-by").forEach((el) => {
+    el.addEventListener("input", interpMergeIntoEditor);
+  });
+}
+
+function interpReadRows() {
+  const host = $("interpRows");
+  return INTERP_ORIENTATIONS.map((o) => {
+    const row = host.querySelector(`.interp-row[data-ori="${o}"]`);
+    if (!row) return { orientation: o, text: "" };
+    return {
+      orientation: o,
+      text: row.querySelector(".interp-text").value,
+      interpretedBy: row.querySelector(".interp-by").value,
+      verify: row.dataset.verify === "1",
+    };
+  });
+}
+
+function interpMergeIntoEditor() {
+  let verse;
+  try { verse = JSON.parse($("editor").value); } catch { return; } // don't clobber invalid JSON
+  const actor = interpActorName();
+  const out = { ...(verse.interpretations || {}) };
+  for (const row of interpReadRows()) {
+    const o = row.orientation;
+    if (!row.text || !row.text.trim()) { delete out[o]; continue; }
+    const prev = out[o] || {};
+    const next = {
+      text: row.text.trim(),
+      status: prev.status && prev.status !== "verified" ? prev.status : (prev.status || "draft"),
+      interpretedBy: { name: (row.interpretedBy || "").trim() || prev.interpretedBy?.name || "AI draft" },
+    };
+    if (row.verify) {
+      const authoredByAI = /^ai\b|ai draft/i.test(next.interpretedBy.name);
+      if (authoredByAI && actor) next.interpretedBy = { name: actor };
+      if (actor) {
+        next.status = "verified";
+        next.verifiedBy = { name: actor };
+        next.verifiedAt = new Date().toISOString().slice(0, 10);
+      }
+    } else if (next.status === "verified") {
+      // Edited an already-verified one without re-verifying → keep prior verification.
+      next.verifiedBy = prev.verifiedBy; next.verifiedAt = prev.verifiedAt;
+    }
+    out[o] = next;
+  }
+  verse.interpretations = out;
+  $("editor").value = JSON.stringify(verse, null, 2);
+  itemDirty = true;
+}
+
+// Build the Yorùbá tone-mark helper once. Clicking a mark inserts it at the
+// cursor in #editor and re-runs the editor's own input validation, so JSON
+// state and the dirty flag stay correct.
+(function buildDiacriticBar() {
+  const MARKS = ["à","á","è","é","ẹ","ẹ̀","ẹ́","ì","í","ò","ó","ọ","ọ̀","ọ́","ù","ú","ṣ","ń","gb"];
+  const bar = $("diacriticBar");
+  if (!bar) return;
+  MARKS.forEach((ch) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = ch;
+    b.setAttribute("aria-label", "Insert " + ch);
+    // mousedown (not click) so the textarea doesn't lose its selection first.
+    b.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const ta = $("editor");
+      const s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + ch + ta.value.slice(en);
+      ta.selectionStart = ta.selectionEnd = s + ch.length;
+      ta.focus();
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    bar.appendChild(b);
+  });
+})();
+// Locate a JSON syntax error as a line:column, so the message is actionable.
+function jsonErrorDetail(text, err) {
+  const m = /position (\d+)/.exec(err.message);
+  if (!m) return err.message;
+  const pos = +m[1];
+  const upto = text.slice(0, pos);
+  const line = upto.split("\n").length;
+  const col = pos - upto.lastIndexOf("\n");
+  return `Invalid JSON at line ${line}, column ${col}`;
+}
+
 function paintProvenance() {
   const src = String(activeCol.source || "");
   const dbLit = src.includes("db");
@@ -660,15 +949,27 @@ $("editor").addEventListener("input", () => {
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
   } catch (e) {
     $("editor").classList.add("invalid");
-    $("jsonState").textContent = "Invalid JSON — fix before saving"; $("jsonState").className = "json-state bad";
+    $("jsonState").textContent = jsonErrorDetail($("editor").value, e); $("jsonState").className = "json-state bad";
   }
 });
+$("modeReadBtn").onclick = () => setEditorMode("read");
+$("modeEditBtn").onclick = () => setEditorMode("edit");
+$("prettifyBtn").onclick = () => {
+  try {
+    const formatted = JSON.stringify(JSON.parse($("editor").value), null, 2);
+    $("editor").value = formatted;
+    $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    $("editor").classList.remove("invalid");
+    if ($("treeView").style.display !== "none") refreshTree();
+    toast("Formatted");
+  } catch (e) { toast(jsonErrorDetail($("editor").value, e), true); }
+};
 
 /* ── Actions ───────────────────────────────────────────────── */
 $("saveBtn").onclick = async () => {
   let value;
   try { value = JSON.parse($("editor").value); }
-  catch { return toast("The editor holds invalid JSON.", true); }
+  catch (e) { return toast(jsonErrorDetail($("editor").value, e), true); }
   try {
     const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(activeKey)}`, {
       method: "PUT", body: JSON.stringify({ value }),
@@ -820,7 +1121,7 @@ window.showArea = function (area) {
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
-    Promise.all([loadDashboard(), loadBackups()]).finally(orTopbarDone);
+    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit()]).finally(orTopbarDone);
   } else if (area === "logs") {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
@@ -836,7 +1137,7 @@ async function loadContributions() {
   list.innerHTML = orLoaderHTML("Loading contributions…");
   try {
     const res = await api("/verses/pending-contributions");
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const rows = d.contributions || [];
     const pending = rows.filter((r) => r.status === "pending").length;
@@ -928,7 +1229,7 @@ async function loadDashboard() {
   grid.innerHTML = '<div class="stat-card" style="grid-column:1/-1">' + orLoaderHTML("Loading dashboard…") + '</div>';
   try {
     const res = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
-    if (res.status === 401 || res.status === 403) return showAuth();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const stats = [
       ["Divinations", d.divinationCount], ["Chats", d.chatCount],
@@ -974,6 +1275,38 @@ async function loadDashboard() {
   }
 }
 
+// Recent destructive operational actions (clear logs, delete/restore backups).
+const OPS_LABEL = {
+  "logs.clear": "Cleared log", "logs.clear-all": "Cleared ALL logs",
+  "backup.delete": "Deleted backup", "backup.delete-all": "Deleted ALL backups",
+  "backup.restore": "Restored backup",
+};
+async function loadOpsAudit() {
+  const wrap = $("opsAudit");
+  if (!wrap) return;
+  try {
+    const res = await fetch(API_BASE + "/api/ops-audit", { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "HTTP " + res.status);
+    const rows = d.rows || [];
+    wrap.innerHTML = rows.length ? rows.map((r) => {
+      const when = r.at ? new Date(r.at).toLocaleString() : "";
+      const what = OPS_LABEL[r.action] || r.action;
+      const tgt = r.target ? ` · ${r.target}` : "";
+      const cnt = (r.count != null) ? ` · ${r.count} item(s)` : "";
+      return `<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--line);flex-wrap:wrap">
+        <strong style="color:var(--osun)">${what}</strong>
+        <span class="log-count">${tgt}${cnt}</span>
+        <span style="flex:1"></span>
+        <span class="log-count">${r.actor || "?"} · ${when}</span>
+      </div>`;
+    }).join("") : '<span class="log-count">No destructive actions recorded yet.</span>';
+  } catch (err) {
+    wrap.innerHTML = '<span class="log-count">Could not load admin actions: ' + err.message + '</span>';
+  }
+}
+
 /* ── Backups ── */
 async function loadBackups() {
   const wrap = $("backupList");
@@ -981,16 +1314,18 @@ async function loadBackups() {
     const res = await fetch(API_BASE + "/api/admin/backups", { credentials: "include" });
     if (!res.ok) { wrap.innerHTML = '<span class="log-count">Backups unavailable.</span>'; return; }
     const d = await res.json();
-    $("backupNote").textContent = `Daily automatic snapshots · keeping the last ${d.retention} · Sunday snapshots are emailed offsite.`;
+    $("backupNote").textContent = `Automatic monthly snapshots · keeping the last ${d.retention} · each is emailed offsite.`;
     wrap.innerHTML = d.snapshots.length ? d.snapshots.map((b) => {
       const when = new Date(b.takenAt).toLocaleString();
       const kb = ((b.stats?.gzBytes || 0) / 1024).toFixed(0);
+      const safeWhen = when.replace(/'/g, "");
       return `<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);flex-wrap:wrap">
         <strong style="color:var(--igbo)">${when}</strong>
         <span class="log-count">${b.trigger} · ${b.stats?.totalItems ?? "?"} items · ${kb} KB</span>
         <span style="flex:1"></span>
         <a class="btn btn-ghost" href="${API_BASE}/api/admin/backups/${b._id}/export" target="_blank" rel="noopener">Download</a>
-        <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${when.replace(/'/g, "")}')">Restore…</button>
+        <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${safeWhen}')">Restore…</button>
+        <button class="btn btn-osun" onclick="deleteBackup('${b._id}','${safeWhen}')">Delete</button>
       </div>`;
     }).join("") : '<span class="log-count">No snapshots yet — the first runs within an hour of boot, or take one now.</span>';
   } catch (err) { wrap.innerHTML = '<span class="log-count">Could not load backups: ' + err.message + "</span>"; }
@@ -1024,16 +1359,40 @@ window.restoreBackup = async function (id, when) {
     loadBackups(); loadCollections();
   } catch (err) { toast("Restore failed: " + err.message, true); }
 };
+window.deleteBackup = async function (id, when) {
+  if (!confirmAct(`Delete the snapshot from ${when}?\n\nThis removes it from the database permanently and cannot be undone.`)) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups/" + id, { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast("Snapshot deleted");
+    loadBackups();
+  } catch (err) { toast("Delete failed: " + err.message, true); }
+};
+window.clearAllBackups = async function () {
+  if (!confirmAct("Delete EVERY snapshot from the database?\n\nYou will have no restore points left. This cannot be undone.")) return;
+  if (!confirmAct("Final confirmation — permanently delete ALL backups?")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups", { method: "DELETE", credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const b = await res.json();
+    if (!res.ok) throw new Error(b.error || "HTTP " + res.status);
+    toast(`Deleted ${b.deleted} snapshot(s)`);
+    loadBackups();
+  } catch (err) { toast("Clear-all failed: " + err.message, true); }
+};
 
 /* ── Logs ── */
 const LOG_TYPES = ["divination", "chat", "feedback", "payment", "contribution"];
-const logState = { type: "divination", rows: [], filtered: [], page: 1, per: 50, loadedOnce: false };
+const logState = { type: "divination", rows: [], page: 1, per: 50, total: 0, pages: 1, loadedOnce: false };
 
 $("logPills").innerHTML = LOG_TYPES.map((t) =>
   `<button class="log-pill${t === "divination" ? " is-active" : ""}" data-log="${t}" onclick="loadLogs('${t}')">${t[0].toUpperCase() + t.slice(1)}</button>`).join("");
 
-window.loadLogs = async function (type) {
+window.loadLogs = async function (type, page) {
   logState.type = type; logState.loadedOnce = true;
+  if (page == null) { logState.page = 1; $("logSearch").value = ""; }
   document.querySelectorAll(".log-pill").forEach((p) => p.classList.toggle("is-active", p.dataset.log === type));
   const clearBtn = $("clearLogBtn");
   if (clearBtn) {
@@ -1043,13 +1402,17 @@ window.loadLogs = async function (type) {
   }
   $("logHead").innerHTML = ""; $("logBody").innerHTML = '<tr><td colspan="99">' + orLoaderHTML("Loading logs…") + '</td></tr>'; $("logDetail").style.display = "none";
   try {
-    const res = await fetch(API_BASE + "/api/" + type + "/logs", { credentials: "include" });
-    if (res.status === 401 || res.status === 403) return showAuth();
+    const q = $("logSearch").value.trim();
+    const params = new URLSearchParams({ page: logState.page, limit: logState.per });
+    if (q) params.set("q", q);
+    // Server-side pagination: only the current page is fetched, not the whole log.
+    const res = await fetch(API_BASE + "/api/logs/" + type + "?" + params.toString(), { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
     const data = await res.json();
-    const rows = Array.isArray(data) ? data : data.logs || data.contributions || [];
-    rows.sort((a, b) => new Date(b.timestamp || b.createdAt || 0) - new Date(a.timestamp || a.createdAt || 0));
-    logState.rows = rows; logState.page = 1;
-    $("logSearch").value = "";
+    if (!res.ok) throw new Error(data.error || "HTTP " + res.status);
+    logState.rows = data.rows || [];
+    logState.total = data.total || 0;
+    logState.pages = data.pages || 1;
     renderLogs();
   } catch (err) {
     $("logBody").innerHTML = `<tr><td>Failed to load ${type} logs: ${err.message}</td></tr>`;
@@ -1083,35 +1446,35 @@ function cellText(v) {
   return /\d{4}-\d{2}-\d{2}T/.test(s) ? new Date(s).toLocaleString() : s.slice(0, 140);
 }
 
+// Renders the current server-provided page (no client-side slicing).
 window.renderLogs = function () {
-  const q = $("logSearch").value.trim().toLowerCase();
-  logState.filtered = q
-    ? logState.rows.filter((r) => JSON.stringify(r).toLowerCase().includes(q))
-    : logState.rows;
-  const cols = logColumns(logState.filtered.length ? logState.filtered : logState.rows);
-  const start = (logState.page - 1) * logState.per;
-  const pageRows = logState.filtered.slice(start, start + logState.per);
+  const rows = logState.rows;
+  const cols = logColumns(rows);
   $("logHead").innerHTML = "<tr>" + cols.map((c) => `<th>${c}</th>`).join("") + "</tr>";
-  $("logBody").innerHTML = pageRows.length ? pageRows.map((r, i) => {
+  $("logBody").innerHTML = rows.length ? rows.map((r, i) => {
     const f = flat(r);
-    return `<tr class="row" onclick="showLogDetail(${start + i})">` + cols.map((c) => `<td data-label="${c}">${cellText(f[c])}</td>`).join("") + "</tr>";
+    return `<tr class="row" onclick="showLogDetail(${i})">` + cols.map((c) => `<td data-label="${c}">${cellText(f[c])}</td>`).join("") + "</tr>";
   }).join("") : '<tr><td colspan="6">Nothing here.</td></tr>';
-  const pages = Math.max(1, Math.ceil(logState.filtered.length / logState.per));
-  $("logPage").textContent = `Page ${logState.page} of ${pages}`;
-  $("logCount").textContent = `${logState.filtered.length} entries`;
+  $("logPage").textContent = `Page ${logState.page} of ${logState.pages}`;
+  $("logCount").textContent = `${logState.total} entries`;
   $("logPrev").disabled = logState.page <= 1;
-  $("logNext").disabled = logState.page >= pages;
+  $("logNext").disabled = logState.page >= logState.pages;
 };
 window.showLogDetail = function (idx) {
-  const row = logState.filtered[idx];
+  const row = logState.rows[idx];
   if (!row) return;
   $("logDetailBody").textContent = JSON.stringify(row, null, 2);
   $("logDetail").style.display = "block";
-  $("logDetail").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  $("logDetail").scrollIntoView({ behavior: "smooth", block: "start" });
 };
-$("logSearch").addEventListener("input", () => { logState.page = 1; renderLogs(); });
-$("logPrev").onclick = () => { logState.page--; renderLogs(); };
-$("logNext").onclick = () => { logState.page++; renderLogs(); };
+// Search re-queries the server (debounced) so it searches ALL entries, not just the page.
+let logSearchTimer;
+$("logSearch").addEventListener("input", () => {
+  clearTimeout(logSearchTimer);
+  logSearchTimer = setTimeout(() => { logState.page = 1; loadLogs(logState.type, 1); }, 350);
+});
+$("logPrev").onclick = () => { if (logState.page > 1) { logState.page--; loadLogs(logState.type, logState.page); } };
+$("logNext").onclick = () => { if (logState.page < logState.pages) { logState.page++; loadLogs(logState.type, logState.page); } };
 
 /* Clear logs — destructive, double-confirmed. 'contribution' is not
    clearable (babaláwo submissions are not disposable telemetry). */
@@ -1121,7 +1484,7 @@ $("clearLogBtn").onclick = async () => {
   if (NON_CLEARABLE.includes(type)) {
     return toast("Contribution submissions can't be bulk-cleared here.", true);
   }
-  const n = logState.rows.length;
+  const n = logState.total;
   if (!confirmAct(`Delete ALL ${n} ${type} log entries from the database?\n\nThis cannot be undone.`)) return;
   if (!confirmAct(`Second confirmation — permanently clear the ${type} log?`)) return;
   try {
@@ -1160,6 +1523,7 @@ async function refreshSessionChip() {
   const me = await whoAmI();
   if (me?.authenticated) {
     $("whoami").textContent = (me.username || me.role) + " · " + me.role;
+    window.__STAFF_NAME__ = me.username || me.role || "";
     $("logoutBtn").style.display = "";
   } else {
     $("whoami").textContent = "";
@@ -1192,11 +1556,11 @@ function setLoggedOutChrome(loggedOut) {
 function clearAllSurfaces() {
   activeCol = null; activeKey = null; collections = [];
   ["colList","itemList","statGrid","trendBars","topOdu","feedbackPanel",
-   "latestFeedback","backupList","logHead","logBody","contribList","auditList"]
+   "latestFeedback","backupList","opsAudit","logHead","logBody","contribList","auditList"]
     .forEach((id) => { const el = $(id); if (el) el.innerHTML = ""; });
   $("countNote").textContent = ""; $("logCount").textContent = "";
   $("logPage").textContent = ""; $("backupNote").textContent = "";
-  logState.rows = []; logState.filtered = []; logState.loadedOnce = false;
+  logState.rows = []; logState.total = 0; logState.pages = 1; logState.page = 1; logState.loadedOnce = false;
   $("editorWrap").style.display = "none";
   $("emptyState").style.display = "none";
   $("logDetail").style.display = "none";
