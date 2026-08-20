@@ -103,11 +103,47 @@ function _verseReadingHTML(vr, solutionInfo) {
       ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`
       : "";
   };
+  // Collapsible verse — the source the interpretation rests on. Shown beneath
+  // the interpretation, closed by default so the reading stays clean. Only
+  // rendered when the Yorùbá looks normalized (tone-marked); raw, un-normalized
+  // submissions are held back from public view until an elder normalizes them.
+  const STRUCT_LABEL = {
+    awo: "The diviners", client: "Cast for", reason: "The reason",
+    instruction: "The instruction", outcome: "The outcome", thanksgiving: "Thanksgiving",
+  };
+  const verseDisc = (r) => {
+    if (!r.normalized || !(r.yoruba && r.yoruba.length)) return "";
+    const yor = r.yoruba.map((l) => esc(l)).join("<br>");
+    const eng = (r.english && r.english.length)
+      ? `<div style="margin-top:8px;color:var(--of-ink-soft);font-style:italic;" data-translate>${r.english.map(esc).join("<br>")}</div>` : "";
+    let struct = "";
+    if (r.structure && typeof r.structure === "object") {
+      const parts = Object.entries(r.structure)
+        .filter(([, v]) => v && v.origin !== "absent" && (v.lines || []).length)
+        .map(([k, v]) => {
+          const recon = v.origin === "reconstructed"
+            ? ` <span style="font-size:10px;color:#b8860b;font-style:italic;">(reconstructed)</span>` : "";
+          return `<div style="margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>${STRUCT_LABEL[k] || k}</span>${recon}<br><span data-translate>${(v.lines || []).map(esc).join(" ")}</span></div>`;
+        }).join("");
+      if (parts) struct = `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e0efe0);">${parts}</div>`;
+    }
+    return `
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>The verse</summary>
+        <div style="margin-top:8px;font-size:13px;line-height:1.7;color:var(--of-ink);padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;">
+          <div data-translate>${yor}</div>
+          ${eng}
+          ${struct}
+        </div>
+      </details>`;
+  };
+
   const block = (r, lead) => `
     <div style="${lead ? "" : "border-top:1px solid var(--of-line,#e0efe0);margin-top:16px;padding-top:14px;"}">
       ${r.title ? `<div style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:13.5px;margin-bottom:6px;" data-translate>${esc(r.title)}</div>` : ""}
       <p class="ori-section-text" data-translate>${esc(r.interpretation)}</p>
       ${credit(r)}
+      ${verseDisc(r)}
     </div>`;
 
   const lead = block(vr.lead, true);
