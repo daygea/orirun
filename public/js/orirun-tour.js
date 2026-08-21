@@ -391,6 +391,7 @@ document.addEventListener("DOMContentLoaded", function () {
    *  4. START TOUR
    * ═══════════════════════════════════════════════════════ */
   async function startTour() {
+   try {
     /* Purge any leftover Driver DOM from previous runs */
     [
       "#driver-page-overlay",
@@ -422,6 +423,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* Translate step titles/descriptions + button labels into the selected language */
     if (tourTranslatable()) {
+     try {
       var strings = [];
       validSteps.forEach(function (st) {
         if (st.popover) strings.push(st.popover.title, st.popover.description);
@@ -438,6 +440,9 @@ document.addEventListener("DOMContentLoaded", function () {
       labels.doneBtnText = map[labels.doneBtnText] || labels.doneBtnText;
       labels.nextBtnText = map[labels.nextBtnText] || labels.nextBtnText;
       labels.prevBtnText = map[labels.prevBtnText] || labels.prevBtnText;
+     } catch (tErr) {
+       console.warn("Orírùn tour: translation step failed, continuing in default language.", tErr);
+     }
     }
 
     var driverInstance = createDriver(labels);
@@ -462,6 +467,9 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }, 300);
     });
+   } catch (err) {
+     console.error("Orírùn tour: failed to start.", err);
+   }
   }
 
   /* ═══════════════════════════════════════════════════════
