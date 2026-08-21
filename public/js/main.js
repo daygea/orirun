@@ -688,10 +688,95 @@ const updateSolutionDetails = async () => {
   }
 };
 
+/* ─────────────────────────────────────────────────────────────
+ *  SEARCHABLE ODÙ COMBOBOX
+ *  Filters the 256 Odù locally (no network, no library) and drives the
+ *  hidden <select id="mainCast">. Selecting an item fires the select's native
+ *  "change" event, so ALL existing logic runs unchanged. Only a valid Odù can
+ *  be chosen; free text never leaks through.
+ * ───────────────────────────────────────────────────────────── */
+function initOduCombobox() {
+  const input = document.getElementById("mainCastSearch");
+  const list = document.getElementById("mainCastList");
+  const select = document.getElementById("mainCast");
+  if (!input || !list || !select) return;
+
+  const names = allOdus.map((o) => o.name);
+  let active = -1; // highlighted index in the current filtered list
+
+  // Match on any part of a compound name ("owo" finds "Osa Owonrin").
+  const filter = (q) => {
+    const s = q.trim().toLowerCase();
+    if (!s) return names; // no query → show all 256 (the list scrolls)
+    return names.filter((n) => n.toLowerCase().includes(s));
+  };
+
+  const choose = (name) => {
+    if (!names.includes(name)) return; // guard: only valid Odù
+    select.value = name;
+    input.value = name;
+    close();
+    // Fire the SAME event the old <select> fired, so nothing downstream changes.
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  const render = (items) => {
+    list.innerHTML = "";
+    if (!items.length) {
+      const li = document.createElement("li");
+      li.textContent = "No matching Odù";
+      li.style.cssText = "padding:8px 10px;color:#8a9a8f;font-style:italic;";
+      list.appendChild(li);
+      open();
+      return;
+    }
+    items.forEach((name, i) => {
+      const li = document.createElement("li");
+      li.textContent = name;
+      li.setAttribute("role", "option");
+      li.dataset.name = name;
+      li.style.cssText = "padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;" + (i === active ? "background:var(--of-green-wash,#eef6ee);" : "");
+      li.addEventListener("mousedown", (e) => { e.preventDefault(); choose(name); });
+      li.addEventListener("mouseenter", () => { active = i; highlight(); });
+      list.appendChild(li);
+    });
+    open();
+  };
+
+  const highlight = () => {
+    Array.from(list.children).forEach((li, i) => {
+      li.style.background = i === active ? "var(--of-green-wash,#eef6ee)" : "";
+    });
+    const el = list.children[active];
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
+  };
+
+  const open = () => { list.style.display = "block"; input.setAttribute("aria-expanded", "true"); };
+  const close = () => { list.style.display = "none"; input.setAttribute("aria-expanded", "false"); active = -1; };
+
+  input.addEventListener("focus", () => { active = -1; render(filter(input.value)); });
+  input.addEventListener("input", () => { active = -1; render(filter(input.value)); });
+  input.addEventListener("keydown", (e) => {
+    const items = Array.from(list.querySelectorAll("li[data-name]"));
+    if (e.key === "ArrowDown") { e.preventDefault(); if (list.style.display === "none") render(filter(input.value)); active = Math.min(active + 1, items.length - 1); highlight(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); highlight(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (active >= 0 && items[active]) choose(items[active].dataset.name); }
+    else if (e.key === "Escape") { close(); }
+  });
+  // Clicking away closes; if the text isn't a valid Odù, restore the last valid.
+  document.addEventListener("click", (e) => {
+    if (!document.getElementById("mainCastCombo")?.contains(e.target)) {
+      close();
+      if (input.value !== select.value) input.value = select.value || "";
+    }
+  });
+}
+
 const populateDropdowns = async () => {
   try {
     const mainCastDropdown = document.getElementById("mainCast");
     populateDropdown(mainCastDropdown, allOdus.map(odu => odu.name));
+    initOduCombobox();
     await Promise.all([updateSpecificOrientation(), updateSolutionDetails()]);
   } catch (error) {
     console.error("Error initializing dropdowns:", error);
