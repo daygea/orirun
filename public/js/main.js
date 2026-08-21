@@ -162,7 +162,11 @@ function _verseReadingHTML(vr, solutionInfo) {
   // the rest WITHOUT rendering them — so the page stays fast no matter how large
   // the corpus grows. Titles and workflow names are hidden; each card leads with
   // its interpretation and the contributor.
-  const MAX_SHOWN = 5;
+  // Render what the backend sent in the initial reading (INITIAL_OTHERS = 8).
+  // "See all" then continues from this offset, fetching further pages — so no
+  // verse is both rendered here and re-fetched. A reading stays focused; the
+  // full corpus is one tap (and paged) away.
+  const MAX_SHOWN = 8;
   const others = vr.others || [];
   const shown = others.slice(0, MAX_SHOWN);
   const remaining = Math.max(0, others.length - shown.length);
@@ -186,19 +190,81 @@ function _verseReadingHTML(vr, solutionInfo) {
   let othersHTML = "";
   if (shown.length) {
     const cards = shown.map(card).join("");
-    const moreNote = remaining > 0
-      ? `<div style="text-align:center;margin-top:10px;font-size:11.5px;color:var(--of-ink-soft,#8a9a8f);font-style:italic;" data-translate>and ${remaining} more verse${remaining > 1 ? "s" : ""} in the corpus</div>`
-      : "";
+    // "See all" — when more supporting verses exist than we render, offer a tap
+    // that fetches the rest in pages (kept out of the initial payload for scale).
+    const total = (typeof vr.totalOthers === "number") ? vr.totalOthers : others.length;
+    const remaining = Math.max(0, total - shown.length);
+    const seeAll = remaining > 0 ? `
+      <div style="text-align:center;margin-top:12px;">
+        <button type="button" class="verse-see-all btn btn-ghost btn-sm"
+          data-odu="${esc(vr.odu || "")}" data-ori="${esc(vr.orientation || "")}" data-offset="${shown.length}"
+          data-translate>See all ${total} verses ↓</button>
+      </div>
+      <div class="verse-more-slot" style="margin-top:8px;"></div>` : "";
     othersHTML = `
       <div class="verse-others" style="margin-top:18px;">
         <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Ifá also speaks through these verses</div>
         ${cards}
-        ${moreNote}
+        ${seeAll}
       </div>`;
   }
 
   return leadHTML + eboBox + othersHTML;
 }
+
+/* "See all" paged loader — fetches the next page of supporting verses for the
+   cast's Odù + orientation and appends them as the same collapsed cards. Kept
+   as a delegated handler so it works for dynamically-rendered readings. */
+function _verseCardHTML(r) {
+  const esc = (s) => String(s == null ? "" : s);
+  const teaser = (t) => {
+    const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
+    return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+  };
+  const contributor = r.provenance?.contributor
+    ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
+  const cred = r.provenance?.contributor
+    ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
+  let verse = "";
+  if (r.normalized && r.yoruba && r.yoruba.length) {
+    verse = `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>The verse</summary>
+      <div style="margin-top:8px;font-size:13px;line-height:1.7;padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${r.yoruba.map(esc).join("<br>")}</div></details>`;
+  }
+  return `<details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
+      <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${esc(teaser(r.interpretation))}</span>${contributor}
+      </summary>
+      <div style="padding:0 12px 12px;"><p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>${cred}${verse}</div>
+    </details>`;
+}
+
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".verse-see-all");
+  if (!btn) return;
+  const odu = btn.dataset.odu, ori = btn.dataset.ori;
+  let offset = parseInt(btn.dataset.offset, 10) || 0;
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = "Loading…";
+  try {
+    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/verses?offset=${offset}&limit=20`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const slot = btn.closest(".verse-others")?.querySelector(".verse-more-slot");
+    if (slot && data.items) slot.insertAdjacentHTML("beforeend", data.items.map(_verseCardHTML).join(""));
+    offset += (data.items || []).length;
+    btn.dataset.offset = offset;
+    if (data.hasMore) {
+      btn.disabled = false;
+      btn.textContent = `Load more (${data.total - offset} left)`;
+    } else {
+      btn.remove(); // all loaded
+    }
+  } catch {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
 
 function logSilently(path, body) {
   fetch(path, {
