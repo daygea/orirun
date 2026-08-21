@@ -116,6 +116,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var labelEl = anchorEl.previousElementSibling;
     if (!labelEl) return;
+    // Only wrap when the previous sibling really is the field's label — not
+    // another control (which can happen with the combobox's hidden <select>
+    // sibling). Wrapping a non-label would reorder the DOM and can break later
+    // steps, so bail safely instead.
+    var isLabel = labelEl.querySelector && (labelEl.querySelector("label") || labelEl.tagName === "LABEL");
+    if (!isLabel) return;
 
     var wrapper = document.createElement("div");
     wrapper.id = wrapperId;
@@ -131,9 +137,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function wrapFieldsForTour() {
-    /* Divination selects — label-div sits directly before each field. The Odù
-       field is now a searchable combobox (#mainCastCombo wraps the visible
-       input); the old #mainCast is a hidden <select>, so target the combo. */
+    /* Divination selects — label-div sits directly before each <select> */
+    /* Divination fields. The Odù field is now a searchable combobox
+       (#mainCastCombo wraps the visible input; #mainCast is a hidden <select>).
+       Wrap the combobox — its previous sibling is the label div, like the
+       other fields. */
     wrapWithLabel("tour-g-maincast",   document.getElementById("mainCastCombo") || document.getElementById("mainCast"));
     wrapWithLabel("tour-g-orient",     document.getElementById("orientation"));
     wrapWithLabel("tour-g-specorient", document.getElementById("specificOrientation"));
@@ -183,7 +191,7 @@ document.addEventListener("DOMContentLoaded", function () {
         popover: {
           title:       "Choose Your Odù Ifá",
           description: "An Odù is a sacred chapter of Ifá. There are 256 in total. " +
-                       "Type to search and select the one that appeared in your divination — or explore any Odù you feel drawn to.",
+                       "Select the one that appeared in your divination — or explore any Odù you feel drawn to.",
           position:    pos("right"),
           showButtons: true
         }
@@ -423,7 +431,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     /* Translate step titles/descriptions + button labels into the selected language */
     if (tourTranslatable()) {
-     try {
       var strings = [];
       validSteps.forEach(function (st) {
         if (st.popover) strings.push(st.popover.title, st.popover.description);
@@ -440,9 +447,6 @@ document.addEventListener("DOMContentLoaded", function () {
       labels.doneBtnText = map[labels.doneBtnText] || labels.doneBtnText;
       labels.nextBtnText = map[labels.nextBtnText] || labels.nextBtnText;
       labels.prevBtnText = map[labels.prevBtnText] || labels.prevBtnText;
-     } catch (tErr) {
-       console.warn("Orírùn tour: translation step failed, continuing in default language.", tErr);
-     }
     }
 
     var driverInstance = createDriver(labels);
