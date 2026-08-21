@@ -344,13 +344,15 @@ document.addEventListener("DOMContentLoaded", function () {
    *  3. DRIVER INSTANCE
    * ═══════════════════════════════════════════════════════ */
   function createDriver(labels) {
-    if (typeof Driver === "undefined") {
+    var DriverCtor = (typeof Driver !== "undefined") ? Driver
+                   : (typeof window !== "undefined" ? window.Driver : undefined);
+    if (typeof DriverCtor === "undefined") {
       console.warn("Orírùn tour: Driver.js not loaded.");
       return null;
     }
 
     labels = labels || {};
-    return new Driver({
+    return new DriverCtor({
       animate:            true,
       opacity:            0.78,
       padding:            isMobile ? 6 : 12,
@@ -400,6 +402,14 @@ document.addEventListener("DOMContentLoaded", function () {
    * ═══════════════════════════════════════════════════════ */
   async function startTour() {
    try {
+    /* Driver.js is lazy-loaded (see lazy-libs.js) to keep it off the critical
+       path. Ensure it's present BEFORE we try to construct the tour — this is
+       the step that was missing, causing "Driver.js not loaded". */
+    if (typeof window.Driver === "undefined" && typeof window.ensureLib === "function") {
+      try { await window.ensureLib("driver"); } catch (e) {
+        console.warn("Orírùn tour: could not load Driver.js.", e);
+      }
+    }
     /* Purge any leftover Driver DOM from previous runs */
     [
       "#driver-page-overlay",
