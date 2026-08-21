@@ -353,6 +353,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab" data-area="dashboard" onclick="showArea('dashboard')">Dashboard</button>
       <button class="area-tab" data-area="logs" onclick="showArea('logs')">Logs</button>
       <button class="area-tab" data-area="verses" onclick="showArea('verses')">Verses</button>
+      <button class="area-tab" data-area="users" onclick="showArea('users')">Users</button>
     </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
@@ -435,11 +436,66 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <strong>draft verse</strong>, then verify it in the Content Studio's <em>eseIfa</em> collection —
       where a named elder signs it off. Nothing appears to app users until that verification.
     </p>
+
+    <!-- Review queue: what's waiting for a reviewer's attention across the
+         whole verse pipeline. Counts drive the chips; the list shows each
+         open item with a one-tap route into the eseIfa editor to act on it. -->
+    <div class="panel" id="reviewQueuePanel" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">Review queue</h3>
+        <button class="btn btn-ghost btn-sm" id="rqRefresh" onclick="loadReviewQueue()" type="button">Refresh</button>
+      </div>
+      <div id="rqChips" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"></div>
+      <div id="rqList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
     <div class="log-count" id="contribNote" style="margin-bottom:10px"></div>
     <div id="contribList" style="display:flex;flex-direction:column;gap:12px"></div>
   </section>
 
-  <main>
+  <section class="ops" id="area-users" aria-label="User management">
+    <h2>Users · account management</h2>
+    <p style="font-size:13px;opacity:.8;margin:-4px 0 12px;max-width:74ch">
+      Accounts that sign in to the studio. <strong>Elder</strong> — a senior babaláwo who
+      authors and verifies others' work. <strong>Babaláwo</strong> — a contributor: authors
+      verses, interpretations and intonations, which land as drafts for an elder to verify.
+      A contributor never verifies their own work. Passwords are set here but never shown —
+      use <em>Reset password</em> to issue a new one.
+    </p>
+
+    <div class="panel" style="margin-bottom:14px">
+      <h3 style="margin:0 0 12px">Create an account</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Username
+          <input id="nuUsername" type="text" autocomplete="off" placeholder="e.g. baba-adewale"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;min-width:180px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Temporary password
+          <input id="nuPassword" type="text" autocomplete="off" placeholder="min 8 characters"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;min-width:180px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Role
+          <select id="nuRole"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+            <option value="babalawo">Babaláwo (contributor)</option>
+            <option value="elder">Elder (verifier)</option>
+            <option value="printonly">Print-only</option>
+            <option value="superadmin">Superadmin</option>
+          </select>
+        </label>
+        <button class="btn btn-green" id="nuCreate" type="button" onclick="createUser()">Create account</button>
+      </div>
+      <div style="font-size:11.5px;opacity:.65;margin-top:8px">
+        Give the person their username and temporary password over a trusted channel; they can change it after signing in.
+      </div>
+    </div>
+
+    <div class="log-count" id="usersNote" style="margin-bottom:10px"></div>
+    <div id="usersList" style="display:flex;flex-direction:column;gap:8px"></div>
+  </section>
     <div id="editorWrap" style="display:none;flex:1;flex-direction:column;min-height:0;min-width:0">
       <div class="editor-head">
         <h1 id="itemTitle">—</h1>
@@ -1238,6 +1294,8 @@ window.showArea = function (area) {
   // areas fetch admin data. isAuthed is set true only after a confirmed
   // superadmin session (see boot / revealApp).
   if (!isAuthed && area !== "content") return;
+  // User management is superadmin-only (backend enforces it too).
+  if (area === "users" && window.__STAFF_ROLE__ && window.__STAFF_ROLE__ !== "superadmin") return;
   document.querySelectorAll(".area-tab").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.area === area));
   // content area = the original three grid panes. The rail is the nav
@@ -1250,6 +1308,7 @@ window.showArea = function (area) {
   document.getElementById("area-dashboard").style.display = area === "dashboard" ? "flex" : "none";
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
   document.getElementById("area-verses").style.display = area === "verses" ? "flex" : "none";
+  document.getElementById("area-users").style.display = area === "users" ? "flex" : "none";
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
@@ -1258,9 +1317,284 @@ window.showArea = function (area) {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
     orTopbarStart();
-    Promise.resolve(loadContributions()).finally(orTopbarDone);
+    Promise.resolve(Promise.all([loadReviewQueue(), loadContributions()])).finally(orTopbarDone);
+  } else if (area === "users") {
+    orTopbarStart();
+    Promise.resolve(loadUsers()).finally(orTopbarDone);
   }
 };
+
+/* ── Review queue ────────────────────────────────────────────
+   Shows what's waiting across the verse pipeline: verses not yet verified,
+   interpretations pending, and un-promoted contributions. Each verse row
+   routes straight into the eseIfa editor so a reviewer can act on it. */
+async function loadReviewQueue() {
+  const chips = $("rqChips");
+  const list = $("rqList");
+  if (!chips || !list) return;
+  list.innerHTML = orLoaderHTML("Loading review queue…");
+  chips.innerHTML = "";
+  try {
+    const res = await api("/verses/review-queue");
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    const c = d.counts || {};
+
+    const chip = (label, n, color) =>
+      '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;' +
+      'padding:5px 11px;border-radius:20px;background:' + color + '1a;color:' + color + ';">' +
+      '<b style="font-size:14px">' + (n || 0) + '</b> ' + escapeHtml(label) + '</span>';
+
+    chips.innerHTML =
+      chip("verses to verify", (c.versesDraft || 0) + (c.versesReviewed || 0), "#b8860b") +
+      chip("interpretations pending", (c.interpretationsDraft || 0) + (c.interpretationsReviewed || 0), "#0f7b3d") +
+      chip("new contributions", c.pendingContributions || 0, "#6a4bb8");
+
+    if (!d.totalOpen) {
+      list.innerHTML = '<div style="opacity:.6;padding:4px 2px">Nothing awaiting review — the corpus is fully verified. 🎉</div>';
+      return;
+    }
+
+    list.innerHTML = "";
+    const items = d.items || [];
+    if (!items.length) {
+      list.innerHTML = '<div style="opacity:.6;padding:4px 2px">No verses pending — see contributions below.</div>';
+    }
+    for (const it of items) {
+      const row = document.createElement("div");
+      row.style.cssText =
+        "display:flex;align-items:center;gap:10px;justify-content:space-between;" +
+        "padding:9px 12px;border:1px solid var(--line,#e6efe4);border-radius:8px;background:#fff";
+
+      var badges = "";
+      if (it.verseStatus && it.verseStatus !== "verified") {
+        var vc = it.verseStatus === "draft" ? "#b8860b" : "#8a6d1b";
+        badges += '<span style="font-size:11px;font-weight:600;color:' + vc + ';white-space:nowrap">verse: ' + escapeHtml(it.verseStatus) + '</span>';
+      }
+      if (it.pendingInterpretations && it.pendingInterpretations.length) {
+        badges += '<span style="font-size:11px;font-weight:600;color:#0f7b3d;white-space:nowrap">' +
+          it.pendingInterpretations.length + ' interp. pending</span>';
+      }
+
+      row.innerHTML =
+        '<div style="min-width:0">' +
+          '<div style="font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+            escapeHtml(it.odu || "—") +
+            (it.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(it.title) + '</span>' : '') +
+          '</div>' +
+          '<div style="display:flex;gap:10px;margin-top:3px">' + badges + '</div>' +
+        '</div>';
+
+      const openBtn = document.createElement("button");
+      openBtn.className = "btn btn-green btn-sm";
+      openBtn.textContent = "Open →";
+      openBtn.style.flex = "0 0 auto";
+      openBtn.onclick = () => openVerseInEditor(it.id);
+      row.appendChild(openBtn);
+      list.appendChild(row);
+    }
+    if (d.truncated) {
+      const more = document.createElement("div");
+      more.style.cssText = "font-size:12px;opacity:.7;padding:4px 2px";
+      more.textContent = "Showing first " + items.length + " of " + d.total + " — verify some to clear the queue.";
+      list.appendChild(more);
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load review queue: " + err.message, true);
+  }
+}
+
+/* Route from the queue into the eseIfa editor for a given verse id: switch to
+   the Content area, open the eseIfa collection, then select the verse. */
+async function openVerseInEditor(verseId) {
+  try {
+    showArea("content");
+    const eseCol = (collections || []).find((c) => c.key === "eseIfa");
+    if (!eseCol) { toast("eseIfa collection not found", true); return; }
+    await selectCollection(eseCol);
+    await selectItem(verseId);
+  } catch (err) {
+    toast("Could not open verse: " + err.message, true);
+  }
+}
+
+/* ── User management ─────────────────────────────────────────
+   Superadmin-only account management. Passwords are set/reset but never
+   shown. Self-lockout and last-superadmin protections are enforced on the
+   backend; the UI also disables self-destructive actions for clarity. */
+const ROLE_LABEL = {
+  superadmin: "Superadmin",
+  elder: "Elder (verifier)",
+  babalawo: "Babaláwo (contributor)",
+  printonly: "Print-only",
+};
+const ROLE_COLOR = {
+  superadmin: "#b8860b", elder: "#0f7b3d", babalawo: "#6a4bb8", printonly: "#8a8a8a",
+};
+
+async function loadUsers() {
+  const list = $("usersList");
+  const note = $("usersNote");
+  if (!list) return;
+  list.innerHTML = orLoaderHTML("Loading accounts…");
+  try {
+    const res = await api("/users");
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    const users = d.users || [];
+    const me = window.__STAFF_NAME__ || "";
+    if (note) note.textContent = users.length + " account" + (users.length === 1 ? "" : "s");
+    list.innerHTML = "";
+    if (!users.length) { list.innerHTML = '<div style="opacity:.6">No accounts yet.</div>'; return; }
+
+    for (const u of users) {
+      const isSelf = u.username === me;
+      const rc = ROLE_COLOR[u.role] || "#8a8a8a";
+      const card = document.createElement("div");
+      card.className = "panel";
+      card.style.cssText = "display:flex;flex-direction:column;gap:10px";
+
+      const statusBits = [];
+      if (u.disabled) statusBits.push('<span style="color:#c0392b;font-weight:600">disabled</span>');
+      if (u.locked) statusBits.push('<span style="color:#b8860b;font-weight:600">locked</span>');
+      if (isSelf) statusBits.push('<span style="opacity:.6">you</span>');
+
+      card.innerHTML =
+        '<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">' +
+          '<strong style="font-size:15px">' + escapeHtml(u.username) + '</strong>' +
+          '<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:14px;background:' + rc + '1a;color:' + rc + '">' +
+            escapeHtml(ROLE_LABEL[u.role] || u.role) + '</span>' +
+        '</div>' +
+        '<div style="font-size:12px;opacity:.75">' +
+          (statusBits.length ? statusBits.join(" · ") + " · " : "") +
+          "last sign-in " + fmtDate(u.lastLoginAt) +
+          (u.createdBy ? " · created by " + escapeHtml(u.createdBy) : "") +
+        '</div>';
+
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center";
+
+      // Role changer
+      const roleSel = document.createElement("select");
+      roleSel.style.cssText = "padding:6px 8px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:12px";
+      ["babalawo", "elder", "printonly", "superadmin"].forEach((r) => {
+        const o = document.createElement("option");
+        o.value = r; o.textContent = ROLE_LABEL[r]; if (r === u.role) o.selected = true;
+        roleSel.appendChild(o);
+      });
+      roleSel.onchange = () => changeUserRole(u.id, roleSel.value, u.username);
+      if (isSelf && u.role === "superadmin") roleSel.disabled = true; // can't demote self
+      actions.appendChild(roleSel);
+
+      // Reset password
+      const resetBtn = document.createElement("button");
+      resetBtn.className = "btn btn-ghost btn-sm";
+      resetBtn.textContent = "Reset password";
+      resetBtn.onclick = () => resetUserPassword(u.id, u.username);
+      actions.appendChild(resetBtn);
+
+      // Enable / disable
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "btn btn-ghost btn-sm";
+      toggleBtn.textContent = u.disabled ? "Enable" : "Disable";
+      toggleBtn.onclick = () => setUserDisabled(u.id, !u.disabled, u.username);
+      if (isSelf) toggleBtn.disabled = true;
+      actions.appendChild(toggleBtn);
+
+      // Delete
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn btn-sm";
+      delBtn.style.cssText = "background:#fbeaea;color:#c0392b";
+      delBtn.textContent = "Delete";
+      delBtn.onclick = () => deleteUser(u.id, u.username);
+      if (isSelf) delBtn.disabled = true;
+      actions.appendChild(delBtn);
+
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load accounts: " + err.message, true);
+  }
+}
+
+async function createUser() {
+  const btn = $("nuCreate");
+  const username = $("nuUsername").value.trim();
+  const password = $("nuPassword").value;
+  const role = $("nuRole").value;
+  if (!username || !password) { toast("Username and password are required", true); return; }
+  if (password.length < 8) { toast("Password must be at least 8 characters", true); return; }
+  if (btn) { btn.disabled = true; btn.textContent = "Creating…"; }
+  try {
+    const res = await api("/users", { method: "POST", body: JSON.stringify({ username, password, role }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Create failed");
+    toast("Account created: " + username);
+    $("nuUsername").value = ""; $("nuPassword").value = "";
+    loadUsers();
+  } catch (err) {
+    toast("Create failed: " + err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Create account"; }
+  }
+}
+
+async function resetUserPassword(id, username) {
+  const pw = prompt("New temporary password for " + username + " (min 8 characters):");
+  if (pw == null) return;
+  if (pw.length < 8) { toast("Password must be at least 8 characters", true); return; }
+  try {
+    const res = await api("/users/" + id + "/reset-password", { method: "POST", body: JSON.stringify({ password: pw }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Reset failed");
+    toast("Password reset for " + username + " — share it securely.");
+  } catch (err) {
+    toast("Reset failed: " + err.message, true);
+  }
+}
+
+async function changeUserRole(id, role, username) {
+  try {
+    const res = await api("/users/" + id + "/role", { method: "POST", body: JSON.stringify({ role }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Role change failed");
+    toast(username + " is now " + (ROLE_LABEL[role] || role));
+    loadUsers();
+  } catch (err) {
+    toast("Role change failed: " + err.message, true);
+    loadUsers(); // re-sync the dropdown to the true value
+  }
+}
+
+async function setUserDisabled(id, disabled, username) {
+  if (disabled && !confirmAct("Disable " + username + "? They won't be able to sign in.")) { loadUsers(); return; }
+  try {
+    const res = await api("/users/" + id + "/disabled", { method: "POST", body: JSON.stringify({ disabled }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Update failed");
+    toast(username + (disabled ? " disabled" : " re-enabled"));
+    loadUsers();
+  } catch (err) {
+    toast("Update failed: " + err.message, true);
+    loadUsers();
+  }
+}
+
+async function deleteUser(id, username) {
+  if (!confirmAct("Permanently delete " + username + "? Consider disabling instead — this can't be undone.")) return;
+  try {
+    const res = await api("/users/" + id, { method: "DELETE" });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Delete failed");
+    toast("Deleted " + username);
+    loadUsers();
+  } catch (err) {
+    toast("Delete failed: " + err.message, true);
+  }
+}
 
 /* ── Babaláwo contribution review queue ──────────────────────── */
 async function loadContributions() {
@@ -1656,6 +1990,12 @@ async function refreshSessionChip() {
   if (me?.authenticated) {
     $("whoami").textContent = (me.username || me.role) + " · " + me.role;
     window.__STAFF_NAME__ = me.username || me.role || "";
+    window.__STAFF_ROLE__ = me.role || "";
+    // User management is superadmin-only. Hide the tab for other roles (the
+    // backend also enforces this; the hide is for a clean, role-appropriate UI
+    // once non-superadmin logins exist).
+    var usersTab = document.querySelector('.area-tab[data-area="users"]');
+    if (usersTab) usersTab.style.display = (me.role === "superadmin") ? "" : "none";
     $("logoutBtn").style.display = "";
   } else {
     $("whoami").textContent = "";
