@@ -385,8 +385,30 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   </section>
 
   <section class="ops" id="area-dashboard" aria-label="Dashboard">
-    <h2>Dashboard</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">Dashboard</h2>
+      <button class="btn btn-ghost btn-sm" onclick="exportAnalyticsPDF(this)" type="button">⬇ Export analytics PDF</button>
+    </div>
     <div class="stat-grid" id="statGrid"></div>
+
+    <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>System &amp; diagnostics</span>
+        <button class="btn btn-ghost btn-sm" onclick="loadDiagnostics()" type="button">Refresh</button>
+      </h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px">
+        <div style="border:1px solid var(--line,#e6efe4);border-radius:8px;padding:12px">
+          <div style="font-size:12px;font-weight:700;opacity:.7;margin-bottom:8px">AI service (chat &amp; drafting)</div>
+          <div id="aiHealth" style="font-size:13px">—</div>
+        </div>
+        <div style="border:1px solid var(--line,#e6efe4);border-radius:8px;padding:12px">
+          <div style="font-size:12px;font-weight:700;opacity:.7;margin-bottom:8px">Numerology system</div>
+          <div id="numSystem" style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">—</div>
+          <div style="font-size:11.5px;opacity:.6;margin-top:6px">Changing this affects every user's numerology reading.</div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel"><h3>Activity — last 14 days</h3><div id="trendBars"></div></div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
       <div class="panel"><h3>Top Odù</h3><div id="topOdu"></div></div>
@@ -454,6 +476,23 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
       <div id="rqChips" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"></div>
       <div id="rqList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Unassigned verses: community/footer-promoted verses with no studio
+         account owner. A superadmin can assign each to the babaláwo whose work
+         it is, so it appears in that person's "My Verses" and they can edit it. -->
+    <div class="panel" id="unassignedPanel" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">Unassigned verses</h3>
+        <button class="btn btn-ghost btn-sm" onclick="loadUnassigned()" type="button">Refresh</button>
+      </div>
+      <p style="font-size:12.5px;opacity:.75;margin:6px 0 10px;max-width:70ch">
+        Verses promoted from the public "Share Insight" link have a contributor name but no studio account,
+        so they don't show in anyone's My Verses. Assign one to a babaláwo/elder account to give them ownership
+        (they can then edit it while it's still a draft).
+      </p>
+      <div class="log-count" id="unassignedNote" style="margin-bottom:8px"></div>
+      <div id="unassignedList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
     <div class="log-count" id="contribNote" style="margin-bottom:10px"></div>
@@ -1434,12 +1473,12 @@ window.showArea = function (area) {
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
-    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit()]).finally(orTopbarDone);
+    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit(), loadDiagnostics()]).finally(orTopbarDone);
   } else if (area === "logs") {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
     orTopbarStart();
-    Promise.resolve(Promise.all([loadReviewQueue(), loadContributions()])).finally(orTopbarDone);
+    Promise.resolve(Promise.all([loadReviewQueue(), loadUnassigned(), loadContributions()])).finally(orTopbarDone);
   } else if (area === "users") {
     orTopbarStart();
     Promise.resolve(loadUsers()).finally(orTopbarDone);
@@ -2009,18 +2048,34 @@ async function loadMyVerses() {
       const sc = v.verseStatus === "verified" ? "#0f7b3d" : v.verseStatus === "reviewed" ? "#8a6d1b" : "#b8860b";
       const card = document.createElement("div");
       card.className = "panel";
-      card.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap";
-      card.innerHTML =
-        '<div style="min-width:0">' +
-          '<div style="font-weight:600;font-size:14px">' + escapeHtml(v.odu) +
-            (v.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(v.title) + '</span>' : '') + '</div>' +
-          '<div style="font-size:12px;margin-top:3px">' +
-            '<span style="font-weight:600;color:' + sc + '">' + escapeHtml(v.verseStatus) + '</span>' +
-            ' · ' + v.interpretationCount + ' interpretation' + (v.interpretationCount === 1 ? '' : 's') +
-            (v.reviewNoteCount ? ' · <span style="color:#b8860b;font-weight:600">✎ ' + v.reviewNoteCount + ' elder note' + (v.reviewNoteCount === 1 ? '' : 's') + '</span>' : '') +
-            (v.editable ? '' : ' · <span style="opacity:.6">locked (verified)</span>') +
-          '</div>' +
+      card.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap";
+      const info = document.createElement("div");
+      info.style.flex = "1 1 60%";
+      info.style.minWidth = "0";
+      info.innerHTML =
+        '<div style="font-weight:600;font-size:14px">' + escapeHtml(v.odu) +
+          (v.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(v.title) + '</span>' : '') + '</div>' +
+        '<div style="font-size:12px;margin-top:3px">' +
+          '<span style="font-weight:600;color:' + sc + '">' + escapeHtml(STATUS_LABEL[v.verseStatus] || v.verseStatus) + '</span>' +
+          ' · ' + v.interpretationCount + ' interpretation' + (v.interpretationCount === 1 ? '' : 's') +
+          (v.editable ? '' : ' · <span style="opacity:.6">locked (verified)</span>') +
         '</div>';
+      // The elder's actual feedback, shown right on the card — no need to open
+      // the verse to read what needs revising.
+      if (Array.isArray(v.openNotes) && v.openNotes.length) {
+        const nb = document.createElement("div");
+        nb.style.cssText = "background:#fdf6e3;border:1px solid #e8d9a8;border-radius:6px;padding:8px 10px;margin-top:8px";
+        nb.innerHTML = '<div style="font-size:11px;font-weight:700;color:#8a6d1b;margin-bottom:4px">✎ Elder feedback</div>' +
+          v.openNotes.map((n) =>
+            '<div style="font-size:12.5px;line-height:1.5">' +
+            (n.orientation ? '<strong>' + escapeHtml(n.orientation) + ':</strong> ' : '') +
+            escapeHtml(n.note) +
+            (n.by ? ' <span style="opacity:.55">— ' + escapeHtml(n.by) + '</span>' : '') +
+            '</div>').join("");
+        info.appendChild(nb);
+      }
+      card.innerHTML = "";
+      card.appendChild(info);
       const actions = document.createElement("div");
       actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
       const interpBtn = document.createElement("button");
@@ -2383,6 +2438,91 @@ async function removeInterpretation(orientation) {
 }
 
 /* ── Babaláwo contribution review queue ──────────────────────── */
+/* ── Unassigned verses → studio account assignment (superadmin) ──
+   Community/footer-promoted verses carry a contributor name but no studio
+   account, so they never reach the contributor's "My Verses". Here a
+   superadmin assigns each to the babaláwo/elder account it belongs to. */
+let _authorAccounts = null; // cached babaláwo/elder account list for the picker
+
+async function fetchAuthorAccounts() {
+  if (_authorAccounts) return _authorAccounts;
+  try {
+    const res = await api("/users");
+    const d = await res.json();
+    _authorAccounts = (d.users || []).filter((u) => ["babalawo", "elder"].includes(u.role) && !u.disabled);
+  } catch { _authorAccounts = []; }
+  return _authorAccounts;
+}
+
+async function loadUnassigned() {
+  const list = $("unassignedList");
+  const note = $("unassignedNote");
+  if (!list) return;
+  list.innerHTML = orLoaderHTML("Loading…");
+  try {
+    const [res, accounts] = await Promise.all([api("/verses-unassigned"), fetchAuthorAccounts()]);
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    const verses = d.verses || [];
+    if (note) note.textContent = verses.length + " unassigned";
+    list.innerHTML = "";
+    if (!verses.length) {
+      list.innerHTML = '<div style="opacity:.6;font-size:13px">Every verse has an owner. Nothing to assign.</div>';
+      return;
+    }
+    if (!accounts.length) {
+      list.innerHTML = '<div style="opacity:.7;font-size:13px">No babaláwo/elder accounts exist yet — create one in Users before assigning.</div>';
+      return;
+    }
+    for (const v of verses) {
+      const row = document.createElement("div");
+      row.className = "panel";
+      row.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap";
+      const opts = accounts.map((a) => '<option value="' + escapeHtml(a.username) + '">' + escapeHtml(a.username) + ' (' + escapeHtml(a.role) + ')</option>').join("");
+      row.innerHTML =
+        '<div style="min-width:0;flex:1 1 55%">' +
+          '<div style="font-weight:600;font-size:14px">' + escapeHtml(v.odu) +
+            (v.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(v.title) + '</span>' : '') + '</div>' +
+          '<div style="font-size:12px;margin-top:3px;opacity:.75">' +
+            (v.contributorName ? 'submitted as “' + escapeHtml(v.contributorName) + '” · ' : '') +
+            escapeHtml(v.status) + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<select id="assign-' + escapeHtml(v.id) + '" style="padding:7px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:13px">' + opts + '</select>' +
+          '<button class="btn btn-green btn-sm" onclick="assignOwner(\'' + encodeURIComponent(v.id) + '\')">Assign</button>' +
+        '</div>';
+      list.appendChild(row);
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load unassigned verses: " + err.message, true);
+  }
+}
+
+async function assignOwner(idEnc, force) {
+  const id = decodeURIComponent(idEnc);
+  const sel = document.getElementById("assign-" + id);
+  const username = sel ? sel.value : "";
+  if (!username) { toast("Pick an account", true); return; }
+  try {
+    const res = await api("/verses/" + encodeURIComponent(id) + "/assign-owner",
+      { method: "POST", body: JSON.stringify({ username, force: !!force }) });
+    const d = await res.json();
+    if (res.status === 409 && d.needsForce) {
+      // Verse already owned by someone else — confirm before reassigning.
+      if (confirmAct('This verse is already assigned to "' + d.currentAccount + '". Reassign it to ' + username + '?')) {
+        return assignOwner(idEnc, true);
+      }
+      return;
+    }
+    if (!res.ok) throw new Error(d.error || "Assign failed");
+    toast("Assigned to " + username);
+    loadUnassigned();
+  } catch (err) {
+    toast("Assign failed: " + err.message, true);
+  }
+}
+
 async function loadContributions() {
   const list = $("contribList");
   const note = $("contribNote");
@@ -2422,7 +2562,21 @@ async function loadContributions() {
 
       if (c.status === "pending") {
         const actions = document.createElement("div");
-        actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+        actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center";
+        // Optional: assign this contribution to a studio account at promotion
+        // time, so it lands directly in that babaláwo's My Verses. Blank =
+        // promote as an unassigned community verse (assign later if needed).
+        const assignSel = document.createElement("select");
+        assignSel.id = "promoteAssign-" + c.id;
+        assignSel.style.cssText = "padding:7px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:13px";
+        assignSel.innerHTML = '<option value="">— assign to account (optional) —</option>';
+        fetchAuthorAccounts().then((accts) => {
+          (accts || []).forEach((a) => {
+            const o = document.createElement("option");
+            o.value = a.username; o.textContent = a.username + " (" + a.role + ")";
+            assignSel.appendChild(o);
+          });
+        });
         const promote = document.createElement("button");
         promote.className = "btn btn-green";
         promote.textContent = "Promote to draft verse →";
@@ -2431,7 +2585,7 @@ async function loadContributions() {
         decline.className = "btn btn-ghost";
         decline.textContent = "Set aside";
         decline.onclick = () => declineContribution(c.id, decline);
-        actions.appendChild(promote); actions.appendChild(decline);
+        actions.appendChild(assignSel); actions.appendChild(promote); actions.appendChild(decline);
         card.appendChild(actions);
       }
       list.appendChild(card);
@@ -2444,11 +2598,15 @@ async function loadContributions() {
 async function promoteContribution(id, btn) {
   if (btn) { btn.disabled = true; btn.textContent = "Promoting…"; }
   try {
-    const res = await api("/verses/promote-stored/" + encodeURIComponent(id), { method: "POST" });
+    const assignSel = document.getElementById("promoteAssign-" + id);
+    const assignTo = assignSel ? assignSel.value : "";
+    const res = await api("/verses/promote-stored/" + encodeURIComponent(id),
+      { method: "POST", body: JSON.stringify(assignTo ? { assignTo } : {}) });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Promotion failed");
-    toast("Promoted to draft verse: " + d.id);
+    toast("Promoted to draft verse" + (assignTo ? " · assigned to " + assignTo : "") + ": " + d.id);
     loadContributions();
+    loadUnassigned();
   } catch (err) {
     toast(err.message, true);
     if (btn) { btn.disabled = false; btn.textContent = "Promote to draft verse →"; }
@@ -2473,6 +2631,112 @@ function escapeHtml(str) {
   return String(str == null ? "" : str)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/* ── System & diagnostics (superadmin) ─────────────────────── */
+async function loadDiagnostics() {
+  // AI health — names the working key/model or the precise failure reason.
+  const aiEl = $("aiHealth");
+  if (aiEl) {
+    aiEl.innerHTML = orLoaderHTML("Checking…");
+    try {
+      const res = await fetch(API_BASE + "/api/ai/health", { credentials: "include" });
+      const d = await res.json();
+      if (d.working) {
+        aiEl.innerHTML = '<span style="color:#0f7b3d;font-weight:600">● Working</span> — key <strong>' +
+          escapeHtml(d.working.keyName) + '</strong>, model <strong>' + escapeHtml(d.working.model) + '</strong>';
+      } else {
+        aiEl.innerHTML = '<span style="color:#c0392b;font-weight:600">● Not working</span>' +
+          (d.error ? '<div style="margin-top:6px;font-size:12px;opacity:.85">' + escapeHtml(d.error) + '</div>' : '');
+      }
+      // Show which keys are configured (masked) so you can see what's set.
+      if (Array.isArray(d.configuredKeys)) {
+        aiEl.innerHTML += '<div style="margin-top:8px;font-size:11.5px;opacity:.65">' +
+          d.configuredKeys.map((k) => escapeHtml(k.name) + ': ' + (k.present ? escapeHtml(k.masked || "set") : "—")).join(" · ") + '</div>';
+      }
+    } catch (err) {
+      aiEl.innerHTML = '<span style="color:#c0392b">Check failed: ' + escapeHtml(err.message) + '</span>';
+    }
+  }
+
+  // Numerology system — the active system + a picker to change it.
+  const nsEl = $("numSystem");
+  if (nsEl) {
+    nsEl.innerHTML = orLoaderHTML("Loading…");
+    try {
+      // This endpoint is under /api/numerology (not /api/admin), so call it directly.
+      const res = await fetch(API_BASE + "/api/numerology/admin/systems", { credentials: "include" });
+      const d = await res.json();
+      const avail = d.available || [];
+      const opts = avail.map((s) => {
+        const val = typeof s === "string" ? s : (s.key || s.id || s.name);
+        const label = typeof s === "string" ? s : (s.label || s.name || val);
+        return '<option value="' + escapeHtml(val) + '"' + (val === d.current ? " selected" : "") + '>' + escapeHtml(label) + '</option>';
+      }).join("");
+      nsEl.innerHTML =
+        '<select id="numSystemSel" style="padding:7px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:13px">' + opts + '</select>' +
+        '<button class="btn btn-green btn-sm" onclick="setNumerologySystem()">Apply</button>' +
+        '<span style="font-size:12px;opacity:.7">active: <strong>' + escapeHtml(d.current || "—") + '</strong></span>';
+    } catch (err) {
+      nsEl.innerHTML = '<span style="color:#c0392b">Failed to load: ' + escapeHtml(err.message) + '</span>';
+    }
+  }
+}
+
+async function setNumerologySystem() {
+  const sel = $("numSystemSel");
+  const system = sel ? sel.value : "";
+  if (!system) return;
+  if (!confirmAct("Switch the active numerology system to " + system + "? This changes every user's numerology reading.")) return;
+  try {
+    const res = await fetch(API_BASE + "/api/numerology/admin/systems", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Failed");
+    toast("Numerology system set to " + system);
+    loadDiagnostics();
+  } catch (err) { toast("Failed: " + err.message, true); }
+}
+
+async function exportAnalyticsPDF(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Preparing…"; }
+  try {
+    // The export endpoint builds the PDF from the dashboard data we send it.
+    // Pull the current summary so the report matches what's on screen.
+    const sres = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
+    const summary = await sres.json();
+    const res = await fetch(API_BASE + "/api/analytics/export-pdf", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary,
+        trends: summary.trends || null,
+        feedbacks: summary.feedbacks || summary.latestFeedback || null,
+        images: [],
+        currentTrendView: "daily",
+        date: new Date().toISOString().slice(0, 10),
+      }),
+    });
+    if (!res.ok) {
+      let msg = "Export failed";
+      try { const e = await res.json(); msg = e.error || msg; } catch {}
+      throw new Error(msg);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "Orirun-Analytics-Report.pdf";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    toast("Analytics PDF downloaded");
+  } catch (err) {
+    toast(err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "⬇ Export analytics PDF"; }
+  }
 }
 
 /* ── Dashboard ── */
@@ -2844,9 +3108,16 @@ async function revealApp() {
     // superadmin — the full studio. Normalize the layout first so no leftover
     // area section (which shares main's grid cell) can overlap the content
     // pane, then load. showArea("content") shows main + hides every .ops area.
-    document.querySelectorAll(".area-tab").forEach((t) => { t.style.display = ""; });
+    // A superadmin has every right: the standard console tabs PLUS "To Verify"
+    // (so they can sign off on content like an elder). "My Verses" stays hidden
+    // — it's the contributor's own-authoring view, not a console feature.
+    const superTabs = ["content", "dashboard", "logs", "verses", "users", "verify"];
+    document.querySelectorAll(".area-tab").forEach((t) => {
+      t.style.display = superTabs.includes(t.dataset.area) ? "" : "none";
+    });
     showArea("content");
     await loadCollections();
+    loadNotifications(); // surfaces the elder "to verify" badge for superadmin too
   }
 }
 
