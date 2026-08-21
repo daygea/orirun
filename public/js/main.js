@@ -95,13 +95,11 @@ function hidePreloader() {
 function _verseReadingHTML(vr, solutionInfo) {
   const esc = (s) => String(s == null ? "" : s);
   const credit = (r) => {
-    const bits = [];
-    if (r.interpretedBy) bits.push(`interpreted by ${esc(r.interpretedBy)}`);
-    if (r.verifiedBy) bits.push(`verified by ${esc(r.verifiedBy)}`);
-    if (r.provenance?.contributor) bits.push(`verse from ${esc(r.provenance.contributor)}`);
-    return bits.length
-      ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`
-      : "";
+    // Seeker-facing attribution: keep only the verse's contributor (whose
+    // wisdom this is). The internal workflow names — interpreted-by and
+    // verified-by — are hidden from the reading.
+    if (!r.provenance?.contributor) return "";
+    return `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>`;
   };
   // Collapsible verse — the source the interpretation rests on. Shown beneath
   // the interpretation, closed by default so the reading stays clean. Only
@@ -146,7 +144,6 @@ function _verseReadingHTML(vr, solutionInfo) {
   const leadR = vr.lead;
   const leadHTML = `
     <div>
-      ${leadR.title ? `<div style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:14px;margin-bottom:6px;" data-translate>${esc(leadR.title)}</div>` : ""}
       <p class="ori-section-text" data-translate>${esc(leadR.interpretation)}</p>
       ${credit(leadR)}
       ${verseDisc(leadR)}
@@ -159,22 +156,24 @@ function _verseReadingHTML(vr, solutionInfo) {
       <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(solutionInfo)}</div>
     </div>` : "";
 
-  // Supporting verses — collapsed cards, counted, paginated. Each shows a
-  // one-line teaser (first sentence of its interpretation, truncated) and
-  // expands on tap to the full interpretation + verse. This is what lets the
-  // reading survive dozens of verses per Odù.
+  // Supporting verses — collapsed cards, capped. A reading is focused, not a
+  // library dump: we render the lead + up to MAX_SHOWN ranked supporting verses
+  // (the most relevant, since ranking floats them up), then show a count for
+  // the rest WITHOUT rendering them — so the page stays fast no matter how large
+  // the corpus grows. Titles and workflow names are hidden; each card leads with
+  // its interpretation and the contributor.
+  const MAX_SHOWN = 5;
   const others = vr.others || [];
+  const shown = others.slice(0, MAX_SHOWN);
+  const remaining = Math.max(0, others.length - shown.length);
   const teaser = (t) => {
     const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
     return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
   };
-  const card = (r, i) => `
-    <details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;${i >= 3 ? "display:none;" : ""}" data-idx="${i}">
+  const card = (r) => `
+    <details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-        <span style="flex:1;min-width:0;">
-          <span style="font-weight:700;color:var(--of-green-deep,#0a5a2c);font-size:13px;display:block;" data-translate>${esc(r.title || "Ifá speaks")}</span>
-          <span style="font-size:12px;color:var(--of-ink-soft,#7a8a80);display:block;" data-translate>${esc(teaser(r.interpretation))}</span>
-        </span>
+        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${esc(teaser(r.interpretation))}</span>
         ${r.provenance?.contributor ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : ""}
       </summary>
       <div style="padding:0 12px 12px;">
@@ -185,20 +184,16 @@ function _verseReadingHTML(vr, solutionInfo) {
     </details>`;
 
   let othersHTML = "";
-  if (others.length) {
-    const count = others.length;
-    const cards = others.map(card).join("");
-    const moreBtn = count > 3
-      ? `<div style="text-align:center;margin-top:10px;">
-           <span class="verse-show-more" style="font-size:12px;color:var(--of-green,#0f7b3d);font-weight:600;cursor:pointer;"
-             onclick="this.closest('.verse-others').querySelectorAll('.verse-card[style*=none]').forEach(function(c){c.style.display='';});this.style.display='none';" data-translate>Show ${count - 3} more ↓</span>
-         </div>`
+  if (shown.length) {
+    const cards = shown.map(card).join("");
+    const moreNote = remaining > 0
+      ? `<div style="text-align:center;margin-top:10px;font-size:11.5px;color:var(--of-ink-soft,#8a9a8f);font-style:italic;" data-translate>and ${remaining} more verse${remaining > 1 ? "s" : ""} in the corpus</div>`
       : "";
     othersHTML = `
       <div class="verse-others" style="margin-top:18px;">
-        <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Ifá also speaks through ${count} more verse${count > 1 ? "s" : ""}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Ifá also speaks through these verses</div>
         ${cards}
-        ${moreBtn}
+        ${moreNote}
       </div>`;
   }
 
