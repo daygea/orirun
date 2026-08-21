@@ -504,6 +504,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   </section>
 
   <section class="ops" id="area-authoring" aria-label="My verses" style="display:none">
+    <div id="authoringNotice" style="display:none"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <h2 style="margin:0">My Verses</h2>
       <button class="btn btn-green" id="newVerseBtn" type="button" onclick="openVerseForm()">+ New verse</button>
@@ -594,6 +595,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   </section>
 
   <section class="ops" id="area-verify" aria-label="To verify" style="display:none">
+    <div id="verifyNotice" style="display:none"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <h2 style="margin:0">To Verify</h2>
       <button class="btn btn-ghost btn-sm" type="button" onclick="loadVerifyQueue()">Refresh</button>
@@ -1786,6 +1788,20 @@ async function loadVerifyQueue() {
   }
 }
 
+const STATUS_LABEL = {
+  draft: "draft", reviewed: "reviewed",
+  needs_revision: "needs revision", verified: "verified",
+};
+const STATUS_COLOR = {
+  draft: "#b8860b", reviewed: "#8a6d1b",
+  needs_revision: "#c0392b", verified: "#0f7b3d",
+};
+function statusChip(status) {
+  const s = status || "draft";
+  return '<span style="font-size:12px;font-weight:600;color:' + (STATUS_COLOR[s] || "#8a8a8a") + '">' +
+    escapeHtml(STATUS_LABEL[s] || s) + '</span>';
+}
+
 async function openVerifyDetail(verseId) {
   const panel = $("verifyDetail");
   panel.style.display = "block";
@@ -1801,7 +1817,14 @@ async function openVerifyDetail(verseId) {
       '<h3 style="margin:0">' + escapeHtml(v.odu) + '</h3>' +
       '<span style="font-size:12px;opacity:.7">from ' + escapeHtml(d.authorName || "a contributor") + '</span></div>';
 
-    // The verse text (read-only — elders don't edit others' words)
+    // Signer identity — entered once, inline (no prompt). Remembered for the session.
+    html += '<div style="background:#f6faf6;border:1px solid var(--line,#e6efe4);border-radius:8px;padding:10px 12px;margin:12px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<label style="font-size:12px;font-weight:600">Signing as:</label>' +
+      '<input id="vdSigner" type="text" placeholder="your name, as the verifying elder" value="' + escapeHtml(_verifyElderName || "") + '" ' +
+        'style="flex:1;min-width:180px;padding:7px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:13px">' +
+      '<span style="font-size:11px;opacity:.6">recorded with each sign-off</span></div>';
+
+    // Verse text (read-only)
     html += '<div style="margin:12px 0"><div style="font-size:12px;font-weight:600;opacity:.7;margin-bottom:4px">Yorùbá</div>' +
       '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml((v.yoruba || []).join("\n")) + '</div></div>';
     if ((v.english || []).length) {
@@ -1809,14 +1832,17 @@ async function openVerifyDetail(verseId) {
         '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml(v.english.join("\n")) + '</div></div>';
     }
 
-    // Verse verify action
+    // Verse verify + send-back (inline)
     const verseVerified = v.verseStatus === "verified";
-    html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-      '<span style="font-weight:600;font-size:13px">Verse text:</span>' +
-      (verseVerified
-        ? '<span style="color:#0f7b3d;font-weight:600;font-size:13px">✓ verified</span>'
-        : '<button class="btn btn-green btn-sm" onclick="verifyVersePart()">Verify verse</button>') +
-      '</div>';
+    html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px">' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+        '<span style="font-weight:600;font-size:13px">Verse text:</span>' + statusChip(v.verseStatus) +
+        (verseVerified ? '' :
+          '<button class="btn btn-green btn-sm" onclick="verifyPart(\'verse\',null)">Verify verse</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'verse\')">Send back</button>') +
+      '</div>' +
+      '<div id="sb-verse" style="display:none;margin-top:8px"></div>' +
+    '</div>';
 
     // Interpretations
     html += '<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Interpretations</div>';
@@ -1824,25 +1850,23 @@ async function openVerifyDetail(verseId) {
     if (!interps.length) html += '<div style="opacity:.6;font-size:13px">No interpretations submitted.</div>';
     for (const it of interps) {
       const done = it.status === "verified";
+      const oriEnc = encodeURIComponent(it.orientation);
       html += '<div style="border:1px solid var(--line,#e6efe4);border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
         '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
-          '<strong style="font-size:13px">' + escapeHtml(it.orientation) + '</strong>' +
-          (done ? '<span style="color:#0f7b3d;font-weight:600;font-size:12px">✓ verified</span>'
-                : '<span style="color:#b8860b;font-weight:600;font-size:12px">' + escapeHtml(it.status) + '</span>') +
+          '<strong style="font-size:13px">' + escapeHtml(it.orientation) + '</strong>' + statusChip(it.status) +
         '</div>' +
         '<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">' + escapeHtml(it.text || "") + '</div>' +
         (done ? '' :
           '<div style="margin-top:8px;display:flex;gap:8px">' +
-            '<button class="btn btn-green btn-sm" onclick="verifyInterpPart(\'' + encodeURIComponent(it.orientation) + '\')">Verify this</button>' +
-            '<button class="btn btn-ghost btn-sm" onclick="sendBackPart(\'' + encodeURIComponent(it.orientation) + '\')">Send back</button>' +
-          '</div>') +
+            '<button class="btn btn-green btn-sm" onclick="verifyPart(\'interp\',\'' + oriEnc + '\')">Verify this</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'' + oriEnc + '\')">Send back</button>' +
+          '</div>' +
+          '<div id="sb-' + oriEnc + '" style="display:none;margin-top:8px"></div>') +
         '</div>';
     }
     html += '</div>';
 
-    // Send back the whole verse
     html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px;display:flex;gap:8px">' +
-      '<button class="btn btn-ghost btn-sm" onclick="sendBackPart(null)">Send whole verse back with a note</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="closeVerifyDetail()">Close</button></div>';
 
     panel.innerHTML = html;
@@ -1858,57 +1882,109 @@ function closeVerifyDetail() {
   $("verifyDetail").style.display = "none";
   _verifyDetailId = null;
   loadVerifyQueue();
+  loadNotifications();
 }
 
-function askSignerName() {
-  const name = _verifyElderName || prompt("Your name as the verifying elder (recorded with your sign-off):", _verifyElderName || "");
-  if (name && name.trim()) { _verifyElderName = name.trim(); return _verifyElderName; }
-  return null;
+// Read the inline signer field, remember it for the session.
+function signerName() {
+  const el = $("vdSigner");
+  const name = (el && el.value.trim()) || _verifyElderName || "";
+  if (name) _verifyElderName = name;
+  return name;
 }
 
-async function verifyVersePart() {
-  const name = askSignerName();
-  if (!name) return;
-  if (!confirmAct("Verify this verse text? It will go live, signed by " + name + ".")) return;
+// Reveal an inline send-back note form (target = 'verse' or an encoded orientation).
+function toggleSendBack(target) {
+  const box = $("sb-" + target);
+  if (!box) return;
+  if (box.style.display === "block") { box.style.display = "none"; box.innerHTML = ""; return; }
+  const label = target === "verse" ? "this verse" : "the " + decodeURIComponent(target) + " interpretation";
+  box.innerHTML =
+    '<textarea id="sbtext-' + target + '" rows="2" placeholder="What should the contributor revise about ' + escapeHtml(label) + '?" ' +
+      'style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line,#d9e4dc);border-radius:6px;font-size:13px;font-family:inherit"></textarea>' +
+    '<div style="display:flex;gap:8px;margin-top:6px">' +
+      '<button class="btn btn-green btn-sm" onclick="submitSendBack(\'' + target + '\')">Send back with note</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'' + target + '\')">Cancel</button>' +
+    '</div>';
+  box.style.display = "block";
+  const ta = $("sbtext-" + target); if (ta) ta.focus();
+}
+
+async function verifyPart(kind, oriEnc) {
+  const name = signerName();
+  if (!name) { toast("Enter your name to sign off", true); const s = $("vdSigner"); if (s) s.focus(); return; }
+  const orientation = oriEnc ? decodeURIComponent(oriEnc) : null;
+  const what = kind === "verse" ? "verse text" : orientation + " interpretation";
+  if (!confirmAct("Verify the " + what + "? It goes live, signed by " + name + ".")) return;
   try {
-    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/verse",
-      { method: "POST", body: JSON.stringify({ name }) });
+    const url = kind === "verse"
+      ? "/verify/" + encodeURIComponent(_verifyDetailId) + "/verse"
+      : "/verify/" + encodeURIComponent(_verifyDetailId) + "/interpretation/" + encodeURIComponent(orientation);
+    const res = await studioApi(url, { method: "POST", body: JSON.stringify({ name }) });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Verify failed");
-    toast("Verse verified");
+    toast(what + " verified");
     openVerifyDetail(_verifyDetailId);
   } catch (err) { toast("Verify failed: " + err.message, true); }
 }
 
-async function verifyInterpPart(orientationEnc) {
-  const orientation = decodeURIComponent(orientationEnc);
-  const name = askSignerName();
-  if (!name) return;
-  if (!confirmAct("Verify the " + orientation + " interpretation? It will go live, signed by " + name + ".")) return;
-  try {
-    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/interpretation/" + encodeURIComponent(orientation),
-      { method: "POST", body: JSON.stringify({ name }) });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || "Verify failed");
-    toast(orientation + " interpretation verified");
-    openVerifyDetail(_verifyDetailId);
-  } catch (err) { toast("Verify failed: " + err.message, true); }
-}
-
-async function sendBackPart(orientationEnc) {
-  const orientation = orientationEnc ? decodeURIComponent(orientationEnc) : null;
-  const note = prompt(orientation
-    ? "What should the contributor revise about the " + orientation + " interpretation?"
-    : "What should the contributor revise about this verse?");
-  if (note == null || !note.trim()) return;
+async function submitSendBack(target) {
+  const ta = $("sbtext-" + target);
+  const note = ta ? ta.value.trim() : "";
+  if (!note) { toast("Write a note so the contributor knows what to revise", true); if (ta) ta.focus(); return; }
+  const orientation = target === "verse" ? null : decodeURIComponent(target);
   try {
     const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/send-back",
-      { method: "POST", body: JSON.stringify({ note: note.trim(), orientation }) });
+      { method: "POST", body: JSON.stringify({ note, orientation }) });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Send-back failed");
     toast("Sent back with your note");
     openVerifyDetail(_verifyDetailId);
   } catch (err) { toast("Send-back failed: " + err.message, true); }
+}
+
+/* ── Notifications: login notice + tab badges ──────────────── */
+async function loadNotifications() {
+  try {
+    const res = await studioApi("/notifications");
+    if (!res.ok) return;
+    const d = await res.json();
+
+    // Contributor notice: items an elder sent back.
+    const authNotice = $("authoringNotice");
+    if (authNotice) {
+      if (d.needsRevision > 0) {
+        authNotice.innerHTML =
+          '<div style="background:#fdf6e3;border:1px solid #e8d9a8;border-radius:8px;padding:12px 14px;margin-bottom:14px">' +
+          '<strong style="color:#8a6d1b">✎ ' + d.needsRevision + ' verse' + (d.needsRevision === 1 ? '' : 's') +
+          ' need' + (d.needsRevision === 1 ? 's' : '') + ' your revision.</strong> ' +
+          '<span style="font-size:13px;opacity:.8">An elder left feedback — open the verse to see their notes and revise.</span></div>';
+        authNotice.style.display = "block";
+      } else { authNotice.style.display = "none"; }
+    }
+    setTabBadge("authoring", d.needsRevision);
+
+    // Elder notice: work awaiting verification.
+    const vNotice = $("verifyNotice");
+    if (vNotice) {
+      if (d.toVerify > 0) {
+        vNotice.innerHTML =
+          '<div style="background:#eef6ee;border:1px solid #cfe6cf;border-radius:8px;padding:12px 14px;margin-bottom:14px">' +
+          '<strong style="color:#0f7b3d">' + d.toVerify + ' verse' + (d.toVerify === 1 ? '' : 's') +
+          ' await' + (d.toVerify === 1 ? 's' : '') + ' your sign-off.</strong></div>';
+        vNotice.style.display = "block";
+      } else { vNotice.style.display = "none"; }
+    }
+    setTabBadge("verify", d.toVerify);
+  } catch { /* notifications are best-effort */ }
+}
+
+function setTabBadge(area, count) {
+  const tab = document.querySelector('.area-tab[data-area="' + area + '"]');
+  if (!tab) return;
+  // Strip any existing badge, then re-add.
+  tab.textContent = tab.textContent.replace(/\s*\(\d+\)$/, "");
+  if (count > 0) tab.textContent = tab.textContent + " (" + count + ")";
 }
 
 async function loadMyVerses() {
@@ -2797,6 +2873,7 @@ function enterAuthoringMode(role) {
   });
   showArea("authoring");
   loadMyVerses();
+  loadNotifications();
 }
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
