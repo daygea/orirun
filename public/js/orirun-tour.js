@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#mainCast",
+        element: "#mainCastCombo",
         popover: {
           title:       "Choose Your Odù Ifá",
           description: "An Odù is a sacred chapter of Ifá. There are 256 in total. " +
@@ -357,7 +357,12 @@ document.addEventListener("DOMContentLoaded", function () {
       scrollIntoViewOptions: { behavior: "smooth", block: "center" },
 
       onHighlightStarted: function (element) {
-        if (window.innerWidth >= 576 || typeof window.orFormTab !== "function") return;
+        // Switch to the correct form tab BEFORE the element is measured — the
+        // divination and numerology fields live on separate tabs, and a field
+        // on a hidden tab has a zero-size box that Driver can't highlight (the
+        // tour would stall). This must run on every screen size, not just
+        // mobile — on desktop the inactive tab is hidden too.
+        if (typeof window.orFormTab !== "function") return;
         var node = element ? (element.node || (typeof element.getNode === "function" ? element.getNode() : element)) : null;
         var id = node && node.id ? node.id : "";
         if (id === "fullname-box" || id === "birthdate-box") {
@@ -366,13 +371,13 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (id === "calculator") {
           window.orFormTab("numerology");
           if (typeof window.orNumMethod === "function") window.orNumMethod("picknum");
-        } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
+        } else if (id === "mainCastCombo" || id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails" || id === "divination-btn") {
           window.orFormTab("discover");
         }
       },
 
       onReset: function () {
-        if (window.innerWidth < 576 && typeof window.orFormTab === "function") {
+        if (typeof window.orFormTab === "function") {
           window.orFormTab("discover");
         }
         [
@@ -417,10 +422,26 @@ document.addEventListener("DOMContentLoaded", function () {
       if (n && n.parentNode) n.parentNode.removeChild(n);
     });
 
-    /* Filter out steps whose target element doesn't exist */
+    /* Keep only steps whose target exists AND is actually visible. A hidden or
+       zero-size element (e.g. a display:none control, or a field on an inactive
+       tab that hasn't been switched to yet) has an empty box that Driver.js
+       can't highlight — it would silently stall the tour. Tabs are switched by
+       onHighlightStarted before measurement, so fields that live on a tab are
+       allowed through; we only drop elements that are truly not renderable. */
+    function isRenderable(sel) {
+      var n = document.querySelector(sel);
+      if (!n) return false;
+      // Allow known tabbed fields through — their tab is activated on highlight.
+      var tabbed = ["#mainCastCombo","#mainCast","#orientation","#specificOrientation","#solution","#solutionDetails","#divination-btn","#fullname-box","#birthdate-box","#calculator"];
+      if (tabbed.indexOf(sel) !== -1) return true;
+      var style = window.getComputedStyle(n);
+      if (style.display === "none" || style.visibility === "hidden") return false;
+      var r = n.getBoundingClientRect();
+      return (r.width > 0 && r.height > 0);
+    }
     var validSteps = buildSteps().filter(function (step) {
       if (step.element === "body") return true;
-      return !!document.querySelector(step.element);
+      return isRenderable(step.element);
     });
 
     if (!validSteps.length) {
