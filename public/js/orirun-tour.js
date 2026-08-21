@@ -116,12 +116,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var labelEl = anchorEl.previousElementSibling;
     if (!labelEl) return;
-    // Only wrap when the previous sibling really is the field's label — not
-    // another control (which can happen with the combobox's hidden <select>
-    // sibling). Wrapping a non-label would reorder the DOM and can break later
-    // steps, so bail safely instead.
-    var isLabel = labelEl.querySelector && (labelEl.querySelector("label") || labelEl.tagName === "LABEL");
-    if (!isLabel) return;
 
     var wrapper = document.createElement("div");
     wrapper.id = wrapperId;
@@ -138,11 +132,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function wrapFieldsForTour() {
     /* Divination selects — label-div sits directly before each <select> */
-    /* Divination fields. The Odù field is now a searchable combobox
-       (#mainCastCombo wraps the visible input; #mainCast is a hidden <select>).
-       Wrap the combobox — its previous sibling is the label div, like the
-       other fields. */
-    wrapWithLabel("tour-g-maincast",   document.getElementById("mainCastCombo") || document.getElementById("mainCast"));
+    wrapWithLabel("tour-g-maincast",   document.getElementById("mainCast"));
     wrapWithLabel("tour-g-orient",     document.getElementById("orientation"));
     wrapWithLabel("tour-g-specorient", document.getElementById("specificOrientation"));
     wrapWithLabel("tour-g-solution",   document.getElementById("solution"));
@@ -187,7 +177,7 @@ document.addEventListener("DOMContentLoaded", function () {
       },
 
       {
-        element: "#mainCastCombo",
+        element: "#mainCast",
         popover: {
           title:       "Choose Your Odù Ifá",
           description: "An Odù is a sacred chapter of Ifá. There are 256 in total. " +
@@ -376,7 +366,7 @@ document.addEventListener("DOMContentLoaded", function () {
         } else if (id === "calculator") {
           window.orFormTab("numerology");
           if (typeof window.orNumMethod === "function") window.orNumMethod("picknum");
-        } else if (id === "mainCastCombo" || id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
+        } else if (id === "mainCast" || id === "orientation" || id === "specificOrientation" || id === "solution" || id === "solutionDetails") {
           window.orFormTab("discover");
         }
       },
@@ -401,15 +391,22 @@ document.addEventListener("DOMContentLoaded", function () {
    *  4. START TOUR
    * ═══════════════════════════════════════════════════════ */
   async function startTour() {
-   try {
-    /* Driver.js is lazy-loaded (see lazy-libs.js) to keep it off the critical
-       path. Ensure it's present BEFORE we try to construct the tour — this is
-       the step that was missing, causing "Driver.js not loaded". */
+    /* Driver.js is lazy-loaded (lazy-libs.js) to stay off the critical path.
+       Ensure it's present before building the tour — without this it never
+       loads and the tour silently bails ("Driver.js not loaded"). */
     if (typeof window.Driver === "undefined" && typeof window.ensureLib === "function") {
       try { await window.ensureLib("driver"); } catch (e) {
         console.warn("Orírùn tour: could not load Driver.js.", e);
       }
     }
+    /* The first steps target .languageBtn and .historyBtn, which are
+       position:fixed. Driver.js v0.9 computes element positions as
+       getBoundingClientRect() + pageYOffset — correct for normal flow, but for
+       a FIXED element (pinned to the viewport) it double-counts the scroll,
+       placing the popover in the wrong spot (bottom-left) and breaking the
+       Next transition. Scrolling to the top makes pageYOffset 0, so the fixed
+       elements are positioned correctly. */
+    try { window.scrollTo(0, 0); } catch (e) {}
     /* Purge any leftover Driver DOM from previous runs */
     [
       "#driver-page-overlay",
@@ -481,9 +478,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }, 300);
     });
-   } catch (err) {
-     console.error("Orírùn tour: failed to start.", err);
-   }
   }
 
   /* ═══════════════════════════════════════════════════════
