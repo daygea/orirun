@@ -354,6 +354,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab" data-area="logs" onclick="showArea('logs')">Logs</button>
       <button class="area-tab" data-area="verses" onclick="showArea('verses')">Verses</button>
       <button class="area-tab" data-area="users" onclick="showArea('users')">Users</button>
+      <button class="area-tab" data-area="authoring" onclick="showArea('authoring')" style="display:none">My Verses</button>
     </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
@@ -482,7 +483,6 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
             style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
             <option value="babalawo">Babaláwo (contributor)</option>
             <option value="elder">Elder (verifier)</option>
-            <option value="printonly">Print-only</option>
             <option value="superadmin">Superadmin</option>
           </select>
         </label>
@@ -495,6 +495,81 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 
     <div class="log-count" id="usersNote" style="margin-bottom:10px"></div>
     <div id="usersList" style="display:flex;flex-direction:column;gap:8px"></div>
+  </section>
+
+  <section class="ops" id="area-authoring" aria-label="My verses" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">My Verses</h2>
+      <button class="btn btn-green" id="newVerseBtn" type="button" onclick="openVerseForm()">+ New verse</button>
+    </div>
+    <p style="font-size:13px;opacity:.8;margin:6px 0 14px;max-width:74ch">
+      Contribute verses and their interpretations. Your work is saved as a <strong>draft</strong>
+      and reviewed by an elder before it reaches seekers — nothing you write appears publicly until
+      it has been verified. You can keep editing a verse until it's verified.
+    </p>
+
+    <!-- The verse form (create / edit) — hidden until "New verse" or "Edit" -->
+    <div class="panel" id="verseFormPanel" style="display:none;margin-bottom:16px">
+      <h3 id="verseFormTitle" style="margin:0 0 12px">New verse</h3>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Odù
+          <div id="vfOduCombo" style="position:relative">
+            <input id="vfOduSearch" type="text" autocomplete="off" placeholder="Type to search the 256 Odù…"
+              style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box">
+            <ul id="vfOduList" role="listbox" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:240px;overflow-y:auto;margin:2px 0 0;padding:4px;list-style:none;background:#fff;border:1px solid var(--line,#d9e4dc);border-radius:8px;box-shadow:0 6px 20px rgba(10,60,40,.12)"></ul>
+          </div>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Title <span style="font-weight:400;opacity:.6">(a short handle — optional)</span>
+          <input id="vfTitle" type="text" autocomplete="off" placeholder="e.g. Ẹjìogbè on patience"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          The verse in Yorùbá <span style="font-weight:400;opacity:.6">(one line per line of verse)</span>
+          <textarea id="vfYoruba" rows="5" placeholder="Ifá ní kí a rúbọ&#10;kí a tó délé ayé…"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
+          <button class="btn btn-ghost btn-sm" id="vfDiacritics" type="button" onclick="suggestVerseDiacritics()"
+            style="align-self:flex-start">◌́ Suggest tone marks</button>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          The English meaning <span style="font-weight:400;opacity:.6">(one line per line)</span>
+          <textarea id="vfEnglish" rows="5" placeholder="Ifá says we should make sacrifice&#10;before we arrive in the world…"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Themes <span style="font-weight:400;opacity:.6">(comma-separated — optional)</span>
+          <input id="vfThemes" type="text" autocomplete="off" placeholder="sacrifice, patience, destiny"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        </label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-green" id="vfSave" type="button" onclick="saveVerse()">Save draft</button>
+          <button class="btn btn-ghost" type="button" onclick="closeVerseForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- The interpretations editor for a saved verse (hidden until a verse is open) -->
+    <div class="panel" id="interpEditorPanel" style="display:none;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0" id="interpEditorTitle">Interpretations</h3>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="closeInterpEditor()">Done</button>
+      </div>
+      <p style="font-size:12.5px;opacity:.75;margin:6px 0 12px">
+        Add what this verse says for each orientation it speaks to. Add only the orientations it addresses — not all ten.
+      </p>
+      <div id="interpList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;border-top:1px solid var(--line,#e6efe4);padding-top:12px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Orientation
+          <select id="interpOri" style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px"></select>
+        </label>
+        <button class="btn btn-green btn-sm" type="button" onclick="addInterpretation()">Add interpretation</button>
+      </div>
+    </div>
+
+    <div class="log-count" id="myVersesNote" style="margin-bottom:10px"></div>
+    <div id="myVersesList" style="display:flex;flex-direction:column;gap:8px"></div>
   </section>
     <div id="editorWrap" style="display:none;flex:1;flex-direction:column;min-height:0;min-width:0">
       <div class="editor-head">
@@ -1309,6 +1384,8 @@ window.showArea = function (area) {
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
   document.getElementById("area-verses").style.display = area === "verses" ? "flex" : "none";
   document.getElementById("area-users").style.display = area === "users" ? "flex" : "none";
+  var authArea = document.getElementById("area-authoring");
+  if (authArea) authArea.style.display = area === "authoring" ? "flex" : "none";
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
@@ -1427,10 +1504,9 @@ const ROLE_LABEL = {
   superadmin: "Superadmin",
   elder: "Elder (verifier)",
   babalawo: "Babaláwo (contributor)",
-  printonly: "Print-only",
 };
 const ROLE_COLOR = {
-  superadmin: "#b8860b", elder: "#0f7b3d", babalawo: "#6a4bb8", printonly: "#8a8a8a",
+  superadmin: "#b8860b", elder: "#0f7b3d", babalawo: "#6a4bb8",
 };
 
 async function loadUsers() {
@@ -1478,7 +1554,7 @@ async function loadUsers() {
       // Role changer
       const roleSel = document.createElement("select");
       roleSel.style.cssText = "padding:6px 8px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:12px";
-      ["babalawo", "elder", "printonly", "superadmin"].forEach((r) => {
+      ["babalawo", "elder", "superadmin"].forEach((r) => {
         const o = document.createElement("option");
         o.value = r; o.textContent = ROLE_LABEL[r]; if (r === u.role) o.selected = true;
         roleSel.appendChild(o);
@@ -1593,6 +1669,344 @@ async function deleteUser(id, username) {
     loadUsers();
   } catch (err) {
     toast("Delete failed: " + err.message, true);
+  }
+}
+
+/* ── Babaláwo / Elder authoring view ─────────────────────────
+   A contributor's scoped surface: their own draft verses, a guided form to
+   create/edit them, and a per-orientation interpretations editor. Talks to
+   the /api/studio endpoints (own-work-only, draft-only, never verify —
+   enforced server-side). */
+
+// studio-api: like api() but under /api/studio (the contributor surface).
+const studioApi = (p, opts = {}) =>
+  fetch(API_BASE + "/api/studio" + p, { credentials: "include",
+    headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, ...opts });
+
+let _authoringOdus = [];   // full Odù name list for the picker
+let _vfOduValue = "";      // currently chosen Odù in the form
+let _editingVerseId = null; // set when editing an existing verse
+let _openInterpVerseId = null;
+let _allOrientations = [];
+
+async function loadMyVerses() {
+  const list = $("myVersesList");
+  const note = $("myVersesNote");
+  if (!list) return;
+  list.innerHTML = orLoaderHTML("Loading your verses…");
+  try {
+    // Load the Odù list + orientations once, for the pickers.
+    if (!_authoringOdus.length) await loadAuthoringOdus();
+    const res = await studioApi("/my-verses");
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    const verses = d.verses || [];
+    if (note) note.textContent = verses.length + " verse" + (verses.length === 1 ? "" : "s");
+    list.innerHTML = "";
+    if (!verses.length) {
+      list.innerHTML = '<div style="opacity:.6;padding:6px 2px">No verses yet. Tap “+ New verse” to contribute your first.</div>';
+      return;
+    }
+    for (const v of verses) {
+      const sc = v.verseStatus === "verified" ? "#0f7b3d" : v.verseStatus === "reviewed" ? "#8a6d1b" : "#b8860b";
+      const card = document.createElement("div");
+      card.className = "panel";
+      card.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap";
+      card.innerHTML =
+        '<div style="min-width:0">' +
+          '<div style="font-weight:600;font-size:14px">' + escapeHtml(v.odu) +
+            (v.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(v.title) + '</span>' : '') + '</div>' +
+          '<div style="font-size:12px;margin-top:3px">' +
+            '<span style="font-weight:600;color:' + sc + '">' + escapeHtml(v.verseStatus) + '</span>' +
+            ' · ' + v.interpretationCount + ' interpretation' + (v.interpretationCount === 1 ? '' : 's') +
+            (v.editable ? '' : ' · <span style="opacity:.6">locked (verified)</span>') +
+          '</div>' +
+        '</div>';
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+      const interpBtn = document.createElement("button");
+      interpBtn.className = "btn btn-ghost btn-sm";
+      interpBtn.textContent = "Interpretations";
+      interpBtn.onclick = () => openInterpEditor(v.id);
+      actions.appendChild(interpBtn);
+      if (v.editable) {
+        const editBtn = document.createElement("button");
+        editBtn.className = "btn btn-green btn-sm";
+        editBtn.textContent = "Edit";
+        editBtn.onclick = () => openVerseForm(v.id);
+        actions.appendChild(editBtn);
+      }
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load your verses: " + err.message, true);
+  }
+}
+
+async function loadAuthoringOdus() {
+  // The Odù names come from the same generator the main app uses; the studio
+  // doesn't have it, so fetch the orientations from the backend and build the
+  // Odù list from the public verse odu list is not available — instead we ask
+  // the backend's orientations endpoint and use a static 16-base expansion.
+  try {
+    const res = await studioApi("/orientations");
+    const d = await res.json();
+    _allOrientations = d.all || [];
+  } catch { _allOrientations = []; }
+  // Build the 256 Odù names locally (same rule as the main app).
+  _authoringOdus = buildOduNames();
+}
+
+// The 16 principal Odù and the 256-name expansion (mirrors the main app).
+function buildOduNames() {
+  const base = ["Ejiogbe","Oyeku Meji","Iwori Meji","Idi Meji","Irosun Meji","Owonrin Meji",
+    "Obara Meji","Okanran Meji","Ogunda Meji","Osa Meji","Ika Meji","Oturupon Meji",
+    "Otura Meji","Irete Meji","Ose Meji","Ofun Meji"];
+  const names = base.slice();
+  base.forEach((a) => base.forEach((b) => {
+    if (a !== b) {
+      const first = a === "Ejiogbe" ? "Ogbe" : a.split(" ")[0];
+      const second = b === "Ejiogbe" ? "Ogbe" : b.split(" ")[0];
+      names.push(first + " " + second);
+    }
+  }));
+  return names;
+}
+
+/* ── Odù combobox inside the verse form ── */
+function initVerseFormCombo() {
+  const input = $("vfOduSearch"), listEl = $("vfOduList");
+  if (!input || !listEl) return;
+  let active = -1;
+  const filter = (q) => {
+    const s = q.trim().toLowerCase();
+    if (!s) return _authoringOdus;
+    return _authoringOdus.filter((n) => n.toLowerCase().includes(s));
+  };
+  const choose = (name) => {
+    if (!_authoringOdus.includes(name)) return;
+    _vfOduValue = name; input.value = name; close();
+  };
+  const render = (items) => {
+    listEl.innerHTML = "";
+    if (!items.length) { listEl.innerHTML = '<li style="padding:8px 10px;color:#8a9a8f;font-style:italic">No matching Odù</li>'; open(); return; }
+    items.forEach((name, i) => {
+      const li = document.createElement("li");
+      li.textContent = name;
+      li.style.cssText = "padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;" + (i === active ? "background:#eef6ee" : "");
+      li.addEventListener("mousedown", (e) => { e.preventDefault(); choose(name); });
+      listEl.appendChild(li);
+    });
+    open();
+  };
+  const open = () => { listEl.style.display = "block"; };
+  const close = () => { listEl.style.display = "none"; active = -1; };
+  input.oninput = () => { active = -1; render(filter(input.value)); };
+  input.onfocus = () => { active = -1; render(filter(input.value)); };
+  input.onkeydown = (e) => {
+    const items = Array.from(listEl.querySelectorAll("li"));
+    if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(filter(input.value)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(filter(input.value)); }
+    else if (e.key === "Enter") { e.preventDefault(); if (active >= 0 && items[active]) choose(items[active].textContent); }
+    else if (e.key === "Escape") close();
+  };
+  document.addEventListener("click", (e) => {
+    if (!$("vfOduCombo")?.contains(e.target)) { close(); if (input.value !== _vfOduValue) input.value = _vfOduValue || ""; }
+  });
+}
+
+async function openVerseForm(verseId) {
+  _editingVerseId = verseId || null;
+  $("verseFormPanel").style.display = "block";
+  $("interpEditorPanel").style.display = "none";
+  $("verseFormTitle").textContent = verseId ? "Edit verse" : "New verse";
+  initVerseFormCombo();
+  if (verseId) {
+    // Load the verse and fill the form.
+    try {
+      const res = await studioApi("/verses/" + encodeURIComponent(verseId));
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Load failed");
+      const v = d.verse;
+      _vfOduValue = v.odu; $("vfOduSearch").value = v.odu;
+      $("vfTitle").value = v.title || "";
+      $("vfYoruba").value = (v.yoruba || []).join("\n");
+      $("vfEnglish").value = (v.english || []).join("\n");
+      $("vfThemes").value = (v.themes || []).join(", ");
+    } catch (err) { toast("Couldn't load verse: " + err.message, true); }
+  } else {
+    _vfOduValue = ""; $("vfOduSearch").value = "";
+    $("vfTitle").value = ""; $("vfYoruba").value = ""; $("vfEnglish").value = ""; $("vfThemes").value = "";
+  }
+  $("verseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeVerseForm() {
+  $("verseFormPanel").style.display = "none";
+  _editingVerseId = null;
+}
+
+async function saveVerse() {
+  const btn = $("vfSave");
+  const odu = _vfOduValue;
+  const yoruba = $("vfYoruba").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const english = $("vfEnglish").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const title = $("vfTitle").value.trim();
+  const themes = $("vfThemes").value.split(",").map((t) => t.trim()).filter(Boolean);
+  if (!odu) { toast("Choose an Odù for this verse", true); return; }
+  if (!yoruba.length) { toast("Enter the verse in Yorùbá", true); return; }
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    const payload = { odu, yoruba, english, title, themes };
+    const res = _editingVerseId
+      ? await studioApi("/verses/" + encodeURIComponent(_editingVerseId), { method: "PUT", body: JSON.stringify(payload) })
+      : await studioApi("/verses", { method: "POST", body: JSON.stringify(payload) });
+    const d = await res.json();
+    if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
+    toast(_editingVerseId ? "Verse updated" : "Draft verse saved");
+    closeVerseForm();
+    loadMyVerses();
+  } catch (err) {
+    toast("Save failed: " + err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save draft"; }
+  }
+}
+
+async function suggestVerseDiacritics() {
+  const btn = $("vfDiacritics");
+  const lines = $("vfYoruba").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) { toast("Enter the Yorùbá text first", true); return; }
+  if (btn) { btn.disabled = true; btn.textContent = "◌́ Suggesting…"; }
+  try {
+    // Reuse the admin diacritic suggester if this user can reach it; otherwise
+    // this is a helper only elders/superadmins have. For babaláwos we still
+    // offer it via the studio surface if the backend exposes it there.
+    const res = await studioApi("/suggest-diacritics", { method: "POST", body: JSON.stringify({ yoruba: lines }) });
+    if (res.status === 404) { toast("Tone-mark helper isn't available for your account yet.", true); return; }
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Suggestion failed");
+    if (Array.isArray(d.suggestion) && d.suggestion.length) {
+      if (confirmAct("Replace the Yorùbá text with the suggested tone marks? Review every mark after — the machine can be wrong.")) {
+        $("vfYoruba").value = d.suggestion.join("\n");
+        toast("Tone marks applied — please review every line before saving.");
+      }
+    }
+  } catch (err) {
+    toast("Suggestion failed: " + err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "◌́ Suggest tone marks"; }
+  }
+}
+
+/* ── Interpretations editor ── */
+async function openInterpEditor(verseId) {
+  _openInterpVerseId = verseId;
+  $("verseFormPanel").style.display = "none";
+  $("interpEditorPanel").style.display = "block";
+  // Fill the orientation picker.
+  const sel = $("interpOri");
+  sel.innerHTML = "";
+  _allOrientations.forEach((o) => {
+    const opt = document.createElement("option"); opt.value = o; opt.textContent = o; sel.appendChild(opt);
+  });
+  await refreshInterpList();
+  $("interpEditorPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeInterpEditor() {
+  $("interpEditorPanel").style.display = "none";
+  _openInterpVerseId = null;
+  loadMyVerses();
+}
+
+async function refreshInterpList() {
+  const wrap = $("interpList");
+  wrap.innerHTML = orLoaderHTML("Loading…");
+  try {
+    const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId));
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Load failed");
+    const v = d.verse;
+    $("interpEditorTitle").textContent = "Interpretations · " + v.odu;
+    const interps = v.interpretations || [];
+    wrap.innerHTML = "";
+    if (!interps.length) {
+      wrap.innerHTML = '<div style="opacity:.6;font-size:13px">No interpretations yet. Add one below.</div>';
+    }
+    for (const it of interps) {
+      const locked = it.status === "verified";
+      const row = document.createElement("div");
+      row.style.cssText = "border:1px solid var(--line,#e6efe4);border-radius:8px;padding:10px 12px";
+      row.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<strong style="font-size:13px">' + escapeHtml(it.orientation) + '</strong>' +
+          '<span style="font-size:11px;font-weight:600;color:' + (locked ? "#0f7b3d" : "#b8860b") + '">' + escapeHtml(it.status) + '</span>' +
+        '</div>' +
+        '<textarea ' + (locked ? "disabled" : "") + ' rows="3" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line,#d9e4dc);border-radius:6px;font-size:13px;line-height:1.6;font-family:inherit">' + escapeHtml(it.text || "") + '</textarea>';
+      if (!locked) {
+        const acts = document.createElement("div");
+        acts.style.cssText = "display:flex;gap:8px;margin-top:8px";
+        const save = document.createElement("button");
+        save.className = "btn btn-green btn-sm"; save.textContent = "Save";
+        save.onclick = () => saveInterpretation(it.orientation, row.querySelector("textarea").value);
+        const del = document.createElement("button");
+        del.className = "btn btn-ghost btn-sm"; del.textContent = "Remove";
+        del.onclick = () => removeInterpretation(it.orientation);
+        acts.appendChild(save); acts.appendChild(del);
+        row.appendChild(acts);
+      } else {
+        const note = document.createElement("div");
+        note.style.cssText = "font-size:11px;opacity:.6;margin-top:6px";
+        note.textContent = "Verified by an elder — locked.";
+        row.appendChild(note);
+      }
+      wrap.appendChild(row);
+    }
+  } catch (err) {
+    wrap.innerHTML = "";
+    toast("Failed to load interpretations: " + err.message, true);
+  }
+}
+
+async function addInterpretation() {
+  const ori = $("interpOri").value;
+  await saveInterpretation(ori, "");
+  // After adding an empty one, refresh so the textarea appears to fill in.
+}
+
+async function saveInterpretation(orientation, text) {
+  if (!text || !text.trim()) {
+    // Adding a brand-new orientation with no text yet — prompt for it.
+    const entered = prompt("Interpretation for " + orientation + ":");
+    if (entered == null || !entered.trim()) return;
+    text = entered.trim();
+  }
+  try {
+    const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
+      { method: "PUT", body: JSON.stringify({ text }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
+    toast("Interpretation for " + orientation + " saved");
+    refreshInterpList();
+  } catch (err) {
+    toast("Save failed: " + err.message, true);
+  }
+}
+
+async function removeInterpretation(orientation) {
+  if (!confirmAct("Remove the interpretation for " + orientation + "?")) return;
+  try {
+    const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
+      { method: "DELETE" });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Remove failed");
+    toast("Removed " + orientation);
+    refreshInterpList();
+  } catch (err) {
+    toast("Remove failed: " + err.message, true);
   }
 }
 
@@ -2050,7 +2464,38 @@ async function revealApp() {
   isAuthed = true;
   setLoggedOutChrome(false);
   $("authState").style.display = "none";
-  await loadCollections();
+  const role = window.__STAFF_ROLE__ || "";
+  if (role === "babalawo" || role === "elder") {
+    // Scoped authoring view — contributors never see the full console.
+    enterAuthoringMode(role);
+  } else {
+    // superadmin — the full studio.
+    await loadCollections();
+  }
+}
+
+/* Contributor (babaláwo / elder) view. Hides every superadmin surface — the
+   collections rail, editor, dashboard, logs, users, backups — and shows only
+   the authoring area. Backend routes enforce the same limits, so this is a
+   clean UI, not a security boundary on its own. */
+function enterAuthoringMode(role) {
+  // Hide the area tabs that don't belong to contributors.
+  document.querySelectorAll(".area-tab").forEach((t) => {
+    const keep = t.dataset.area === "authoring";
+    t.style.display = keep ? "" : "none";
+    t.classList.toggle("is-active", keep);
+  });
+  // Hide the three-pane content shell entirely.
+  [".shell > nav", ".shell > .items", ".shell > main"].forEach((sel) => {
+    const el = document.querySelector(sel);
+    if (el) el.style.display = "none";
+  });
+  ["area-dashboard", "area-logs", "area-verses", "area-users"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+  showArea("authoring");
+  loadMyVerses();
 }
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -2068,7 +2513,11 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Sign-in failed");
-    if (data.role !== "superadmin") throw new Error("This console needs a superadmin account.");
+    // The studio now serves three signed-in roles: superadmin (full console),
+    // and elder/babalawo (a scoped authoring view). Other roles are rejected.
+    if (!["superadmin", "elder", "babalawo"].includes(data.role)) {
+      throw new Error("This account can't sign in to the studio.");
+    }
     $("loginPass").value = "";
     toast("Signed in as " + (data.username || data.role));
     await refreshSessionChip();
@@ -2095,7 +2544,7 @@ if (location.protocol === "file:") {
 (async function boot() {
   setLoggedOutChrome(true);
   const me = await refreshSessionChip();
-  if (me?.authenticated && me.role === "superadmin") {
+  if (me?.authenticated && ["superadmin", "elder", "babalawo"].includes(me.role)) {
     await revealApp();
   } else {
     gateToLogin();

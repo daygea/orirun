@@ -152,7 +152,7 @@ function _verseReadingHTML(vr, solutionInfo) {
   // Ẹbọ — the actionable heart, surfaced into its own box rather than buried.
   const eboBox = solutionInfo && solutionInfo !== "No solution info available." ? `
     <div style="background:var(--of-brass-wash,#fbf5e9);border:1px solid var(--of-brass-line,#e7d6a8);border-radius:8px;padding:11px 13px;margin:16px 0;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-brass,#8a5a2b);font-weight:700;margin-bottom:4px;" data-translate>The ẹbọ to make</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-brass,#8a5a2b);font-weight:700;margin-bottom:4px;" data-translate>◈ The ẹbọ to make</div>
       <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(solutionInfo)}</div>
     </div>` : "";
 
@@ -776,14 +776,6 @@ const populateDropdowns = async () => {
   try {
     const mainCastDropdown = document.getElementById("mainCast");
     populateDropdown(mainCastDropdown, allOdus.map(odu => odu.name));
-    // No silent default: prepend an empty option and select it, so the Odù
-    // field starts genuinely unset (matching the empty combobox placeholder)
-    // rather than auto-selecting Ejiogbe. A reading requires a real choice.
-    const blankOpt = document.createElement("option");
-    blankOpt.value = "";
-    blankOpt.textContent = "";
-    mainCastDropdown.insertBefore(blankOpt, mainCastDropdown.firstChild);
-    mainCastDropdown.value = "";
     initOduCombobox();
     await Promise.all([updateSpecificOrientation(), updateSolutionDetails()]);
   } catch (error) {
@@ -939,20 +931,6 @@ const performUserDivination = async (
   const solutionDetails     = getInputValue("solutionDetails",     solutionDetailsParam);
   const orientationText     = orientation === "Positive" ? "Ire" : "Ayewo";
   const resultElement       = document.getElementById("divinationResult");
-
-  // No Odù chosen yet — the field starts empty by design. Prompt for a real
-  // selection rather than silently reading a phantom default.
-  if (!mainCast) {
-    const search = document.getElementById("mainCastSearch");
-    if (resultElement) {
-      resultElement.innerHTML =
-        "<p style='color:#0c3d24;font-size:14px;text-align:center;padding:10px;'>" +
-        "Please choose an Odù to reveal its wisdom — type to search the 256 Odù, or cast with the opèlè." +
-        "</p>";
-    }
-    if (search) { try { search.focus(); } catch (e) {} }
-    return;
-  }
 
   showPreloader();
 
@@ -2704,8 +2682,6 @@ async function loginAdmin() {
     document.querySelectorAll(".admin-dashboard").forEach(el => { el.style.display = "none"; });
     if (data.role === "superadmin") {
       document.getElementById("dashboard-superadmin").style.display = "block";
-    } else if (data.role === "printonly") {
-      document.getElementById("dashboard-printonly").style.display = "block";
     }
   } catch (err) {
     console.error("Login error:", err);
