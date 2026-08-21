@@ -2540,7 +2540,11 @@ async function revealApp() {
     // Scoped authoring view — contributors never see the full console.
     enterAuthoringMode(role);
   } else {
-    // superadmin — the full studio.
+    // superadmin — the full studio. Normalize the layout first so no leftover
+    // area section (which shares main's grid cell) can overlap the content
+    // pane, then load. showArea("content") shows main + hides every .ops area.
+    document.querySelectorAll(".area-tab").forEach((t) => { t.style.display = ""; });
+    showArea("content");
     await loadCollections();
   }
 }
