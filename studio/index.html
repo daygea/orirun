@@ -360,6 +360,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab" data-area="verses" onclick="showArea('verses')">Verses</button>
       <button class="area-tab" data-area="users" onclick="showArea('users')">Users</button>
       <button class="area-tab" data-area="authoring" onclick="showArea('authoring')" style="display:none">My Verses</button>
+      <button class="area-tab" data-area="verify" onclick="showArea('verify')" style="display:none">To Verify</button>
     </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
@@ -590,6 +591,24 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 
     <div class="log-count" id="myVersesNote" style="margin-bottom:10px"></div>
     <div id="myVersesList" style="display:flex;flex-direction:column;gap:8px"></div>
+  </section>
+
+  <section class="ops" id="area-verify" aria-label="To verify" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">To Verify</h2>
+      <button class="btn btn-ghost btn-sm" type="button" onclick="loadVerifyQueue()">Refresh</button>
+    </div>
+    <p style="font-size:13px;opacity:.8;margin:6px 0 14px;max-width:74ch">
+      Work from other contributors awaiting your sign-off. Verifying a verse or an interpretation makes it live and
+      records your name as the elder who vouched for it. You won't see your own contributions here — those must be
+      verified by a different elder. If something isn't right, <strong>send it back</strong> with a note instead of
+      changing the contributor's words.
+    </p>
+    <div class="log-count" id="verifyNote" style="margin-bottom:10px"></div>
+    <div id="verifyList" style="display:flex;flex-direction:column;gap:8px"></div>
+
+    <!-- Detail panel for verifying one verse (opens on "Review") -->
+    <div class="panel" id="verifyDetail" style="display:none;margin-top:16px"></div>
   </section>
 
   <main>
@@ -1408,6 +1427,8 @@ window.showArea = function (area) {
   document.getElementById("area-users").style.display = area === "users" ? "flex" : "none";
   var authArea = document.getElementById("area-authoring");
   if (authArea) authArea.style.display = area === "authoring" ? "flex" : "none";
+  var verifyArea = document.getElementById("area-verify");
+  if (verifyArea) verifyArea.style.display = area === "verify" ? "flex" : "none";
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
@@ -1420,6 +1441,9 @@ window.showArea = function (area) {
   } else if (area === "users") {
     orTopbarStart();
     Promise.resolve(loadUsers()).finally(orTopbarDone);
+  } else if (area === "verify") {
+    orTopbarStart();
+    Promise.resolve(loadVerifyQueue()).finally(orTopbarDone);
   }
 };
 
@@ -1711,6 +1735,182 @@ let _editingVerseId = null; // set when editing an existing verse
 let _openInterpVerseId = null;
 let _allOrientations = [];
 
+/* ── Elder verification surface ──────────────────────────────
+   Elders verify OTHERS' work (four-eyes: never their own — the backend
+   enforces it and their own work never appears in the queue). Granular:
+   verse text and each interpretation signed separately. If something's off,
+   send it back with a note rather than editing the contributor's words. */
+let _verifyElderName = ""; // remembered signer name for this session
+
+async function loadVerifyQueue() {
+  const list = $("verifyList");
+  const note = $("verifyNote");
+  if (!list) return;
+  $("verifyDetail").style.display = "none";
+  list.innerHTML = orLoaderHTML("Loading work to verify…");
+  try {
+    const res = await studioApi("/verify-queue");
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    const d = await res.json();
+    const items = d.items || [];
+    if (note) note.textContent = items.length + " awaiting your sign-off";
+    list.innerHTML = "";
+    if (!items.length) {
+      list.innerHTML = '<div style="opacity:.6;padding:6px 2px">Nothing to verify right now. 🎉</div>';
+      return;
+    }
+    for (const it of items) {
+      const row = document.createElement("div");
+      row.className = "panel";
+      row.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap";
+      var bits = [];
+      if (it.verseNeedsVerify) bits.push('<span style="font-weight:600;color:#b8860b">verse: ' + escapeHtml(it.verseStatus) + '</span>');
+      if (it.pendingInterpretations.length) bits.push('<span style="font-weight:600;color:#0f7b3d">' + it.pendingInterpretations.length + ' interp. pending</span>');
+      row.innerHTML =
+        '<div style="min-width:0">' +
+          '<div style="font-weight:600;font-size:14px">' + escapeHtml(it.odu) +
+            (it.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(it.title) + '</span>' : '') + '</div>' +
+          '<div style="font-size:12px;margin-top:3px">' + bits.join(" · ") +
+            (it.contributor ? ' · <span style="opacity:.7">from ' + escapeHtml(it.contributor) + '</span>' : '') + '</div>' +
+        '</div>';
+      const btn = document.createElement("button");
+      btn.className = "btn btn-green btn-sm";
+      btn.textContent = "Review →";
+      btn.onclick = () => openVerifyDetail(it.id);
+      row.appendChild(btn);
+      list.appendChild(row);
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load verify queue: " + err.message, true);
+  }
+}
+
+async function openVerifyDetail(verseId) {
+  const panel = $("verifyDetail");
+  panel.style.display = "block";
+  panel.innerHTML = orLoaderHTML("Loading verse…");
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(verseId));
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Load failed");
+    const v = d.verse;
+    _verifyDetailId = verseId;
+
+    let html = '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">' +
+      '<h3 style="margin:0">' + escapeHtml(v.odu) + '</h3>' +
+      '<span style="font-size:12px;opacity:.7">from ' + escapeHtml(d.authorName || "a contributor") + '</span></div>';
+
+    // The verse text (read-only — elders don't edit others' words)
+    html += '<div style="margin:12px 0"><div style="font-size:12px;font-weight:600;opacity:.7;margin-bottom:4px">Yorùbá</div>' +
+      '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml((v.yoruba || []).join("\n")) + '</div></div>';
+    if ((v.english || []).length) {
+      html += '<div style="margin:12px 0"><div style="font-size:12px;font-weight:600;opacity:.7;margin-bottom:4px">English</div>' +
+        '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml(v.english.join("\n")) + '</div></div>';
+    }
+
+    // Verse verify action
+    const verseVerified = v.verseStatus === "verified";
+    html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<span style="font-weight:600;font-size:13px">Verse text:</span>' +
+      (verseVerified
+        ? '<span style="color:#0f7b3d;font-weight:600;font-size:13px">✓ verified</span>'
+        : '<button class="btn btn-green btn-sm" onclick="verifyVersePart()">Verify verse</button>') +
+      '</div>';
+
+    // Interpretations
+    html += '<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Interpretations</div>';
+    const interps = v.interpretations || [];
+    if (!interps.length) html += '<div style="opacity:.6;font-size:13px">No interpretations submitted.</div>';
+    for (const it of interps) {
+      const done = it.status === "verified";
+      html += '<div style="border:1px solid var(--line,#e6efe4);border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">' +
+          '<strong style="font-size:13px">' + escapeHtml(it.orientation) + '</strong>' +
+          (done ? '<span style="color:#0f7b3d;font-weight:600;font-size:12px">✓ verified</span>'
+                : '<span style="color:#b8860b;font-weight:600;font-size:12px">' + escapeHtml(it.status) + '</span>') +
+        '</div>' +
+        '<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">' + escapeHtml(it.text || "") + '</div>' +
+        (done ? '' :
+          '<div style="margin-top:8px;display:flex;gap:8px">' +
+            '<button class="btn btn-green btn-sm" onclick="verifyInterpPart(\'' + encodeURIComponent(it.orientation) + '\')">Verify this</button>' +
+            '<button class="btn btn-ghost btn-sm" onclick="sendBackPart(\'' + encodeURIComponent(it.orientation) + '\')">Send back</button>' +
+          '</div>') +
+        '</div>';
+    }
+    html += '</div>';
+
+    // Send back the whole verse
+    html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px;display:flex;gap:8px">' +
+      '<button class="btn btn-ghost btn-sm" onclick="sendBackPart(null)">Send whole verse back with a note</button>' +
+      '<button class="btn btn-ghost btn-sm" onclick="closeVerifyDetail()">Close</button></div>';
+
+    panel.innerHTML = html;
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    panel.innerHTML = '<div style="color:#c0392b">' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+let _verifyDetailId = null;
+
+function closeVerifyDetail() {
+  $("verifyDetail").style.display = "none";
+  _verifyDetailId = null;
+  loadVerifyQueue();
+}
+
+function askSignerName() {
+  const name = _verifyElderName || prompt("Your name as the verifying elder (recorded with your sign-off):", _verifyElderName || "");
+  if (name && name.trim()) { _verifyElderName = name.trim(); return _verifyElderName; }
+  return null;
+}
+
+async function verifyVersePart() {
+  const name = askSignerName();
+  if (!name) return;
+  if (!confirmAct("Verify this verse text? It will go live, signed by " + name + ".")) return;
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/verse",
+      { method: "POST", body: JSON.stringify({ name }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Verify failed");
+    toast("Verse verified");
+    openVerifyDetail(_verifyDetailId);
+  } catch (err) { toast("Verify failed: " + err.message, true); }
+}
+
+async function verifyInterpPart(orientationEnc) {
+  const orientation = decodeURIComponent(orientationEnc);
+  const name = askSignerName();
+  if (!name) return;
+  if (!confirmAct("Verify the " + orientation + " interpretation? It will go live, signed by " + name + ".")) return;
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/interpretation/" + encodeURIComponent(orientation),
+      { method: "POST", body: JSON.stringify({ name }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Verify failed");
+    toast(orientation + " interpretation verified");
+    openVerifyDetail(_verifyDetailId);
+  } catch (err) { toast("Verify failed: " + err.message, true); }
+}
+
+async function sendBackPart(orientationEnc) {
+  const orientation = orientationEnc ? decodeURIComponent(orientationEnc) : null;
+  const note = prompt(orientation
+    ? "What should the contributor revise about the " + orientation + " interpretation?"
+    : "What should the contributor revise about this verse?");
+  if (note == null || !note.trim()) return;
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/send-back",
+      { method: "POST", body: JSON.stringify({ note: note.trim(), orientation }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Send-back failed");
+    toast("Sent back with your note");
+    openVerifyDetail(_verifyDetailId);
+  } catch (err) { toast("Send-back failed: " + err.message, true); }
+}
+
 async function loadMyVerses() {
   const list = $("myVersesList");
   const note = $("myVersesNote");
@@ -1741,6 +1941,7 @@ async function loadMyVerses() {
           '<div style="font-size:12px;margin-top:3px">' +
             '<span style="font-weight:600;color:' + sc + '">' + escapeHtml(v.verseStatus) + '</span>' +
             ' · ' + v.interpretationCount + ' interpretation' + (v.interpretationCount === 1 ? '' : 's') +
+            (v.reviewNoteCount ? ' · <span style="color:#b8860b;font-weight:600">✎ ' + v.reviewNoteCount + ' elder note' + (v.reviewNoteCount === 1 ? '' : 's') + '</span>' : '') +
             (v.editable ? '' : ' · <span style="opacity:.6">locked (verified)</span>') +
           '</div>' +
         '</div>';
@@ -2019,6 +2220,23 @@ async function refreshInterpList() {
     if (!res.ok) throw new Error(d.error || "Load failed");
     const v = d.verse;
     $("interpEditorTitle").textContent = "Interpretations · " + v.odu;
+    // Surface any elder send-back notes so the contributor knows what to revise.
+    const notes = Array.isArray(v.reviewNotes) ? v.reviewNotes : [];
+    const existingBanner = document.getElementById("interpReviewNotes");
+    if (existingBanner) existingBanner.remove();
+    if (notes.length) {
+      const banner = document.createElement("div");
+      banner.id = "interpReviewNotes";
+      banner.style.cssText = "background:#fdf6e3;border:1px solid #e8d9a8;border-radius:8px;padding:10px 12px;margin-bottom:12px";
+      banner.innerHTML = '<div style="font-size:12px;font-weight:700;color:#8a6d1b;margin-bottom:6px">✎ Elder feedback</div>' +
+        notes.map((n) =>
+          '<div style="font-size:12.5px;line-height:1.5;margin-bottom:4px">' +
+          (n.orientation ? '<strong>' + escapeHtml(n.orientation) + ':</strong> ' : '') +
+          escapeHtml(n.note || "") +
+          (n.by ? ' <span style="opacity:.6">— ' + escapeHtml(n.by) + '</span>' : '') +
+          '</div>').join("");
+      $("interpList").parentNode.insertBefore(banner, $("interpList"));
+    }
     const interps = v.interpretations || [];
     _interpTaken = interps.map((it) => it.orientation);
     wrap.innerHTML = "";
@@ -2561,11 +2779,12 @@ async function revealApp() {
    the authoring area. Backend routes enforce the same limits, so this is a
    clean UI, not a security boundary on its own. */
 function enterAuthoringMode(role) {
-  // Hide the area tabs that don't belong to contributors.
+  // Contributors see "My Verses"; elders also see "To Verify".
+  const allowed = role === "elder" ? ["authoring", "verify"] : ["authoring"];
   document.querySelectorAll(".area-tab").forEach((t) => {
-    const keep = t.dataset.area === "authoring";
+    const keep = allowed.includes(t.dataset.area);
     t.style.display = keep ? "" : "none";
-    t.classList.toggle("is-active", keep);
+    t.classList.toggle("is-active", t.dataset.area === "authoring");
   });
   // Hide the three-pane content shell entirely.
   [".shell > nav", ".shell > .items", ".shell > main"].forEach((sel) => {
