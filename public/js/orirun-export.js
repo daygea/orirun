@@ -197,6 +197,38 @@
         n.setAttribute("aria-expanded", "true");
       }
     });
+
+    // The verse-driven reading uses <details>/<summary> for the verse toggles
+    // and supporting-verse cards, which collapse via the `open` attribute
+    // (not CSS). Force every <details> open on the CLONE so the full reading —
+    // verse text and all supporting interpretations — appears in the PDF.
+    root.querySelectorAll("details").forEach(function (d) {
+      d.setAttribute("open", "");
+      d.open = true;
+    });
+    // Hide the disclosure triangle on <summary> in the print clone, and let
+    // the summary sit as a plain block — the content below it carries the full
+    // text, so the reading reads cleanly top to bottom in the PDF.
+    root.querySelectorAll("summary").forEach(function (s) {
+      s.style.listStyle = "none";
+      s.style.display = "block";
+      s.style.cursor = "default";
+    });
+    // Supporting-verse cards show a truncated teaser in the summary and the
+    // FULL interpretation in the body. In the PDF both are visible, so drop the
+    // teaser summary to avoid repeating the opening sentence — the full text
+    // remains. (The "The verse" toggle summary is a label, so keep those.)
+    root.querySelectorAll(".verse-card > summary").forEach(function (s) {
+      var contributor = s.querySelector("span[style*='white-space']");
+      // Keep the contributor chip if present; drop the teaser text.
+      if (contributor) {
+        s.innerHTML = "";
+        s.appendChild(contributor);
+        s.style.textAlign = "right";
+      } else {
+        s.style.display = "none";
+      }
+    });
     root.style.position = "static";
     root.style.color = root.style.color || "#22332b";
   }
