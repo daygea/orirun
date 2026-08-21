@@ -152,7 +152,7 @@ function _verseReadingHTML(vr, solutionInfo) {
   // Ẹbọ — the actionable heart, surfaced into its own box rather than buried.
   const eboBox = solutionInfo && solutionInfo !== "No solution info available." ? `
     <div style="background:var(--of-brass-wash,#fbf5e9);border:1px solid var(--of-brass-line,#e7d6a8);border-radius:8px;padding:11px 13px;margin:16px 0;">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-brass,#8a5a2b);font-weight:700;margin-bottom:4px;" data-translate>The ẹbọ to make</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--of-brass,#8a5a2b);font-weight:700;margin-bottom:4px;" data-translate>◈ The ẹbọ to make</div>
       <div style="font-size:13.5px;color:var(--of-ink);line-height:1.5;" data-translate>${esc(solutionInfo)}</div>
     </div>` : "";
 
@@ -708,8 +708,13 @@ document.getElementById("solution").addEventListener("change", updateSolutionDet
 document.addEventListener("change", async function (event) {
   if (event.target.id === "mainCast") {
     const selectedOdu = event.target.value;
-    await Promise.all([updateSpecificOrientation(), updateSolutionDetails()]);
+    // Render the opele FIRST — it's drawn purely from local baseOdus and needs
+    // no network, so it must never wait on (or be blocked by) the dropdown
+    // fetches below. This keeps the cast visual instant and offline-perfect.
     displayConfiguration(selectedOdu);
+    try {
+      await Promise.all([updateSpecificOrientation(), updateSolutionDetails()]);
+    } catch (_) { /* offline: dropdowns update later; opele already rendered */ }
   }
 });
 
