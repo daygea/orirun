@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+(function () {
+  /// Detect the iOS App Store wrapper (its WebView user agent ends in "PWAShell")
+  if (!/PWAShell/.test(navigator.userAgent)) return;
+  window.IS_IOS_APP = true;
+  document.documentElement.classList.add('ios-app');
+
+  // Hide payment / Play-Store UI immediately to avoid any flash before removal
+  var style = document.createElement('style');
+  style.textContent =
+    'html.ios-app #paymentModal,' +
+    'html.ios-app #payButton,' +
+    'html.ios-app .donate-btn,' +
+    'html.ios-app a[href*="paystack"],' +
+    'html.ios-app a[href*="play.google.com"]{display:none !important;}';
+  document.head.appendChild(style);
+
+  // Runs after all deferred scripts (incl. main.js) have executed
+  document.addEventListener('DOMContentLoaded', function () {
+    ['paymentModal', 'payButton'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.remove();
+    });
+    document.querySelectorAll(
+      '.donate-btn, a[href*="paystack"], a[href*="play.google.com"]'
+    ).forEach(function (el) { el.remove(); });
+
+    // No paywall on iOS — make every Odù free so the (now-removed) modal never triggers
+    window.isOduPaid = function () { return true; };
+  });
+})();
+</script>
+<title>Orírùn — Source of Ancestral Wisdom</title>
+<meta name="google-site-verification" content="W7tTnvd4Ramj0plPnmXG5_M-0IlzXcWftdLz3-PeMs8" />
+<meta name="title" content="Orírùn — Source of Ancestral Wisdom">
+<meta name="description" content="Discover yourself through the ancient wisdom of Ifá — one of humanity's oldest and most revered spiritual traditions, recognised by UNESCO. Explore your personal Odu, Orisha alignment, and Yoruba numerology birth chart. Receive daily guidance tailored to your life path. Available in 22 languages. Free for everyone, always.">
+<meta name="keywords" content="Ifa, Ifa divination, Yoruba spirituality, African divination, Orisha, Odu Ifa, Ejiogbe, Yoruba cosmology, Orunmila, Ogun, Oshun, Yemoja, Shango, Obatala, Oya, Esu, numerology, African numerology, life path number, birth chart Africa, ancestral wisdom, Yoruba culture, spiritual guidance Africa, African astrology, Yoruba calendar, Sere Erele Erena, orirun, Orírùn, iwa pele, Ifa wisdom, babalawo, iyaniifa">
+<link rel="canonical" href="https://orirun.com/">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://orirun.com/">
+<meta property="og:title" content="Orírùn — Source of Ancestral Wisdom">
+<meta property="og:description" content="Discover yourself through the ancient wisdom of Ifá — one of humanity's oldest and most revered spiritual traditions, recognised by UNESCO. Explore your personal Odu, Orisha alignment, and Yoruba numerology birth chart. Receive daily guidance tailored to your life path. Available in 22 languages. Free for everyone, always.">
+<meta property="og:image" content="https://orirun.com/public/img/logo.png">
+<meta property="og:image:alt" content="Orírùn — Source of Ancestral Wisdom">
+<meta property="og:site_name" content="Orírùn">
+<meta property="og:locale" content="en_NG">
+<meta property="og:locale:alternate" content="en_GB">
+<meta property="og:locale:alternate" content="yo_NG">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://orirun.com/">
+<meta name="twitter:title" content="Orírùn — Source of Ancestral Wisdom">
+<meta name="twitter:description" content="ADiscover yourself through the ancient wisdom of Ifá — recognised by UNESCO as Intangible Cultural Heritage of Humanity.">
+<meta name="twitter:image" content="https://orirun.com/public/img/logo.png">
+<meta name="twitter:site" content="@orirun_ng">
+<meta name="twitter:creator" content="@orirun_ng">
+
+<!-- Mobile & PWA -->
+<meta id="or-viewport" name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script>
+(function () {
+  // Web visitors keep pinch-zoom (accessibility / WCAG meta-viewport). Installed
+  // app shells — the iOS App Store wrapper (PWAShell), iOS "Add to Home Screen",
+  // and the Android Play Store TWA (display-mode: standalone) — disable zoom to
+  // preserve the native-app feel and prevent accidental stretch.
+  try {
+    var installed =
+      /PWAShell/.test(navigator.userAgent) ||
+      window.navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (installed) {
+      var m = document.getElementById('or-viewport');
+      if (m) m.setAttribute('content',
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+    }
+  } catch (e) {}
+})();
+</script>
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="author" content="Orírùn Cultural Foundation">
+<meta name="copyright" content="Orírùn Cultural Foundation 2026">
+<meta name="language" content="English">
+<meta name="revisit-after" content="7 days">
+<meta name="category" content="Spirituality, African Culture, Divination, Numerology">
+<meta name="classification" content="Spirituality">
+<meta name="theme-color" content="#2e7d32">
+
+<!-- <link rel="manifest" href="/public/manifest.json"> -->
+<script>
+if (location.protocol !== 'file:') {
+  var link = document.createElement('link');
+  link.rel  = 'manifest';
+  link.href = 'manifest.json';
+  document.head.appendChild(link);
+}
+
+/* Portrait lock.
+   The manifest ("orientation":"portrait") locks the installed app on
+   Android. This adds the Screen Orientation API on top, which also holds
+   in fullscreen and re-asserts if anything releases the lock.
+   Note: iOS/WebKit implements neither the manifest orientation field nor
+   screen.orientation.lock(), so this is a no-op on iPhone — no web API
+   can force portrait there. */
+(function () {
+  function lockPortrait() {
+    try {
+      var so = window.screen && window.screen.orientation;
+      if (so && typeof so.lock === 'function') {
+        so.lock('portrait').catch(function () { /* not permitted here — fine */ });
+      }
+    } catch (e) { /* unsupported — fine */ }
+  }
+  lockPortrait();
+  // Re-assert if the platform drops the lock (e.g. leaving fullscreen).
+  if (window.screen && window.screen.orientation) {
+    window.screen.orientation.addEventListener &&
+      window.screen.orientation.addEventListener('change', lockPortrait);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) lockPortrait();
+  });
+})();
+</script>
+<link rel="icon" href="public/img/favicon.png" type="image/png">
+
+<link rel="sitemap" type="application/xml" title="Sitemap" href="public/sitemap.xml">
+
+<!-- Type: system serif (Georgia) via CSS fallback — no third-party font
+     request. Avoids cross-domain calls to Google (slow on Tor, and a privacy
+     dependency); Georgia covers Yorùbá diacritics and ships on all platforms. -->
+
+<!-- Preloads -->
+<link rel="preload" href="public/css/bootstrap.css" as="style" onload="this.rel='stylesheet'">
+<link rel="preload" href="public/css/style.css" as="style" onload="this.rel='stylesheet'">
+<link rel="preload" href="public/css/a11y-global.css" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="public/css/a11y-global.css"></noscript>
+<link rel="preload" href="public/css/orirun-identity.css" as="style" onload="this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="public/css/orirun-identity.css"></noscript>
+<noscript>
+  <link rel="stylesheet" href="public/css/bootstrap.css">
+  <link rel="stylesheet" href="public/css/style.css">
+</noscript>
+
+
+<!-- Schema: Organization -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Orírùn Cultural Foundation",
+  "alternateName": "Orirun",
+  "url": "https://orirun.com",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://orirun.com/public/img/logo.png",
+    "width": 200,
+    "height": 200
+  },
+  "sameAs": [
+    "https://facebook.com/orirunng/",
+    "https://www.instagram.com/orirun_ng/",
+    "https://twitter.com/orirun_ng/"
+  ],
+  "description": "Discover yourself through the ancient wisdom of Ifá — one of humanity's oldest and most revered spiritual traditions, recognised by UNESCO. Explore your personal Odu, Orisha alignment, and Yoruba numerology birth chart. Receive daily guidance tailored to your life path. Available in 22 languages. Free for everyone, always.",
+  "foundingDate": "2024",
+  "areaServed": "Worldwide",
+  "knowsAbout": [
+    "Ifa divination",
+    "Yoruba spirituality",
+    "Odu Ifa",
+    "Orisha",
+    "African numerology",
+    "Yoruba cosmology",
+    "Ancestral wisdom"
+  ],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "Customer Support",
+    "email": "info@orirun.com",
+    "telephone": "+2348027573121",
+    "availableLanguage": ["English", "Yoruba"]
+  }
+}
+</script>
+
+<!-- Schema: WebSite (enables Google Sitelinks Search Box) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Orírùn",
+  "url": "https://orirun.com",
+  "description": "Discover yourself through the ancient wisdom of Ifá — one of humanity's oldest and most revered spiritual traditions, recognised by UNESCO. Explore your personal Odu, Orisha alignment, and Yoruba numerology birth chart. Receive daily guidance tailored to your life path. Available in 22 languages. Free for everyone, always.",
+  "inLanguage": ["en", "yo"],
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://orirun.com/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+
+<!-- Schema: WebApplication -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Orírùn — Source of Ancestral Wisdom",
+  "url": "https://orirun.com",
+  "applicationCategory": "SpiritualityApplication",
+  "operatingSystem": "All",
+  "browserRequirements": "Requires JavaScript",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "NGR"
+  },
+  "description": "Discover yourself through the ancient wisdom of Ifá — one of humanity's oldest and most revered spiritual traditions, recognised by UNESCO. Explore your personal Odu, Orisha alignment, and Yoruba numerology birth chart. Receive daily guidance tailored to your life path. Available in 22 languages. Free for everyone, always.",
+  "screenshot": "https://orirun.com/public/img/logo.png",
+  "featureList": [
+    "Ifa readings across 256 Odu",
+    "Orisha alignment and spiritual guidance",
+    "Yoruba numerology birth chart",
+    "Planetary hour and Orisha cosmic influence",
+    "Yoruba calendar integration",
+    "Multi-language support including Yoruba"
+  ]
+}
+</script>
+
+<!-- Schema: FAQPage (boosts featured snippets for Ifa-related searches) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is Ifa divination?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ifa is an ancient Yoruba system of divination and wisdom. It is based on 256 sacred chapters called Odu, each containing teachings, stories, and guidance. Ifa readings reveal which Odu energy is active in a person's life and what spiritual actions are recommended."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is an Odu in Ifa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "An Odu is a sacred chapter of Ifa. There are 256 Odu in total. Each Odu is a body of wisdom governing specific areas of life — health, wealth, relationships, destiny, and more. The Odu that appears in a divination session is the one whose energy is currently most relevant to the person being read."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Who are the Orisha?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Orisha are divine forces in Yoruba spirituality, each governing a domain of life and nature. Examples include Ogun (iron and new beginnings), Oshun (love and sweet water), Shango (thunder and justice), Yemoja (ocean and motherhood), and Obatala (wisdom and purity)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between Ire and Ayewo in Ifa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "In Ifa divination, Ire means the Odu is appearing in a positive, favourable alignment — blessings are available. Ayewo means the Odu is appearing in a cautionary alignment — something requires attention, correction, or spiritual action to restore balance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is Ebo in Ifa?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Ebo is a prescribed spiritual offering or action in Ifa. It is recommended to activate a blessing (in Ire) or resolve a challenge (in Ayewo). Ebo is not a punishment — it is a practical spiritual step, similar to taking medicine to restore health."
+      }
+    }
+  ]
+}
+</script>
+  <script>
+    window.addEventListener("load", () => {
+        const preloadList = [
+            "public/img/chain.png",
+            "public/img/opeleFooter.png",
+            "public/img/opon.png",
+            "public/img/openOpele.png",
+            "public/img/closeOpele.png"
+        ];
+
+        preloadList.forEach(src => {
+            const img = new Image();
+            img.src = src;
+        });
+    });
+    </script>
+    <!-- Google tag (gtag.js) — loaded AFTER window load so it stays off the
+         critical render path. gtag() is stubbed immediately so any early
+         calls queue in dataLayer and replay once the script arrives. -->
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-FG6G5M8Z0S');
+      window.addEventListener('load', function () {
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-FG6G5M8Z0S';
+        document.head.appendChild(s);
+      });
+    </script>
+</head>
+
+<body>
+<!-- Portrait is handled by the PWA manifest ("orientation":"portrait") for the
+     installed app. In a plain browser tab the layout stays responsive; no
+     rotate-to-portrait message is shown. -->
+
+    <div id="preloader" style="position:fixed;inset:0;z-index:9999;background:#fff;">
+        <span id="flag"></span><br/>
+        <img src="public/img/bird.gif" loading="lazy" decoding="async" alt="bird" style="display:none;" />
+        <div style="margin-top: 50vh; text-align: center;" id="loading-screen"></div>
+    </div>
+    <div id="new-preloader" role="status" aria-live="polite"
+         style="display:none; position:fixed; inset:0; z-index:9999; flex-direction:column;
+                align-items:center; justify-content:center;
+                background:rgba(246,243,236,0.82); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;
+                  background:#fff; border:1px solid rgba(20,40,30,0.14); border-top:3px solid #0f7b3d;
+                  border-radius:14px; box-shadow:0 8px 28px rgba(20,45,30,0.12); padding:22px 26px; max-width:300px;">
+        <span class="spinner"></span>
+        <span style="font-size:16px; font-weight:700; color:#0c3d24;">Translating…</span>
+        <span style="font-size:12.5px; color:#6b7770; line-height:1.5;">Preparing your language…</span>
+      </div>
+    </div>
+    <div class="container-fluid" style="display: none;" id="printArea">
+        <header class="app-header">
+        <div class="text-center"><a href="/" style="color: green; text-decoration: none;"><img src="public/img/logo.png" width="270" height="115" style="height:60px;width:auto;margin-top:3vh" alt="Orirun Logo"/></a></div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="languageBtn">
+                    🌐
+                    <select id="language-select"></select>
+                </div>
+            </div>
+            <div class="col-md-8 text-center">
+                 <p style="
+                  background: linear-gradient(135deg, #f0f7f0, #e8f5e8);
+                  padding: 2px 2px;
+                  text-align: center;
+                  color: #1b4332;
+                  font-size: 13px;
+                  line-height: 1.7;
+                  letter-spacing: 0.3px;
+                "><span data-translate="header">I pay homage to OLODUMARE, Oduduwa, Orunmila, Ajagunmale, Aworomaja, Odu Òlógboòjè, Ègàn, Gbogbo Ẹlẹ́yẹ, Gbogbo Irunmole, Ooni of Ife, Gbogbo Ọba Aláde, Àràbà Agbaye. I pay homage to all Elders.</span></p>
+            </div>
+            <div class="col-md-2">
+                <button class="historyBtn btn btn-sm btn-default app-btn" onclick="toggleHistory()">
+                  <span data-translate>Show History</span> <span id="historyArrow"> ▼</span>
+                </button>
+            </div>
+        </div>
+        </header>
+        <main id="app-main">
+        <div class="row" style="display: grid; place-items: center;">
+                <div id="dashboard-superadmin" class="admin-dashboard" style="display:none;">
+                  <div class="text-center"><h2>Orirun Dashboard</h2></div>
+                    <div class="text-center"> 
+                        <button class="btn btn-md btn-default admin"  onclick="showAnalytics()">📊 Dashboard</button>
+                        <button class="btn btn-md btn-default admin" onclick="showLogs('divination')">Divination</button>
+                        <button class="btn btn-md btn-default admin" onclick="showLogs('chat')">Chats</button>
+                        <button class="btn btn-md btn-default admin" onclick="showLogs('feedback')">Feedbacks</button>
+                        <button class="btn btn-md btn-default admin" onclick="showLogs('payment')">Payments</button>
+                        <button class="btn btn-md btn-default admin" onclick="showLogs('contribution')">Contributions</button>
+                        <button class="btn btn-md btn-default admin" onclick="updateOdu()">Update Odu</button>
+                        <button class="btn btn-md btn-default admin" onclick="logoutAdmin()">Logout</button> 
+                    </div>
+                </div>
+                <div id="adminPasswordContainer" style="display: none;">
+                    <div class="text-center">
+                        <input style="padding: 5px; font-size: 16px; border: 1px solid green; border-radius: 5px;" type="password" id="adminPassword" placeholder="Password" />
+                        <button class="btn btn-sm btn-default" id="loginBtn" style="border: 1px solid green;" onclick="loginAdmin()">Login</button> 
+                    </div>
+                </div>
+        </div>
+        <div class="row app-section">
+            <div id="configurationResult" class="col-sm-3 odusign" style="font-family: cursive;">
+                <img id="hiddenTapArea" class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />
+            </div>
+
+            <div class="form-tabs col-12">
+              <button type="button" class="form-tab is-active" data-tab="discover" onclick="orFormTab('discover')" data-translate>Ifa Wisdom</button>
+              <button type="button" class="form-tab" data-tab="numerology" onclick="orFormTab('numerology')" data-translate>Numerology</button>
+            </div>
+            <script>
+              window.orFormTab = function(which){
+                var d=document.getElementById('main-content'), n=document.getElementById('numerology-section');
+                if(d) d.classList.toggle('tab-hidden', which!=='discover');
+                if(n) n.classList.toggle('tab-hidden', which!=='numerology');
+                document.querySelectorAll('.form-tab').forEach(function(b){
+                  b.classList.toggle('is-active', b.getAttribute('data-tab')===which);
+                });
+                /* Switching flows starts fresh — clear the previous result so a
+                   numerology reading doesn't linger under the Ifa Wisdom form
+                   (and vice versa). Skip while the onboarding tour drives tabs. */
+                if(!document.querySelector('#driver-page-overlay') && !document.querySelector('#or-tour-dim')){
+                  var r=document.getElementById('divinationResult'); if(r) r.innerHTML='';
+                  var c=document.getElementById('configurationResult');
+                  if(c) c.innerHTML='<img class="moving-bg" src="public/img/bird.gif" alt="bird" width="168" height="159" loading="lazy" decoding="async" />';
+                }
+              };
+              window.orNumMethod = function(which){
+                document.querySelectorAll('#numerology-section .num-pane').forEach(function(p){
+                  p.classList.toggle('pane-hidden', p.getAttribute('data-pane')!==which);
+                });
+                document.querySelectorAll('.num-subtab').forEach(function(b){
+                  b.classList.toggle('is-active', b.getAttribute('data-method')===which);
+                });
+              };
+            </script>
+            <div class="col-sm-6 ifaDetails" id="main-content" data-tour="divination">
+          <h3 style="text-align:center;font-weight:bold;">
+            <span data-translate>Discover Ifa Wisdom</span>
+          </h3>
+
+          <!-- Odu Ifa -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <label for="mainCast" style="margin:0;">
+              <span data-translate="oduIfa">Odu Ifa</span>
+            </label>
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="An Odu is a sacred chapter of Ifa. There are 256 Odu in total, each a body of wisdom, stories, and guidance. The Odu that appears in your reading is not random — it is the one whose energy is active and relevant in your life right now."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+          </div>
+          <!-- Searchable Odù combobox. The <select> below stays as the source
+               of truth (its value + change event drive all existing logic);
+               this input filters the 256 Odù and sets that select. -->
+          <div id="mainCastCombo" class="odu-combo" style="position:relative;">
+            <input id="mainCastSearch" class="form-control" type="text"
+              autocomplete="off" role="combobox" aria-expanded="false"
+              aria-controls="mainCastList" aria-autocomplete="list"
+              placeholder="Type to search 256 Odù…" data-translate-attr="placeholder"
+              data-placeholder="Type to search 256 Odù…" />
+            <ul id="mainCastList" role="listbox" class="odu-combo-list"
+              style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:260px;overflow-y:auto;margin:2px 0 0;padding:4px;list-style:none;background:#fff;border:1px solid var(--of-line,#d9e4dc);border-radius:8px;box-shadow:0 6px 20px rgba(10,60,40,.12);"></ul>
+          </div>
+          <select id="mainCast" class="form-control" style="display:none;"></select>
+
+          <!-- Orientation -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <label for="orientation" style="margin:0;">
+              <span data-translate="orientation">Orientation (Ire / Ayewo)</span>
+            </label>
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Ire means the Odu is appearing in a positive, favourable alignment — blessings are available to you. Ayewo means a cautionary alignment — something needs attention or spiritual action to restore balance."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+          </div>
+          <select id="orientation" onchange="updateSpecificOrientation()" class="form-control">
+            <option value="Positive">Ire</option>
+            <option value="Negative">Ayewo</option>
+          </select>
+
+          <!-- Specific Orientation -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <label for="specificOrientation" style="margin:0;">
+              <span data-translate="specificOrientation">Specific Orientation</span>
+            </label>
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Within Ire or Ayewo, there are specific types of blessing or challenge. For example: Aiku = longevity and health, Aje = wealth, Isegun = victory. This tells you exactly which area of life the Odu is speaking to."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+          </div>
+          <select id="specificOrientation" class="form-control"></select>
+
+          <!-- Solution -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <label for="solution" style="margin:0;">
+              <span data-translate="solution">Solution (Ebo / Adimu)</span>
+            </label>
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Ebo is a prescribed spiritual action or offering — something you do to activate a blessing (in Ire) or resolve a challenge (in Ayewo). Think of it as spiritual medicine. Adimu is a more personal offering made directly to your Orisha."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+          </div>
+          <select id="solution" onchange="updateSolutionDetails()" class="form-control">
+            <option value="Ebo" selected>Ebo</option>
+            <option value="Adimu">Adimu</option>
+          </select>
+
+          <!-- Specific Solution -->
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <label for="solutionDetails" style="margin:0;">
+              <span data-translate="specificSolution">Specific Solution</span>
+            </label>
+            <i class="ifa-tip" data-translate-attr="data-tip" data-tip="This is the specific type of Ebo or Adimu prescribed. For example: Akoru = a material offering made to resolve the situation. Each specific solution carries its own set of items and actions as revealed by the Odu."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+          </div>
+          <select id="solutionDetails" class="form-control"></select>
+
+          <button id="divination-btn" onclick="performUserDivination()" class="btn btn-md btn-default app-btn">
+            <span data-translate>Reveal Wisdom</span>
+          </button>
+        </div>
+            <div class="col-sm-3 numerology tab-hidden" id="numerology-section">
+              <h3 style="text-align:center;font-weight:bold;">
+                <span data-translate>Numerology</span>
+              </h3>
+                    <div id="result"></div>
+                    <div class="num-subtabs">
+                      <button type="button" class="num-subtab is-active" data-method="namedate" onclick="orNumMethod('namedate')" data-translate>Name & Date</button>
+                      <button type="button" class="num-subtab" data-method="picknum" onclick="orNumMethod('picknum')" data-translate>Pick a Number</button>
+                    </div>
+                    <div class="num-pane" data-pane="namedate">
+                    <label><span data-translate="enterName">Enter your full name</span></label>
+                    <div id="fullname-box">
+                      <input class="form-control" type="text" id="fullname" data-translate-attr="placeholder"
+                        placeholder="Olanbiwoninu Kadri" />
+                    </div>
+
+                    <label><span data-translate="birthDate">Select your birth date</span></label>
+                    <div id="birthdate-box">
+                      <input
+                        id="birthdate"
+                        type="date"
+                        class="form-control"
+                      />
+                      <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                        <button onclick="performBirthChart()" class="btn btn-md btn-default app-btn" id="determine-btn">
+                          <span data-translate="revealMessage">Reveal Message</span>
+                        </button>
+                        <i class="ifa-tip" data-translate-attr="data-tip"
+                          data-tip="Your name and birth date are used to calculate your Yoruba numerology chart — including your Life Path, Destiny, Soul Urge, and Orisha alignment."
+                          onclick="openIfaTip(this, event)"
+                          role="button"
+                          aria-label="More information">i</i>
+                      </div>
+                    </div>
+                    </div>
+                    <div class="num-divider"><span data-translate>or</span></div>
+                    <div class="num-pane pane-hidden" data-pane="picknum">
+                     <div style="display:flex;align-items:center;justify-content:center;gap:6px; margin-bottom: 10px;">
+                        <p style="margin:0;font-weight:bold;">
+                          <span data-translate>Pick a Number</span>
+                        </p>
+                        <i class="ifa-tip" data-translate-attr="data-tip"
+                        data-tip="Pick a number to explore its sacred energy and meaning. Each number carries its own Ase (divine force) — revealing its spiritual essence, emotional resonance, personality traits, and physical associations as understood in Yoruba and numerological wisdom."
+                        onclick="openIfaTip(this, event)"
+                        role="button"
+                        aria-label="More information">i</i>
+                    </div>
+                     <div class="calculator" id="calculator" style="margin-bottom: 10px;">    
+                    </div>
+                    <!-- Master numbers: sit OUTSIDE .calculator so they stay
+                         upright (that container is on a slow rotation). -->
+                    <div class="master-numbers" role="group" aria-label="Master numbers">
+                      <span class="master-numbers__label" data-translate>Master Numbers</span>
+                      <div class="master-numbers__pair">
+                        <button type="button" class="master-num" data-number="11"
+                                onclick="displayMeaning(11)" aria-label="Master number 11">11</button>
+                        <button type="button" class="master-num" data-number="22"
+                                onclick="displayMeaning(22)" aria-label="Master number 22">22</button>
+                      </div>
+                    </div>
+                    </div>
+            </div>
+        </div>
+        <div class="container" id="divinationResultContainer">
+             <div class="row">
+                <div id="divinationWarning"></div>
+                <div class="col-12" style="color: var(--of-ink);" id="divinationResult">
+                    
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12" style="color: green;" id="numerologyResult">
+                    
+                </div>
+            </div>
+        </div>
+        <section id="analytics" class="app-section" style="display:none; text-align:center;">
+          <div id="analytics-summary"></div>
+          <canvas id="analyticsChart" style="max-width:700px; margin:auto;"></canvas>
+        </section>
+        <div id="paymentModal" class="modal" role="dialog" aria-modal="true" aria-label="Payment" style="display:none;">
+          <div class="modal-content">
+            <span class="close-btn" role="button" tabindex="0" aria-label="Close" onclick="closePaymentModal()">&times;</span>
+            <h3><span data-translate>Pay ₦1000 to Unlock</span></h3>
+            <p><span data-translate>This Odu requires payment to access. Click below to proceed.</span></p>
+            <button id="payButton" onclick="processPayment()"><span data-translate>Pay ₦1000</span></button>
+            <button class="cancel-btn" onclick="closePaymentModal()"><span data-translate>Cancel</span></button>
+          </div>
+        </div>
+        <div id="logs" style="display:none;"></div>
+        <div class="row">
+                <div class="col-md-3"></div>
+                <div class="col-sm-6" id="odu-editor-panel" style="display:none; margin-top:20px;">
+                  <div class="text-center"><h2>Odù Admin Editor <button class="btn btn-md btn-default" onclick="backToDashboard()">⬅ Hide</button></h2></div>
+                  <div class="text-center"><div class="status alert-success" id="status"></div></div>
+                 <label>Odù Key</label>
+                    <div class="input-group mb-2">
+                      <input
+                        class="form-control"
+                        id="oduKey"
+                        placeholder="Ejiogbe"
+                      />
+                      <button
+                        class="btn btn-success"
+                        type="button"
+                        onclick="loadOdu()"
+                      >
+                        Load Odù
+                      </button>
+                    </div>
+                  <br>
+                  <textarea class="form-control allow-copy allow-paste" id="editor" style="width:100%; height:320px;"></textarea>
+
+                  <br>
+                  <button class="btn btn-md btn-success" onclick="saveOdu()">Save Changes</button>
+                </div>
+        </div>
+        <div id="myHistoryContainer" class="history-container" style="display:none;">
+              <h2><span data-translate>My History</span> 
+                <span>
+                  <a href="#" style="text-decoration: none; font-size: 14px;" onclick="openSyncModal()" data-translate>Sync Device</a>
+                  <i class="ifa-tip" data-translate-attr="data-tip" data-tip="Save or restore your data across devices — no account needed."
+              onclick="openIfaTip(this, event)" role="button" aria-label="More information">i</i>
+                </span>
+              </h2>
+              
+              <div id="historyList" class="history-list">
+                <!-- History cards will be injected here -->
+              </div>
+            
+              <div id="historyPagination" class="history-pagination" style="margin-top:10px; text-align:center; display:none;">
+                  <button id="prevPageBtn" class="btn btn-sm app-btn btn-default" data-translate>⬅ Prev</button>
+                  <div id="pageNumbers"></div>
+                  <button id="nextPageBtn" class="btn btn-sm app-btn btn-default" data-translate>Next ➡</button>
+              </div>
+              <div class="text-center"><span id="pageInfo" style="margin:0 10px;"></span></div>
+        </div>
+        </main>
+        <footer class="footer" style="margin-top: 0;">
+  <div class="container" style="margin-top: 0;">
+
+    <!-- ── Support button ── -->
+    <div style="display: none;" class="row app-section">
+      <div class="col-md-4"></div>
+      <div class="col-md-4" style="text-align:center;">
+        <a target="_blank" href="https://paystack.shop/pay/orirun"
+           class="btn btn-md btn-default app-btn donate-btn"
+           style="
+             color:green;
+             margin-top:2vh;
+             display:inline-flex;
+             flex-direction:column;
+             align-items:center;
+             gap:3px;
+             padding:10px 20px;
+             max-width:320px;
+             width:auto;
+           ">
+          <span>
+            <span data-translate="support">SUPPORT THE PROJECT</span> <span class="heart">💖</span>
+          </span>
+          <span style="
+            font-size:11px;
+            font-weight:normal;
+            opacity:0.75;
+            line-height:1.4;
+            white-space:normal;
+            text-align:center;
+          "data-translate>Donations help keep this free for all.</span>
+        </a>
+      </div>
+      <div class="col-md-4"></div>
+    </div>
+
+
+    <!-- ── Main footer content ── -->
+    <div class="row">
+      <div class="col-12 text-center" style="color:green;">
+
+        <!-- 1. Navigation links -->
+        <div style="
+          display:flex;
+          flex-wrap:wrap;
+          justify-content:center;
+          align-items:center;
+          gap:6px 12px;
+          margin-top:3vh;
+          font-size:12px;
+        ">
+          🧿 <a href="#" id="tour-guidance-link"
+               style="color:green;text-decoration:underline;white-space:nowrap;"
+               onclick="showGuidancePopup(currentLang || 'en'); return false;">
+            <span data-translate>Today's Guidance</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" id="or-cast-link"
+             style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="orirunCastIfa(); return false;">
+            <span data-translate>Today's Ifá Cast</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="showAboutModal()">
+            <span data-translate="aboutUs">About Us</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="showTermsModal()">
+            <span data-translate>Terms &amp; Policy</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="showContributionModal()">
+            <span data-translate>Share Insight</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="orirun.restartTour()">
+            <span data-translate>Restart Tour</span>
+          </a>
+        </div>
+
+        <!-- 2. Daily Guidance notification toggle -->
+        <div id="notif-toggle-slot" style="margin-top:16px;"></div>
+
+        <!-- 4. Sponsorship / contact -->
+        <p style="margin-top:20px;" data-translate>
+          For sponsorships, partnerships, or collaboration inquiries, please contact us:
+        </p>
+        <p>
+          <a style="color:green;" href="mailto:info@orirun.com">info@orirun.com</a> |
+          <a style="color:green;" href="tel:+2348027573121">+2348027573121</a>
+        </p>
+
+        <!-- 5. Socials -->
+        <p class="socials">
+          <a href="https://wa.me/2348027573121" target="_blank">
+            <img width="44" height="45" style="width:25px;height:auto" src="public/img/whatsapp.png" alt="WhatsApp"/></a> |
+          <a href="https://www.facebook.com/orirunng" target="_blank">
+            <img loading="lazy" decoding="async" width="70" height="66" src="public/img/facebook.png" alt="Facebook"/></a> |
+          <a href="https://twitter.com/orirun_ng" target="_blank">
+            <img loading="lazy" decoding="async" width="63" height="62" src="public/img/twitter.png" alt="Twitter"/></a> |
+          <a href="https://instagram.com/orirun_ng" target="_blank">
+            <img loading="lazy" decoding="async" width="70" height="68" src="public/img/instagram.png" alt="Instagram"/></a> |
+          <a href="https://www.youtube.com/@orirun" target="_blank">
+            <img loading="lazy" decoding="async" width="90" height="71" src="public/img/youtube.png" alt="Youtube"/></a>
+        </p>
+
+        <!-- App download badges — shown on the website, hidden inside the installed app -->
+        <div class="app-download">
+          <p class="app-download__title" data-translate>Get the Orírùn app</p>
+          <div class="app-download__badges">
+            <a class="store-badge" href="https://apps.apple.com/ng/app/orirun/id6766106963" target="_blank" rel="noopener" aria-label="Download on the App Store">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+              <span><small data-translate>Download on the</small><strong>App Store</strong></span>
+            </a>
+            <!-- NOTE: replace this href with the real Play Store listing URL when available -->
+            <a class="store-badge" href="https://play.google.com/store/apps/details?id=com.orirun.app" target="_blank" rel="noopener" aria-label="Get it on Google Play">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"/></svg>
+              <span><small data-translate>Get it on</small><strong>Google Play</strong></span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 6. Copyright -->
+        <p>&copy; <span id="year"></span> Orírùn Cultural Foundation,
+          <span data-translate="rights"> All Rights Reserved.</span>
+        </p>
+
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+        <!-- ── Overlays & dialogs (moved out of the footer) ── -->
+    <!-- ── Audio Modal ── -->
+    <div id="audioModal" role="dialog" aria-modal="true" aria-label="Audio player" style="display:none;position:fixed;top:20%;left:10%;width:80%;height:20%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
+      <div style="text-align:right;padding:5px;">
+        <button onclick="closeAudioModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
+      </div>
+      <div id="audioPlayerContainer" style="padding:10px;text-align:center;"></div>
+    </div>
+
+    <!-- ── Video Modal ── -->
+    <div id="videoModal" role="dialog" aria-modal="true" aria-label="Video player" style="display:none;position:fixed;top:10%;left:10%;width:80%;height:70%;background:white;border:2px solid #008000;z-index:10000;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.5);">
+      <div style="text-align:right;padding:5px;">
+        <button onclick="closeVideoModal()" style="background:#008000;color:white;border:none;padding:5px 10px;cursor:pointer;"><span data-translate>Close ✖</span></button>
+      </div>
+      <iframe id="videoFrame" width="100%" height="90%" frameborder="0" allowfullscreen></iframe>
+    </div>
+
+        <!-- ── Modals ── -->
+        <div id="termsModal" class="termsModal" role="dialog" aria-modal="true" aria-label="Terms and Policy" style="display:none">
+          <div class="termsModal-content">
+            <button class="app-btn termsClose" aria-label="Close" data-translate>Close</button>
+            <div id="termsContent">
+              <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="aboutModal" class="aboutModal" role="dialog" aria-modal="true" aria-label="About" style="display:none">
+          <div class="aboutModal-content">
+            <button class="app-btn aboutClose" aria-label="Close" data-translate>Close</button>
+            <div id="aboutContent">
+              <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="contributionModal" class="custom-modal" role="dialog" aria-modal="true" aria-label="Share insight">
+          <div class="custom-modal-content">
+            <button class="app-btn customClose"
+              aria-label="Close" data-translate>Close</button>
+            <h3 data-translate>Share Insight</h3>
+            <p id="babalawoIntro" style="display:none;font-size:0.92em;color:var(--of-ink-soft);line-height:1.55;margin-top:-4px;" data-translate>Aboru, Aboye, Abosise oo.</p>
+            <div class="mb-3">
+              <label data-translate>Full Name</label>
+              <input type="text" id="contributorName" data-translate-attr="placeholder"
+                placeholder="e.g. Ojogbon Olanbiwoninu Kadri"
+                class="form-control allow-paste">
+            </div>
+            <div class="mb-3" id="contributionCategoryField">
+              <label data-translate>Select Category</label>
+              <select id="contributionCategory" class="form-control">
+                <option value="General">General</option>
+                <option value="Babalawo">Ifá verse or teaching</option>
+                <option value="Numerology">Numerology</option>
+                <option value="Astrology">Astrology</option>
+              </select>
+            </div>
+            <!-- Unified Ifá contribution fields (verse/teaching, from anyone
+                 incl. babaláwo/ìyánífá). Lean: only what the verse pipeline
+                 needs — Odù (routes it) + consent — plus optional title and a
+                 media link. Lineage/town were dropped to keep the modal short;
+                 the backend already treats them as optional. -->
+            <div id="babalawoFields" style="display:none;">
+              <div class="mb-3">
+                <label data-translate>Odù this verse or teaching belongs to</label>
+                <input type="text" id="babOdu" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="e.g. Èjì Ogbè, Ọ̀yẹ̀kú Méjì">
+              </div>
+              <div class="mb-3">
+                <label data-translate>Title (optional)</label>
+                <input type="text" id="babTitle" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="A short title for this verse">
+              </div>
+              <div class="mb-3">
+                <label data-translate>Audio or video link (optional)</label>
+                <input type="text" id="ifaMedia" class="form-control allow-paste"
+                  data-translate-attr="placeholder" placeholder="Paste a YouTube, audio, or video link">
+              </div>
+              <label style="display:flex;gap:8px;align-items:flex-start;font-size:0.9em;line-height:1.5;">
+                <input type="checkbox" id="babConsent" style="margin-top:3px;flex-shrink:0;">
+                <span data-translate>I consent to being credited by name once a verifying elder has reviewed this.</span>
+              </label>
+            </div>
+            <div class="mb-3">
+              <label data-translate>Contribution</label>
+              <textarea id="contributionText" class="form-control allow-paste" data-translate-attr="placeholder"
+                rows="5" placeholder="Enter your content here..."></textarea>
+            </div>
+            <button class="btn btn-primary mt-2"
+              onclick="submitContribution()" data-translate>Submit</button>
+          </div>
+        </div>
+
+    <!-- ── Chatbot ── -->
+    <div id="chatbot-container" class="hidden">
+      <div id="chatbot-header">
+        <span class="chatbot-title">💬 Orírùn <span data-translate>Learning Corner</span></span>
+        <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
+      </div>
+      <div id="chatbot-messages">
+        <div class="chat-message-wrapper align-left">
+          <div class="chat-message bot-message"><span data-translate>Hello.</span></div>
+        </div>
+      </div>
+      <div id="chatbot-input-container">
+        <textarea id="chatbot-input" data-translate-attr="placeholder" placeholder="Ask a question, or type 'help' to browse topics..."></textarea>
+        <button class="queryBtn" id="send-btn" onclick="sendMessage()">➜</button>
+      </div>
+    </div>
+    <button id="chatbot-toggle" onclick="toggleChatbot()">💬</button>
+        
+        <div id="successPopup" class="success-popup" role="status" aria-live="polite">
+            <div class="success-check"><span data-translate>✔ Insight Submitted!</span></div>
+        </div>
+
+        <!-- Ifa Guide Modal -->
+        <div id="ifaGuideModal" role="dialog" aria-modal="true" aria-label="Ifa guide" style="
+          display: none;
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          z-index: 9999;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 20px;
+          overflow-y: auto;
+        " onclick="closeIfaGuide(event)">
+
+          <div style="
+            background: white;
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            border-radius: 12px;
+            padding: 32px 28px;
+            line-height: 1.8;
+            position: relative;
+            font-family: inherit;
+          " onclick="event.stopPropagation()">
+
+            <!-- Close Button -->
+            <button onclick="closeIfaGuideModal()" style="
+              position: absolute;
+              top: 14px;
+              right: 16px;
+              background: none;
+              border: none;
+              font-size: 22px;
+              cursor: pointer;
+              color: #555;
+              line-height: 1;
+            ">✕</button>
+
+            <h2 style="color:#2e7d32;margin-top:0;">
+              <span data-translate>Understanding Your Ifa Reading</span>
+            </h2>
+
+            <p data-translate>
+              Ifa is an ancient Yoruba system of wisdom and divination. When you receive
+              a reading, several sacred concepts are revealed. This guide explains each
+              one in plain language.
+            </p>
+
+            <hr/>
+
+            <!-- What is an Odu -->
+            <h3 style="color:#2e7d32;" data-translate>What is an Odu?</h3>
+            <p data-translate>
+              An <strong>Odu</strong> is a sacred chapter of Ifa. There are 256 Odu in
+              total, each one a vast body of stories, teachings, warnings, and blessings.
+              Think of each Odu as a living library — when it appears in your divination,
+              it means its energy is present and relevant in your life right now. The Odu
+              that appears is not random; Ifa teaches it is revealed by Orunmila, the
+              Orisha of wisdom and destiny.
+            </p>
+
+            <!-- Ire / Ayewo -->
+            <h3 style="color:#2e7d32;" data-translate>What is Ire and Ayewo?</h3>
+            <p data-translate>
+              Every Odu can appear in two orientations:<br/>
+              <strong>Ire</strong> — a positive, favourable alignment. The energy of the
+              Odu is working in your favour, bringing blessings, health, longevity, or
+              abundance.<br/>
+              <strong>Ayewo</strong> — a cautionary alignment. The energy is present but
+              something needs attention, correction, or spiritual action to restore balance.
+            </p>
+
+            <!-- Specific Orientation -->
+            <h3 style="color:#2e7d32;" data-translate>What is the Specific Orientation?</h3>
+            <p data-translate>
+              Within Ire or Ayewo, there are specific types of blessing or challenge.
+              <strong>Aiku</strong> means longevity and good health. <strong>Aje</strong>
+              relates to wealth. <strong>Isegun</strong> relates to victory and so on. The specific
+              orientation tells you exactly which area of life the Odu is speaking to.
+            </p>
+
+            <!-- Ebo -->
+            <h3 style="color:#2e7d32;" data-translate>What is Ebo and Adimu?</h3>
+            <p data-translate>
+              <strong>Ebo</strong> is a prescribed offering or spiritual action — something
+              you do to activate the blessing (in Ire) or resolve the challenge (in Ayewo).
+              It is not a punishment; it is a practical spiritual step, like taking
+              medicine.<br/>
+              <strong>Adimu</strong> is a more personal offering made directly to your
+              Orisha.
+            </p>
+
+            <!-- Orisha -->
+            <h3 style="color:#2e7d32;" data-translate>What are the Orisha?</h3>
+            <p data-translate>
+              The <strong>Orisha</strong> are divine forces in Yoruba spirituality — each
+              governing a domain of life and nature. Ogun governs iron, labour, and new
+              roads. Oshun governs love and fertility. Shango governs thunder and
+              justice. When an Orisha appears in your reading, their energy is active in
+              your situation.
+            </p>
+
+            <!-- Line by Line -->
+            <h3 style="color:#2e7d32;" data-translate>What does the Line by Line Interpretation mean?</h3>
+            <p data-translate>
+              Ifa is revealed through a pattern of four marks, each corresponding to one
+              of the four elements (Fire, Air, Water, Earth) and their governing Orisha.
+              A single mark <strong>|</strong> means that energy is <em>open</em> — active
+              and flowing freely in your life. A double mark <strong>||</strong> means that
+              energy is <em>latent</em> — present but not fully activated, requiring your
+              attention and spiritual action.
+            </p>
+
+            <!-- Ebora -->
+            <h3 style="color:#2e7d32;" data-translate>What is Ebora?</h3>
+            <p data-translate>
+              <strong>Ebora</strong> are the spiritual intermediaries or guardians specific
+              to each Odu — sacred forces that are particularly attentive when that Odu is
+              present. Honouring them strengthens your alignment with the Odu's energy.
+            </p>
+
+            <!-- Ewe -->
+            <h3 style="color:#2e7d32;" data-translate>What is Ewe (Plant)?</h3>
+            <p data-translate>
+              Each Odu has sacred plants (<strong>Ewe</strong>) associated with it. These
+              are used in spiritual baths, teas, and ritual preparations to strengthen the
+              body and spirit in alignment with the Odu's teaching.
+            </p>
+
+            <!-- Eewo -->
+            <h3 style="color:#2e7d32;" data-translate>What is Eewo (Taboo)?</h3>
+            <p data-translate>
+              <strong>Eewo</strong> are sacred prohibitions. Every Odu carries specific
+              things a person should avoid — certain foods, behaviours, or actions that
+              would weaken their alignment with their destiny. Respecting the Eewo is
+              part of living in harmony with the Odu.
+            </p>
+
+            <hr/>
+
+            <p style="font-style:italic;color:red;font-size:13px;" data-translate>
+              This guide is an introduction only. For a full and personalised
+              interpretation, always consult a qualified Babalawo or Iyánífá. Ifa is a
+              living tradition — no digital tool replaces the sacred relationship between
+              the diviner and the Odu.
+            </p>
+
+            <!-- Close Button at Bottom -->
+            <div style="text-align:center;margin-top:24px;">
+              <button onclick="closeIfaGuideModal()" style="
+                background: #2e7d32;
+                color: white;
+                border: none;
+                padding: 10px 28px;
+                border-radius: 6px;
+                font-size: 15px;
+                cursor: pointer;
+              " data-translate>Close Guide</button>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="onboarding-modal" role="dialog" aria-modal="true" aria-label="Welcome" style="
+          display:none;
+          position:fixed;
+          inset:0;
+          background:rgba(0,0,0,0.7);
+          z-index:10000;
+          align-items:center;
+          justify-content:center;
+        ">
+          <div style="
+            background:white;
+            padding:30px;
+            border-radius:12px;
+            max-width:420px;
+            text-align:center;
+          ">
+            <h2 style="color:#2e7d32;" data-translate>Kaabo to Orírùn</h2>
+            <p>
+              <span data-translate>Discover your destiny through Ifá, numerology, and ancestral wisdom.</span>
+            </p>
+
+            <button id="start-tour-btn" class="btn btn-md btn-default app-btn" data-translate>
+              Take a Quick Tour
+            </button>
+
+            <br><br>
+
+            <button id="skip-tour-btn" class="btn btn-sm btn-default" data-translate>
+              Skip
+            </button>
+          </div>
+        </div>
+    </div>
+<script src="public/js/crypto-js.min.js" defer></script>
+<script src="public/js/config.js" defer></script>
+<script src="public/js/purify.js" defer></script>
+<!-- ~1 KB loader: jsPDF/html2canvas/Chart.js/Driver.js now load on first
+     use instead of on every visit (≈1 MB off the critical path). bootstrap.js
+     and axios were removed outright — nothing referenced them. -->
+<script src="public/js/lazy-libs.js" defer></script>
+<script src="public/js/orirun-export.js" defer></script>
+<script src="public/js/utils.js" defer></script>
+<script src="public/js/babalawo-contribution.js" defer></script>
+<script src="public/js/feedback.js" defer></script>
+<script src="public/js/knowledgeBase.js" defer></script>
+<script src="public/js/main.js" defer></script>
+<script src="public/js/offline-resilience.js" defer></script>
+<script src="public/js/a11y.js" defer></script>
+<script src="public/js/sync.js" defer></script>
+<script src="public/js/chatbot.js" defer></script>
+<script src="public/js/audioVideo.js" defer></script>
+<script src="public/js/translation.js" defer></script>
+<script src="public/js/analytics.js" defer></script>
+<script src="public/js/dailyGuidance.js" defer></script>
+<script src="public/js/orirun-cast.js" defer></script>
+<script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
+        if (reg.waiting) {
+          reg.waiting.postMessage({type: 'SKIP_WAITING'});
+        }
+      }).catch(console.error);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (typeof renderNotifToggle === "function") {
+        renderNotifToggle(document.getElementById("notif-toggle-slot"));
+      }
+    });
+
+    // Load the decorative background photo AFTER first paint, off the
+    // critical path, then fade it in. This keeps Largest Contentful Paint
+    // fast (the app paints on the solid scrim colour immediately) while the
+    // photo still arrives a moment later.
+    (function () {
+      function revealBackground() {
+        var img = new Image();
+        img.onload = function () { document.body.classList.add("bg-ready"); };
+        img.src = "public/img/background.jpg";
+      }
+      var kick = function () {
+        if ("requestIdleCallback" in window) {
+          requestIdleCallback(revealBackground, { timeout: 2000 });
+        } else {
+          setTimeout(revealBackground, 400);
+        }
+      };
+      if (document.readyState === "complete") kick();
+      else window.addEventListener("load", kick);
+    })();
+</script>
+<script src="public/js/orirun-tour.js" defer></script>
+</body>
+</html>

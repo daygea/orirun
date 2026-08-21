@@ -776,6 +776,14 @@ const populateDropdowns = async () => {
   try {
     const mainCastDropdown = document.getElementById("mainCast");
     populateDropdown(mainCastDropdown, allOdus.map(odu => odu.name));
+    // No silent default: prepend an empty option and select it, so the Odù
+    // field starts genuinely unset (matching the empty combobox placeholder)
+    // rather than auto-selecting Ejiogbe. A reading requires a real choice.
+    const blankOpt = document.createElement("option");
+    blankOpt.value = "";
+    blankOpt.textContent = "";
+    mainCastDropdown.insertBefore(blankOpt, mainCastDropdown.firstChild);
+    mainCastDropdown.value = "";
     initOduCombobox();
     await Promise.all([updateSpecificOrientation(), updateSolutionDetails()]);
   } catch (error) {
@@ -931,6 +939,20 @@ const performUserDivination = async (
   const solutionDetails     = getInputValue("solutionDetails",     solutionDetailsParam);
   const orientationText     = orientation === "Positive" ? "Ire" : "Ayewo";
   const resultElement       = document.getElementById("divinationResult");
+
+  // No Odù chosen yet — the field starts empty by design. Prompt for a real
+  // selection rather than silently reading a phantom default.
+  if (!mainCast) {
+    const search = document.getElementById("mainCastSearch");
+    if (resultElement) {
+      resultElement.innerHTML =
+        "<p style='color:#0c3d24;font-size:14px;text-align:center;padding:10px;'>" +
+        "Please choose an Odù to reveal its wisdom — type to search the 256 Odù, or cast with the opèlè." +
+        "</p>";
+    }
+    if (search) { try { search.focus(); } catch (e) {} }
+    return;
+  }
 
   showPreloader();
 
