@@ -559,12 +559,27 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         Add what this verse says for each orientation it speaks to. Add only the orientations it addresses — not all ten.
       </p>
       <div id="interpList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;border-top:1px solid var(--line,#e6efe4);padding-top:12px">
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Orientation
-          <select id="interpOri" style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px"></select>
-        </label>
-        <button class="btn btn-green btn-sm" type="button" onclick="addInterpretation()">Add interpretation</button>
+
+      <!-- Inline compose row: pick an orientation, optionally get an AI draft to
+           rewrite, then save. Not a prompt() — a proper writing surface. -->
+      <div id="interpCompose" style="display:none;border:1px dashed var(--line,#cbdccb);border-radius:8px;padding:12px;margin-bottom:12px;background:#fbfdfb">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <label style="font-size:12px;font-weight:600">For orientation:</label>
+          <select id="interpComposeOri" style="padding:7px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:13px"></select>
+          <button class="btn btn-ghost btn-sm" type="button" id="interpAiBtn" onclick="draftInterpretationAI()">✨ Draft with AI</button>
+        </div>
+        <textarea id="interpComposeText" rows="4" placeholder="What does this verse say for this orientation? Write in your own words."
+          style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:14px;line-height:1.6;font-family:inherit"></textarea>
+        <div id="interpAiNotes" style="display:none;font-size:11.5px;opacity:.7;margin-top:6px;white-space:pre-wrap;border-left:2px solid #cbdccb;padding-left:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-green btn-sm" type="button" onclick="saveComposedInterpretation()">Save interpretation</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="closeInterpCompose()">Cancel</button>
+        </div>
+        <div style="font-size:11px;opacity:.6;margin-top:8px">The AI draft is only a starting point — a machine can't read Ifá. Rewrite it in your own words; what you save is credited to you.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px">
+        <button class="btn btn-green btn-sm" type="button" onclick="openInterpCompose()">+ Add an interpretation</button>
       </div>
     </div>
 
@@ -1906,12 +1921,7 @@ async function openInterpEditor(verseId) {
   _openInterpVerseId = verseId;
   $("verseFormPanel").style.display = "none";
   $("interpEditorPanel").style.display = "block";
-  // Fill the orientation picker.
-  const sel = $("interpOri");
-  sel.innerHTML = "";
-  _allOrientations.forEach((o) => {
-    const opt = document.createElement("option"); opt.value = o; opt.textContent = o; sel.appendChild(opt);
-  });
+  closeInterpCompose();
   await refreshInterpList();
   $("interpEditorPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -1919,8 +1929,79 @@ async function openInterpEditor(verseId) {
 function closeInterpEditor() {
   $("interpEditorPanel").style.display = "none";
   _openInterpVerseId = null;
+  closeInterpCompose();
   loadMyVerses();
 }
+
+/* Inline compose: pick an orientation the verse doesn't yet cover, optionally
+   pull an AI draft to rewrite, then save. Replaces the old prompt(). */
+function openInterpCompose(existingOrientations) {
+  const sel = $("interpComposeOri");
+  sel.innerHTML = "";
+  // Offer only orientations not already interpreted (so we don't clobber one).
+  const taken = existingOrientations || _interpTaken || [];
+  const avail = _allOrientations.filter((o) => !taken.includes(o));
+  if (!avail.length) {
+    toast("Every orientation already has an interpretation. Edit one above instead.", false);
+    return;
+  }
+  avail.forEach((o) => {
+    const opt = document.createElement("option"); opt.value = o; opt.textContent = o; sel.appendChild(opt);
+  });
+  $("interpComposeText").value = "";
+  $("interpAiNotes").style.display = "none";
+  $("interpAiNotes").textContent = "";
+  $("interpCompose").style.display = "block";
+  $("interpCompose").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function closeInterpCompose() {
+  const c = $("interpCompose");
+  if (c) c.style.display = "none";
+  const t = $("interpComposeText"); if (t) t.value = "";
+  const n = $("interpAiNotes"); if (n) { n.style.display = "none"; n.textContent = ""; }
+}
+
+async function draftInterpretationAI() {
+  const btn = $("interpAiBtn");
+  const orientation = $("interpComposeOri").value;
+  if (!orientation) return;
+  if (btn) { btn.disabled = true; btn.textContent = "✨ Drafting…"; }
+  try {
+    const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/draft-interpretation/" + encodeURIComponent(orientation),
+      { method: "POST", body: JSON.stringify({}) });
+    if (res.status === 404) { toast("AI draft helper isn't available for your account.", true); return; }
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Draft failed");
+    if (!d.speaks) {
+      toast(d.message || "The helper judged this verse doesn't speak to that orientation.", false);
+      return;
+    }
+    // Drop the draft in as a STARTING POINT — the babaláwo rewrites it.
+    $("interpComposeText").value = d.text || "";
+    if (d.notes) {
+      const notes = $("interpAiNotes");
+      notes.textContent = "AI reasoning (check it, don't trust it):\n" + d.notes;
+      notes.style.display = "block";
+    }
+    toast("Draft added — now rewrite it in your own words before saving.");
+  } catch (err) {
+    toast("AI draft failed: " + err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "✨ Draft with AI"; }
+  }
+}
+
+async function saveComposedInterpretation() {
+  const orientation = $("interpComposeOri").value;
+  const text = $("interpComposeText").value.trim();
+  if (!orientation) { toast("Pick an orientation", true); return; }
+  if (!text) { toast("Write the interpretation before saving", true); return; }
+  await saveInterpretation(orientation, text);
+  closeInterpCompose();
+}
+
+let _interpTaken = []; // orientations already interpreted on the open verse
 
 async function refreshInterpList() {
   const wrap = $("interpList");
@@ -1932,6 +2013,7 @@ async function refreshInterpList() {
     const v = d.verse;
     $("interpEditorTitle").textContent = "Interpretations · " + v.odu;
     const interps = v.interpretations || [];
+    _interpTaken = interps.map((it) => it.orientation);
     wrap.innerHTML = "";
     if (!interps.length) {
       wrap.innerHTML = '<div style="opacity:.6;font-size:13px">No interpretations yet. Add one below.</div>';
@@ -1971,22 +2053,11 @@ async function refreshInterpList() {
   }
 }
 
-async function addInterpretation() {
-  const ori = $("interpOri").value;
-  await saveInterpretation(ori, "");
-  // After adding an empty one, refresh so the textarea appears to fill in.
-}
-
 async function saveInterpretation(orientation, text) {
-  if (!text || !text.trim()) {
-    // Adding a brand-new orientation with no text yet — prompt for it.
-    const entered = prompt("Interpretation for " + orientation + ":");
-    if (entered == null || !entered.trim()) return;
-    text = entered.trim();
-  }
+  if (!text || !text.trim()) { toast("Write the interpretation before saving", true); return; }
   try {
     const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
-      { method: "PUT", body: JSON.stringify({ text }) });
+      { method: "PUT", body: JSON.stringify({ text: text.trim() }) });
     const d = await res.json();
     if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
     toast("Interpretation for " + orientation + " saved");
