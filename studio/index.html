@@ -60,6 +60,7 @@ header .right{margin-left:auto;display:flex;align-items:center;gap:10px;font-siz
 
 /* ── Collections rail ── */
 nav{background:var(--white);border-right:1px solid var(--line);overflow-y:auto;padding:14px 10px}
+.shell > nav{grid-column:1;grid-row:2}
 nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-spacing:.12em;
   color:var(--ink-soft);padding:4px 10px 10px}
 .col-item{display:block;width:100%;text-align:left;padding:9px 10px;border-radius:var(--radius);
@@ -74,7 +75,7 @@ nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-s
 .pill.err{background:#F7E3DE;color:var(--osun)}
 
 /* ── Item list ── */
-.items{background:var(--efun);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.items{grid-column:2;grid-row:2;background:var(--efun);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
 .items .tools{padding:12px;display:flex;gap:8px;border-bottom:1px solid var(--line)}
 .items input[type=search]{
   flex:1;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);
@@ -96,7 +97,7 @@ nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-s
 .count-note{padding:8px 14px;font-size:11px;color:var(--ink-soft)}
 
 /* ── Editor ── */
-main{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--efun)}
+main{grid-column:3;grid-row:2;display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--efun)}
 .editor-head{padding:16px 22px 0}
 .editor-head h1{font-family:var(--serif);font-size:22px;font-weight:700;color:var(--igbo);
   word-break:break-word}
@@ -248,6 +249,10 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
    paddings, stacked stat cards, full-width actions, 44px targets. */
 @media (max-width:900px){
   .shell{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr;height:auto;min-height:100vh}
+  /* The desktop layout pins nav/items/main and the .ops areas to explicit
+     grid cells (col/row) to prevent overlap. The mobile layout stacks them,
+     so clear those pins and let them auto-flow into the stacked rows. */
+  .shell > nav, .shell > .items, .shell > main, .ops{grid-column:auto;grid-row:auto}
   header{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 12px;gap:6px;position:sticky;top:0;z-index:60}
   nav.area-nav{order:3;width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.area-nav::-webkit-scrollbar{display:none}
