@@ -278,7 +278,12 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .shell > main{display:block;min-height:0;overflow:visible;flex:none}
   #editorWrap{flex:none;min-height:0}
   .editor-body{display:block;min-height:0;flex:none}
-  .editor-body textarea{min-height:44vh;font-size:16px;flex:none;height:auto} /* 16px stops iOS zoom-on-focus */
+  /* Use the ID (#editor) here, not '.editor-body textarea' — the base rule is
+     'textarea#editor{flex:1}', an ID selector that outranks a class selector,
+     so a class-based override is ignored (this was why the textarea kept
+     growing and overlapping the interpretation panel on the eseIfa editor).
+     Matching the ID gives equal specificity, and source order lets this win. */
+  textarea#editor{flex:none;height:auto;min-height:44vh;font-size:16px} /* 16px stops iOS zoom-on-focus */
   /* Drop the nested scroll on the interpretation panel — on mobile it should
      flow with the page, not create a second scroll area that overlaps. */
   #interpPanel{max-height:none!important;overflow:visible!important;flex:none!important}
