@@ -434,7 +434,38 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
     </div>
 
-    <div class="panel"><h3>Activity — last 14 days</h3><div id="trendBars"></div></div>
+    <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>Activity</span>
+        <span id="trendRange" style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm trend-range-btn is-active" data-days="14" onclick="setTrendRange(14)">14d</button>
+          <button class="btn btn-ghost btn-sm trend-range-btn" data-days="30" onclick="setTrendRange(30)">30d</button>
+          <button class="btn btn-ghost btn-sm trend-range-btn" data-days="7" onclick="setTrendRange(7)">7d</button>
+        </span>
+      </h3>
+      <div id="trendLegend" style="display:flex;gap:14px;font-size:11.5px;margin:4px 0 10px;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--igbo,#0f7b3d);display:inline-block"></span>Divinations</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--brass,#b8860b);display:inline-block"></span>Chats</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--osun,#a0522d);display:inline-block"></span>Feedback</span>
+      </div>
+      <div id="trendBars"></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+      <div class="panel">
+        <h3>Content pipeline</h3>
+        <div id="corpusPanel" style="font-size:13px"></div>
+      </div>
+      <div class="panel">
+        <h3>Revenue</h3>
+        <div id="revenuePanel" style="font-size:13px"></div>
+      </div>
+      <div class="panel">
+        <h3>Accounts</h3>
+        <div id="usersPanel" style="font-size:13px"></div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
       <div class="panel"><h3>Top Odù</h3><div id="topOdu"></div></div>
       <div class="panel"><h3>Feedback</h3><div id="feedbackPanel"></div></div>
@@ -2984,6 +3015,43 @@ async function exportAnalyticsPDF(btn) {
 }
 
 /* ── Dashboard ── */
+let _dashData = null;        // last analytics summary, so the range toggle re-renders without refetch
+let _trendRangeDays = 14;    // current activity-chart window
+
+// Renders the activity chart split by event type (divinations / chats / feedback)
+// over the selected day-range, using per-type daily buckets from the summary.
+function renderTrend() {
+  const bars = $("trendBars");
+  if (!bars || !_dashData) return;
+  const t = _dashData.trendsByType || {};
+  const div = t.divination || {};
+  const chat = t.chat || {};
+  const fb = t.feedback || {};
+  const days = [];
+  for (let i = _trendRangeDays - 1; i >= 0; i--) {
+    const dt = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    days.push([dt, div[dt] || 0, chat[dt] || 0, fb[dt] || 0]);
+  }
+  // Scale bars to the busiest single day across all three series.
+  const max = Math.max(1, ...days.map(([, a, b, c]) => a + b + c));
+  const seg = (n, color) => n > 0
+    ? `<span style="height:100%;width:${Math.round(n / max * 100)}%;background:${color};display:inline-block"></span>`
+    : "";
+  bars.innerHTML = days.map(([dt, a, b, c]) =>
+    `<div class="bar-row"><span class="bl">${dt.slice(5)}</span>` +
+    `<span class="bt" style="display:inline-flex;overflow:hidden">` +
+      seg(a, "var(--igbo,#0f7b3d)") + seg(b, "var(--brass,#b8860b)") + seg(c, "var(--osun,#a0522d)") +
+    `</span><span class="bn">${a + b + c}</span></div>`).join("");
+}
+
+// Switch the activity window (7 / 14 / 30 days) and re-render from cached data.
+function setTrendRange(days) {
+  _trendRangeDays = days;
+  document.querySelectorAll(".trend-range-btn").forEach((b) =>
+    b.classList.toggle("is-active", Number(b.dataset.days) === days));
+  renderTrend();
+}
+
 async function loadDashboard() {
   const grid = $("statGrid");
   grid.innerHTML = '<div class="stat-card" style="grid-column:1/-1">' + orLoaderHTML("Loading dashboard…") + '</div>';
@@ -2996,19 +3064,73 @@ async function loadDashboard() {
       ["Feedback", d.feedbackCount],
       ["Satisfaction", (d.feedbackOverview?.satisfactionRate ?? "–") + (typeof d.feedbackOverview?.satisfactionRate === "number" ? "%" : "")],
     ];
+    // Revenue + pipeline headline cards (only shown when the data exists).
+    const pay = d.payments || {};
+    const corpus = d.corpus || {};
+    const users = d.users || {};
+    const money = (n) => "₦" + (Number(n) || 0).toLocaleString();
+    if (pay.count != null) stats.push(["Revenue", money(pay.total)]);
+    if (pay.count != null) stats.push(["Transactions", pay.count]);
+    if (corpus.total != null) stats.push(["Verses", corpus.total]);
+    // The single most actionable content number — awaiting elder sign-off.
+    if (corpus.pendingVerses != null) stats.push(["Awaiting verification", corpus.pendingVerses]);
+    if (users.total != null) stats.push(["Accounts", users.total]);
     grid.innerHTML = stats.map(([l, n]) =>
       `<div class="stat-card"><div class="n">${n ?? 0}</div><div class="l">${l}</div></div>`).join("");
 
-    // last 14 days from trends.daily
-    const daily = d.trends?.daily || {};
-    const days = [];
-    for (let i = 13; i >= 0; i--) {
-      const dt = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      days.push([dt, daily[dt] || 0]);
+    // Stash the summary so the range toggle can re-render without refetching.
+    _dashData = d;
+    renderTrend();
+
+    // Content pipeline panel — corpus health with the pending-verification
+    // headline. Each row is a status count; the bar shows its share of the corpus.
+    const cp = d.corpus || {};
+    if (cp.total != null) {
+      const rows = [
+        ["Verified", cp.verified, "#0f7b3d"],
+        ["Awaiting verification", cp.pendingVerses, "#b8860b"],
+        ["Draft", cp.draft, "#8a8a8a"],
+        ["Reviewed", cp.reviewed, "#8a6d1b"],
+        ["Needs revision", cp.needsRevision, "#c0392b"],
+        ["Unassigned", cp.unassigned, "#a0522d"],
+      ];
+      const cmax = Math.max(1, cp.total);
+      $("corpusPanel").innerHTML =
+        `<div class="bar-row"><span class="bl" style="font-weight:600">Total verses</span><span class="bn" style="width:auto;font-weight:600">${cp.total}</span></div>` +
+        rows.map(([l, n, c]) =>
+          `<div class="bar-row"><span class="bl">${l}</span><span class="bt"><span class="bf" style="width:${Math.round((n || 0) / cmax * 100)}%;background:${c}"></span></span><span class="bn">${n || 0}</span></div>`).join("");
+    } else {
+      $("corpusPanel").innerHTML = '<span class="log-count">Corpus stats unavailable.</span>';
     }
-    const max = Math.max(1, ...days.map(([, n]) => n));
-    $("trendBars").innerHTML = days.map(([dt, n]) =>
-      `<div class="bar-row"><span class="bl">${dt.slice(5)}</span><span class="bt"><span class="bf" style="width:${Math.round(n / max * 100)}%"></span></span><span class="bn">${n}</span></div>`).join("");
+
+    // Revenue panel.
+    if (pay.count != null) {
+      const moneyR = (n) => "₦" + (Number(n) || 0).toLocaleString();
+      const prov = Object.entries(pay.byProvider || {});
+      const byType = Object.entries(pay.byType || {});
+      $("revenuePanel").innerHTML =
+        `<div class="bar-row"><span class="bl" style="font-weight:600">Total received</span><span class="bn" style="width:auto;font-weight:600">${moneyR(pay.total)}</span></div>` +
+        `<div class="bar-row"><span class="bl">Successful</span><span class="bn" style="width:auto">${pay.count}</span></div>` +
+        (pay.attempted != null ? `<div class="bar-row"><span class="bl">Attempted</span><span class="bn" style="width:auto">${pay.attempted}</span></div>` : "") +
+        (byType.length ? '<div style="margin-top:6px;font-size:11px;opacity:.6">By type</div>' +
+          byType.map(([k, v]) => `<div class="bar-row"><span class="bl">${k}</span><span class="bn" style="width:auto">${moneyR(v)}</span></div>`).join("") : "") +
+        (prov.length ? '<div style="margin-top:6px;font-size:11px;opacity:.6">By provider</div>' +
+          prov.map(([k, v]) => `<div class="bar-row"><span class="bl">${k}</span><span class="bn" style="width:auto">${moneyR(v)}</span></div>`).join("") : "");
+    } else {
+      $("revenuePanel").innerHTML = '<span class="log-count">No payment data.</span>';
+    }
+
+    // Accounts panel.
+    if (users && users.total != null) {
+      const roles = Object.entries(users.byRole || {});
+      $("usersPanel").innerHTML =
+        `<div class="bar-row"><span class="bl" style="font-weight:600">Total accounts</span><span class="bn" style="width:auto;font-weight:600">${users.total}</span></div>` +
+        (users.active != null ? `<div class="bar-row"><span class="bl">Active</span><span class="bn" style="width:auto">${users.active}</span></div>` : "") +
+        (roles.length ? '<div style="margin-top:6px;font-size:11px;opacity:.6">By role</div>' +
+          roles.map(([k, v]) => `<div class="bar-row"><span class="bl">${k}</span><span class="bn" style="width:auto">${v}</span></div>`).join("") : "");
+    } else {
+      $("usersPanel").innerHTML = '<span class="log-count">No account data.</span>';
+    }
 
     const top = d.topOdu || [];
     const tmax = Math.max(1, ...top.map((o) => o.count));
