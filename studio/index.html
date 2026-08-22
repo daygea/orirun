@@ -1505,8 +1505,34 @@ $("snapshotBtn").onclick = async () => {
   } catch (err) { toast("Snapshot failed: " + err.message, true); }
 };
 
-$("exportBtn").onclick = () => {
-  window.open(API_BASE + `/api/admin/content/${activeCol.key}/export`, "_blank");
+$("exportBtn").onclick = async () => {
+  if (!activeCol) return toast("Choose a collection first", true);
+  // Same fix as backup download: fetch with credentials (the auth cookie isn't
+  // reliably sent on a bare window.open cross-site navigation), then hand the
+  // blob to the browser as a file.
+  try {
+    const res = await fetch(API_BASE + `/api/admin/content/${activeCol.key}/export`, {
+      credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) {
+      let msg = "Export failed";
+      try { msg = (await res.json()).error || msg; } catch {}
+      return toast(msg, true);
+    }
+    let filename = activeCol.key + ".json";
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename="?([^"]+)"?/);
+    if (m) filename = m[1];
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast("Export failed: " + err.message, true);
+  }
 };
 
 /* New item */
@@ -3234,13 +3260,46 @@ async function loadBackups() {
         <strong style="color:var(--igbo)">${when}</strong>
         <span class="log-count">${b.trigger} · ${b.stats?.totalItems ?? "?"} items · ${kb} KB</span>
         <span style="flex:1"></span>
-        <a class="btn btn-ghost" href="${API_BASE}/api/admin/backups/${b._id}/export" target="_blank" rel="noopener">Download</a>
+        <button class="btn btn-ghost" onclick="downloadBackup('${b._id}')">Download</button>
         <button class="btn btn-osun" onclick="restoreBackup('${b._id}','${safeWhen}')">Restore…</button>
         <button class="btn btn-osun" onclick="deleteBackup('${b._id}','${safeWhen}')">Delete</button>
       </div>`;
     }).join("") : '<span class="log-count">No snapshots yet — the first runs within an hour of boot, or take one now.</span>';
   } catch (err) { wrap.innerHTML = '<span class="log-count">Could not load backups: ' + err.message + "</span>"; }
 }
+
+// Download a snapshot via a credentialed fetch (not a bare <a href>): the auth
+// token is an httpOnly cross-site cookie, and top-level/window.open navigations
+// don't reliably carry it, which returned {"error":"Unauthorized"}. Fetching
+// with credentials uses the same CORS-approved path the rest of the studio
+// uses, then we hand the blob to the browser as a file download.
+window.downloadBackup = async function (id) {
+  try {
+    const res = await fetch(API_BASE + "/api/admin/backups/" + id + "/export", {
+      credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) {
+      let msg = "Download failed";
+      try { msg = (await res.json()).error || msg; } catch {}
+      return toast(msg, true);
+    }
+    // Prefer the server's filename from Content-Disposition; fall back to a date.
+    let filename = "orirun-snapshot.json.gz";
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = cd.match(/filename="?([^"]+)"?/);
+    if (m) filename = m[1];
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    toast("Download failed: " + err.message, true);
+  }
+};
+
 window.runBackup = async function (withEmail) {
   try {
     const res = await fetch(API_BASE + "/api/admin/backups/run", {
