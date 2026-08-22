@@ -268,7 +268,20 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   .prov-node{border-radius:99px!important;border-left:1px solid var(--line)!important;min-height:36px}
   .prov-meta{width:100%;margin:4px 0 0}
   .editor-body{padding:10px 14px}
-  .editor-body textarea{min-height:44vh;font-size:16px} /* 16px stops iOS zoom-on-focus */
+  /* On mobile the shell is height:auto, so main/.editor-body have no bounded
+     height and `flex:1` can't resolve — the JSON textarea and the interp panel
+     then fight for space and overlap. Fix: neutralise the flex-grow heights so
+     everything sizes to its content and stacks in normal flow, and let the
+     PAGE scroll (instead of the desktop's flex-internal-scroll layout).
+     NOTE: #editorWrap's display is toggled inline by JS (flex/none), so we do
+     NOT set display on it here — only relax its flex sizing. */
+  .shell > main{display:block;min-height:0;overflow:visible;flex:none}
+  #editorWrap{flex:none;min-height:0}
+  .editor-body{display:block;min-height:0;flex:none}
+  .editor-body textarea{min-height:44vh;font-size:16px;flex:none;height:auto} /* 16px stops iOS zoom-on-focus */
+  /* Drop the nested scroll on the interpretation panel — on mobile it should
+     flow with the page, not create a second scroll area that overlaps. */
+  #interpPanel{max-height:none!important;overflow:visible!important;flex:none!important}
   .editor-actions{padding:10px 14px;position:static;background:var(--paper,#faf8f0);border-top:1px solid var(--line)}
   .editor-actions button{min-height:44px}
   .logs{font-size:12.5px}
