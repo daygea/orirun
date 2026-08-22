@@ -516,8 +516,13 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         so they don't show in anyone's My Verses. Assign one to a babaláwo/elder account to give them ownership
         (they can then edit it while it's still a draft).
       </p>
-      <div class="log-count" id="unassignedNote" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <input type="search" id="unassignedSearch" placeholder="Search unassigned verses…" aria-label="Search unassigned verses"
+          style="flex:1 1 200px;padding:8px 11px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        <span class="log-count" id="unassignedNote"></span>
+      </div>
       <div id="unassignedList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="unassignedPager" style="display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 0"></div>
     </div>
 
     <div class="log-count" id="contribNote" style="margin-bottom:10px"></div>
@@ -676,8 +681,13 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       verified by a different elder. If something isn't right, <strong>send it back</strong> with a note instead of
       changing the contributor's words.
     </p>
-    <div class="log-count" id="verifyNote" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <input type="search" id="verifySearch" placeholder="Search work to verify…" aria-label="Search work to verify"
+        style="flex:1 1 200px;padding:8px 11px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+      <span class="log-count" id="verifyNote"></span>
+    </div>
     <div id="verifyList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="verifyPager" style="display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 0"></div>
 
     <!-- Detail panel for verifying one verse (opens on "Review") -->
     <div class="panel" id="verifyDetail" style="display:none;margin-top:16px"></div>
@@ -1884,21 +1894,32 @@ let _allOrientations = [];
    send it back with a note rather than editing the contributor's words. */
 let _verifyElderName = ""; // remembered signer name for this session
 
-async function loadVerifyQueue() {
+let _verifyPage = 1;
+async function loadVerifyQueue(page) {
   const list = $("verifyList");
   const note = $("verifyNote");
   if (!list) return;
+  if (page != null) _verifyPage = page;
   $("verifyDetail").style.display = "none";
   list.innerHTML = orLoaderHTML("Loading work to verify…");
   try {
-    const res = await studioApi("/verify-queue");
+    const q = ($("verifySearch") && $("verifySearch").value.trim()) || "";
+    const params = new URLSearchParams();
+    params.set("page", _verifyPage);
+    if (q) params.set("q", q);
+    const res = await studioApi("/verify-queue?" + params.toString());
     if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const items = d.items || [];
-    if (note) note.textContent = items.length + " awaiting your sign-off";
+    const total = d.total != null ? d.total : items.length;
+    if (note) note.textContent = total + " awaiting your sign-off" +
+      (d.pages > 1 ? " · page " + d.page + "/" + d.pages : "");
     list.innerHTML = "";
+    renderVerifyPager(d);
     if (!items.length) {
-      list.innerHTML = '<div style="opacity:.6;padding:6px 2px">Nothing to verify right now. 🎉</div>';
+      list.innerHTML = q
+        ? '<div style="opacity:.6;padding:6px 2px">No matching work to verify.</div>'
+        : '<div style="opacity:.6;padding:6px 2px">Nothing to verify right now. 🎉</div>';
       return;
     }
     for (const it of items) {
@@ -1927,6 +1948,32 @@ async function loadVerifyQueue() {
     toast("Failed to load verify queue: " + err.message, true);
   }
 }
+
+function renderVerifyPager(d) {
+  const pager = $("verifyPager");
+  if (!pager) return;
+  pager.innerHTML = "";
+  if (!d || !d.pages || d.pages <= 1) return;
+  const mk = (label, disabled, target) => {
+    const b = document.createElement("button");
+    b.className = "btn btn-ghost btn-sm";
+    b.textContent = label; b.disabled = disabled;
+    b.onclick = () => loadVerifyQueue(target);
+    return b;
+  };
+  pager.appendChild(mk("‹ Prev", d.page <= 1, d.page - 1));
+  const mid = document.createElement("span");
+  mid.style.cssText = "font-size:12px;opacity:.7";
+  mid.textContent = d.page + " / " + d.pages;
+  pager.appendChild(mid);
+  pager.appendChild(mk("Next ›", d.page >= d.pages, d.page + 1));
+}
+
+let _verifySearchDebounce = null;
+$("verifySearch").addEventListener("input", () => {
+  clearTimeout(_verifySearchDebounce);
+  _verifySearchDebounce = setTimeout(() => loadVerifyQueue(1), 300);
+});
 
 const STATUS_LABEL = {
   draft: "draft", reviewed: "reviewed",
@@ -2614,20 +2661,31 @@ async function fetchAuthorAccounts() {
   return _authorAccounts;
 }
 
-async function loadUnassigned() {
+let _unassignedPage = 1;
+async function loadUnassigned(page) {
   const list = $("unassignedList");
   const note = $("unassignedNote");
   if (!list) return;
+  if (page != null) _unassignedPage = page;
   list.innerHTML = orLoaderHTML("Loading…");
   try {
-    const [res, accounts] = await Promise.all([api("/verses-unassigned"), fetchAuthorAccounts()]);
+    const q = ($("unassignedSearch") && $("unassignedSearch").value.trim()) || "";
+    const params = new URLSearchParams();
+    params.set("page", _unassignedPage);
+    if (q) params.set("q", q);
+    const [res, accounts] = await Promise.all([api("/verses-unassigned?" + params.toString()), fetchAuthorAccounts()]);
     if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const verses = d.verses || [];
-    if (note) note.textContent = verses.length + " unassigned";
+    const total = d.total != null ? d.total : verses.length;
+    if (note) note.textContent = total + " unassigned" +
+      (d.pages > 1 ? " · page " + d.page + "/" + d.pages : "");
     list.innerHTML = "";
+    renderUnassignedPager(d);
     if (!verses.length) {
-      list.innerHTML = '<div style="opacity:.6;font-size:13px">Every verse has an owner. Nothing to assign.</div>';
+      list.innerHTML = q
+        ? '<div style="opacity:.6;font-size:13px">No unassigned verses match “' + escapeHtml(q) + '”.</div>'
+        : '<div style="opacity:.6;font-size:13px">Every verse has an owner. Nothing to assign.</div>';
       return;
     }
     if (!accounts.length) {
@@ -2658,6 +2716,32 @@ async function loadUnassigned() {
     toast("Failed to load unassigned verses: " + err.message, true);
   }
 }
+
+function renderUnassignedPager(d) {
+  const pager = $("unassignedPager");
+  if (!pager) return;
+  pager.innerHTML = "";
+  if (!d || !d.pages || d.pages <= 1) return;
+  const mk = (label, disabled, target) => {
+    const b = document.createElement("button");
+    b.className = "btn btn-ghost btn-sm";
+    b.textContent = label; b.disabled = disabled;
+    b.onclick = () => loadUnassigned(target);
+    return b;
+  };
+  pager.appendChild(mk("‹ Prev", d.page <= 1, d.page - 1));
+  const mid = document.createElement("span");
+  mid.style.cssText = "font-size:12px;opacity:.7";
+  mid.textContent = d.page + " / " + d.pages;
+  pager.appendChild(mid);
+  pager.appendChild(mk("Next ›", d.page >= d.pages, d.page + 1));
+}
+
+let _unassignedSearchDebounce = null;
+$("unassignedSearch").addEventListener("input", () => {
+  clearTimeout(_unassignedSearchDebounce);
+  _unassignedSearchDebounce = setTimeout(() => loadUnassigned(1), 300);
+});
 
 async function assignOwner(idEnc, force) {
   const id = decodeURIComponent(idEnc);
