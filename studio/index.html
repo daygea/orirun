@@ -3093,8 +3093,13 @@ function setLoggedOutChrome(loggedOut) {
 // Wipe every data surface — used on logout so nothing stale lingers.
 function clearAllSurfaces() {
   activeCol = null; activeKey = null; collections = [];
-  ["colList","itemList","statGrid","trendBars","topOdu","feedbackPanel",
-   "latestFeedback","backupList","opsAudit","logHead","logBody","contribList","auditList"]
+  [// superadmin console surfaces
+   "colList","itemList","statGrid","trendBars","topOdu","feedbackPanel",
+   "latestFeedback","backupList","opsAudit","logHead","logBody","contribList","auditList",
+   // babaláwo / elder authoring surfaces — these hold one account's own work,
+   // so they MUST be cleared on any account change or the next person sees a
+   // flash of the previous person's verses.
+   "myVersesList","verifyList","interpList","interpVerseText","unassignedList"]
     .forEach((id) => { const el = $(id); if (el) el.innerHTML = ""; });
   $("countNote").textContent = ""; $("logCount").textContent = "";
   $("logPage").textContent = ""; $("backupNote").textContent = "";
@@ -3102,6 +3107,15 @@ function clearAllSurfaces() {
   $("editorWrap").style.display = "none";
   $("emptyState").style.display = "none";
   $("logDetail").style.display = "none";
+  // Close the interpretation editor / verse form if open for a prior account.
+  _openInterpVerseId = null; _editingVerseId = null;
+  const iep = $("interpEditorPanel"); if (iep) iep.style.display = "none";
+  const vfp = $("verseFormPanel"); if (vfp) vfp.style.display = "none";
+  // Reset notification badges. setTabBadge appends " (N)" as text to the tab,
+  // so clear that suffix rather than looking for a badge element.
+  document.querySelectorAll(".area-tab").forEach((t) => {
+    t.textContent = t.textContent.replace(/\s*\(\d+\)$/, "");
+  });
 }
 
 function gateToLogin() {
@@ -3114,6 +3128,11 @@ function gateToLogin() {
 
 async function revealApp() {
   isAuthed = true;
+  // Clear every data surface FIRST, before any view is shown. This is the
+  // single choke-point that guarantees switching accounts (or re-authing)
+  // never flashes the previous person's data — e.g. a babaláwo's My Verses
+  // briefly appearing under an elder's login.
+  clearAllSurfaces();
   setLoggedOutChrome(false);
   $("authState").style.display = "none";
   const role = window.__STAFF_ROLE__ || "";
