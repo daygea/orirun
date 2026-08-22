@@ -655,8 +655,13 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
     </div>
 
-    <div class="log-count" id="myVersesNote" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <input type="search" id="myVersesSearch" placeholder="Search my verses…" aria-label="Search my verses"
+        style="flex:1 1 200px;padding:8px 11px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+      <span class="log-count" id="myVersesNote"></span>
+    </div>
     <div id="myVersesList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="myVersesPager" style="display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 0"></div>
   </section>
 
   <section class="ops" id="area-verify" aria-label="To verify" style="display:none">
@@ -846,6 +851,7 @@ const api = (p, opts = {}) =>
 let collections = [];
 let activeCol = null;      // registry entry
 let colPayload = null;     // { keys, data?, truncated }
+let contentPage = 1;       // current page for paginated collections (eseIfa)
 let activeKey = null;
 let itemDirty = false;
 let isAuthed = false;      // true only after a confirmed superadmin session
@@ -915,21 +921,33 @@ function renderCollections() {
 async function selectCollection(c) {
   if (itemDirty && !confirmAct("Discard unsaved changes?")) return;
   activeCol = c; activeKey = null; itemDirty = false;
+  contentPage = 1; // reset to first page when switching collections
   renderCollections();
   $("editorWrap").style.display = "none";
   $("emptyState").style.display = "flex";
   $("search").value = "";
-  // Loader: top bar + in-panel spinner while this collection's items load.
+  await loadContentPage();
+}
+
+// Loads the current collection's item list. For paginated collections (eseIfa)
+// this fetches one server page filtered by the search box; for bounded
+// collections it fetches the whole set (unchanged behaviour). Called on
+// collection switch, page change, and (debounced) search.
+async function loadContentPage() {
+  const c = activeCol;
+  if (!c) return;
   orTopbarStart();
   $("itemList").innerHTML = orLoaderHTML("Loading items…");
   $("countNote").textContent = "";
   try {
-    const res = await api(`/content/${c.key}`);
+    const q = $("search").value.trim();
+    const params = new URLSearchParams();
+    params.set("page", contentPage);
+    if (q) params.set("q", q);
+    const res = await api(`/content/${c.key}?` + params.toString());
     if (res.status === 401 || res.status === 403) return gateToLogin();
     colPayload = await res.json();
     renderItems();
-    // On phones the item list stacks below the collections rail, so tapping a
-    // collection loads its items off-screen. Bring the list into view.
     if (window.matchMedia("(max-width:900px)").matches) {
       const itemsPane = document.querySelector("section.items");
       if (itemsPane) requestAnimationFrame(() =>
@@ -941,9 +959,32 @@ async function selectCollection(c) {
   } finally { orTopbarDone(); }
 }
 function renderItems() {
-  const q = $("search").value.trim().toLowerCase();
   const wrap = $("itemList"); wrap.innerHTML = "";
   if (!colPayload) return;
+
+  // Paginated collection (eseIfa): keys are already the current server page,
+  // filtered server-side by the search term. Render them + page controls.
+  if (colPayload.paginated) {
+    const keys = colPayload.keys || [];
+    for (const k of keys) {
+      const b = document.createElement("button");
+      b.className = "item-row" + (k === activeKey ? " active" : "");
+      b.textContent = k;
+      b.onclick = () => selectItem(k);
+      wrap.appendChild(b);
+    }
+    renderContentPager();
+    const total = colPayload.count || 0;
+    const shownFrom = total === 0 ? 0 : (colPayload.page - 1) * colPayload.limit + 1;
+    const shownTo = Math.min(total, (colPayload.page - 1) * colPayload.limit + keys.length);
+    $("countNote").textContent = total === 0
+      ? "No matching verses"
+      : `${shownFrom}–${shownTo} of ${total}` + (colPayload.pages > 1 ? ` · page ${colPayload.page}/${colPayload.pages}` : "");
+    return;
+  }
+
+  // Bounded collection: the whole set is present; filter client-side.
+  const q = $("search").value.trim().toLowerCase();
   const keys = colPayload.keys.filter((k) => !q || k.toLowerCase().includes(q));
   for (const k of keys.slice(0, 400)) {
     const b = document.createElement("button");
@@ -955,7 +996,41 @@ function renderItems() {
   $("countNote").textContent =
     `${keys.length} of ${colPayload.keys.length} items` + (keys.length > 400 ? " · showing first 400" : "");
 }
-$("search").addEventListener("input", renderItems);
+
+// Prev/next page controls for a paginated collection.
+function renderContentPager() {
+  const wrap = $("itemList");
+  if (!colPayload || !colPayload.paginated || colPayload.pages <= 1) return;
+  const pager = document.createElement("div");
+  pager.style.cssText = "display:flex;gap:8px;align-items:center;justify-content:center;padding:10px 0 4px";
+  const mk = (label, disabled, delta) => {
+    const b = document.createElement("button");
+    b.className = "btn btn-ghost btn-sm";
+    b.textContent = label;
+    b.disabled = disabled;
+    b.onclick = () => { contentPage = colPayload.page + delta; loadContentPage(); };
+    return b;
+  };
+  pager.appendChild(mk("‹ Prev", colPayload.page <= 1, -1));
+  const mid = document.createElement("span");
+  mid.style.cssText = "font-size:12px;opacity:.7";
+  mid.textContent = `${colPayload.page} / ${colPayload.pages}`;
+  pager.appendChild(mid);
+  pager.appendChild(mk("Next ›", colPayload.page >= colPayload.pages, +1));
+  wrap.appendChild(pager);
+}
+let _searchDebounce = null;
+$("search").addEventListener("input", () => {
+  // For a paginated collection, search runs on the server (reset to page 1,
+  // debounced so we don't fire a request per keystroke). For a bounded
+  // collection, it's an instant client-side filter of the already-loaded set.
+  if (colPayload && colPayload.paginated) {
+    clearTimeout(_searchDebounce);
+    _searchDebounce = setTimeout(() => { contentPage = 1; loadContentPage(); }, 300);
+  } else {
+    renderItems();
+  }
+});
 
 /* ── Editor ────────────────────────────────────────────────── */
 async function selectItem(key) {
@@ -2052,22 +2127,33 @@ function setTabBadge(area, count) {
   if (count > 0) tab.textContent = tab.textContent + " (" + count + ")";
 }
 
-async function loadMyVerses() {
+let _myVersesPage = 1;
+async function loadMyVerses(page) {
   const list = $("myVersesList");
   const note = $("myVersesNote");
   if (!list) return;
+  if (page != null) _myVersesPage = page;
   list.innerHTML = orLoaderHTML("Loading your verses…");
   try {
     // Load the Odù list + orientations once, for the pickers.
     if (!_authoringOdus.length) await loadAuthoringOdus();
-    const res = await studioApi("/my-verses");
+    const q = ($("myVersesSearch") && $("myVersesSearch").value.trim()) || "";
+    const params = new URLSearchParams();
+    params.set("page", _myVersesPage);
+    if (q) params.set("q", q);
+    const res = await studioApi("/my-verses?" + params.toString());
     if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const verses = d.verses || [];
-    if (note) note.textContent = verses.length + " verse" + (verses.length === 1 ? "" : "s");
+    const total = d.total != null ? d.total : verses.length;
+    if (note) note.textContent = total + " verse" + (total === 1 ? "" : "s") +
+      (d.pages > 1 ? " · page " + d.page + "/" + d.pages : "");
     list.innerHTML = "";
+    renderMyVersesPager(d);
     if (!verses.length) {
-      list.innerHTML = '<div style="opacity:.6;padding:6px 2px">No verses yet. Tap “+ New verse” to contribute your first.</div>';
+      list.innerHTML = q
+        ? '<div style="opacity:.6;padding:6px 2px">No verses match “' + escapeHtml(q) + '”.</div>'
+        : '<div style="opacity:.6;padding:6px 2px">No verses yet. Tap “+ New verse” to contribute your first.</div>';
       return;
     }
     for (const v of verses) {
@@ -2125,7 +2211,40 @@ async function loadMyVerses() {
   }
 }
 
+function renderMyVersesPager(d) {
+  const pager = $("myVersesPager");
+  if (!pager) return;
+  pager.innerHTML = "";
+  if (!d || !d.pages || d.pages <= 1) return;
+  const mk = (label, disabled, target) => {
+    const b = document.createElement("button");
+    b.className = "btn btn-ghost btn-sm";
+    b.textContent = label; b.disabled = disabled;
+    b.onclick = () => loadMyVerses(target);
+    return b;
+  };
+  pager.appendChild(mk("‹ Prev", d.page <= 1, d.page - 1));
+  const mid = document.createElement("span");
+  mid.style.cssText = "font-size:12px;opacity:.7";
+  mid.textContent = d.page + " / " + d.pages;
+  pager.appendChild(mid);
+  pager.appendChild(mk("Next ›", d.page >= d.pages, d.page + 1));
+}
+
+// Debounced server-side search for My Verses.
+let _myVersesSearchDebounce = null;
+$("myVersesSearch").addEventListener("input", () => {
+  clearTimeout(_myVersesSearchDebounce);
+  _myVersesSearchDebounce = setTimeout(() => loadMyVerses(1), 300);
+});
+
+
+
 async function loadAuthoringOdus() {
+  // The Odù names come from the same generator the main app uses; the studio
+
+
+
   // The Odù names come from the same generator the main app uses; the studio
   // doesn't have it, so fetch the orientations from the backend and build the
   // Odù list from the public verse odu list is not available — instead we ask
