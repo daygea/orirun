@@ -2983,15 +2983,37 @@ async function exportAnalyticsPDF(btn) {
     // Pull the current summary so the report matches what's on screen.
     const sres = await fetch(API_BASE + "/api/analytics/summary", { credentials: "include" });
     const summary = await sres.json();
+
+    // Reshape to exactly what the PDF endpoint expects:
+    //  - summary.satisfactionRate must be a top-level number (it lives under
+    //    feedbackOverview in the raw summary).
+    //  - trends must be an ARRAY of [period, count] pairs, not the raw
+    //    {daily,weekly,monthly} object — the endpoint does trends.map().
+    //  - feedbacks is the latest-feedback list (note the field name).
+    const view = "daily";
+    const trendObj = (summary.trends && summary.trends[view]) || {};
+    const trendPairs = Object.entries(trendObj).sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const payloadSummary = {
+      divinationCount: summary.divinationCount ?? 0,
+      chatCount: summary.chatCount ?? 0,
+      feedbackCount: summary.feedbackCount ?? 0,
+      satisfactionRate: summary.feedbackOverview?.satisfactionRate ?? 0,
+    };
+    const feedbacks = (summary.latestFeedbacks || []).map((f) => ({
+      contextType: f.contextType || f.type || "feedback",
+      feedback: f.feedback || f.message || f.text || "",
+      timestamp: f.timestamp ? new Date(f.timestamp).toLocaleString() : "",
+    }));
+
     const res = await fetch(API_BASE + "/api/analytics/export-pdf", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        summary,
-        trends: summary.trends || null,
-        feedbacks: summary.feedbacks || summary.latestFeedback || null,
-        images: [],
-        currentTrendView: "daily",
+        summary: payloadSummary,
+        trends: trendPairs,
+        feedbacks,
+        images: {},                 // object, not array — endpoint reads images.trendImage
+        currentTrendView: view,
         date: new Date().toISOString().slice(0, 10),
       }),
     });
