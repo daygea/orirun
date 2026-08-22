@@ -3015,6 +3015,13 @@ async function exportAnalyticsPDF(btn) {
         images: {},                 // object, not array — endpoint reads images.trendImage
         currentTrendView: view,
         date: new Date().toISOString().slice(0, 10),
+        // The rest of the dashboard, so the PDF mirrors what's on screen:
+        payments: summary.payments || null,
+        corpus: summary.corpus || null,
+        users: summary.users || null,
+        topOdu: summary.topOdu || [],
+        feedbackByType: summary.feedbackOverview?.byType || {},
+        currency: "₦",
       }),
     });
     if (!res.ok) {
