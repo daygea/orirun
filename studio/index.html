@@ -478,8 +478,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <strong>the same weight as a real seeker signal</strong>: this gives reach, not extra authority.
       </p>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-        <input type="text" id="seedOdu" placeholder="Odù (e.g. Osa Owonrin)"
-          style="flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line,#e6efe4);border-radius:8px;font-size:13px" />
+      <div style="position:relative;flex:1;min-width:160px" id="seedOduCombo">
+        <input type="text" id="seedOdu" autocomplete="off" placeholder="Type to search the 256 Odù…"
+          style="width:100%;padding:8px 10px;border:1px solid var(--line,#e6efe4);border-radius:8px;font-size:13px" />
+        <ul id="seedOduList" role="listbox" style="display:none;position:absolute;z-index:60;left:0;right:0;top:100%;max-height:240px;overflow-y:auto;margin:2px 0 0;padding:4px;list-style:none;background:#fff;border:1px solid var(--line,#d9e4dc);border-radius:8px;box-shadow:0 6px 20px rgba(10,60,40,.12)"></ul>
+      </div>
         <select id="seedOri" style="padding:8px 10px;border:1px solid var(--line,#e6efe4);border-radius:8px;font-size:13px">
           <option value="">Orientation…</option>
           <option>Aiku</option><option>Aje</option><option>Aya</option><option>Bimo</option><option>Isegun</option>
@@ -3149,11 +3152,54 @@ function setTrendRange(days) {
 }
 
 // Seed learning signals by PICKING verses (superadmin + elder) — no IDs typed.
-// Load the verses for an Odù, show their text, and mark the ones that have come
-// to pass. The verseId is resolved from what's shown, never typed. Signals are
-// recorded at seeker weight — reach, not extra authority.
+// The Odù field is a searchable combobox over the 256 Odù (same list as the
+// rest of the studio), so retrieval is easy and typo-free.
+let _seedOduValue = "";
+function initSeedOduCombo() {
+  const input = $("seedOdu"), listEl = $("seedOduList");
+  if (!input || !listEl || input._wired) return;
+  input._wired = true;
+  // Reuse the studio's Odù name list (built once for the authoring picker).
+  if (!_authoringOdus || !_authoringOdus.length) {
+    try { _authoringOdus = buildOduNames(); } catch (e) {}
+  }
+  let active = -1;
+  const filter = (q) => {
+    const s = (q || "").trim().toLowerCase();
+    if (!s) return _authoringOdus.slice(0, 50);
+    return _authoringOdus.filter((n) => n.toLowerCase().includes(s)).slice(0, 50);
+  };
+  const choose = (name) => { if (_authoringOdus.includes(name)) { _seedOduValue = name; input.value = name; close(); } };
+  const open = () => { listEl.style.display = "block"; };
+  const close = () => { listEl.style.display = "none"; active = -1; };
+  const render = (items) => {
+    listEl.innerHTML = "";
+    if (!items.length) { listEl.innerHTML = '<li style="padding:8px 10px;color:#8a9a8f;font-style:italic">No matching Odù</li>'; open(); return; }
+    items.forEach((name, i) => {
+      const li = document.createElement("li");
+      li.textContent = name;
+      li.style.cssText = "padding:8px 10px;border-radius:6px;cursor:pointer;font-size:13px;" + (i === active ? "background:#eef6ee" : "");
+      li.addEventListener("mousedown", (e) => { e.preventDefault(); choose(name); });
+      listEl.appendChild(li);
+    });
+    open();
+  };
+  input.oninput = () => { active = -1; render(filter(input.value)); };
+  input.onfocus = () => { active = -1; render(filter(input.value)); };
+  input.onkeydown = (e) => {
+    const items = Array.from(listEl.querySelectorAll("li"));
+    if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, items.length - 1); render(filter(input.value)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(filter(input.value)); }
+    else if (e.key === "Enter") { e.preventDefault(); if (active >= 0 && items[active]) choose(items[active].textContent); }
+    else if (e.key === "Escape") close();
+  };
+  document.addEventListener("click", (e) => {
+    if (!$("seedOduCombo")?.contains(e.target)) { close(); if (input.value !== _seedOduValue) input.value = _seedOduValue || ""; }
+  });
+}
+
 async function loadSeedVerses(btn) {
-  const odu = ($("seedOdu").value || "").trim();
+  const odu = (_seedOduValue || ($("seedOdu").value || "").trim());
   const ori = ($("seedOri").value || "").trim();
   const list = $("seedVerseList");
   const out = $("seedResult");
@@ -3701,7 +3747,11 @@ async function refreshSessionChip() {
     // Bulk signal seeding is an authority action — superadmin + elder only
     // (backend enforces the same). It seeds the reading ranking's signals.
     var seedPanel = document.getElementById("seedPanel");
-    if (seedPanel) seedPanel.style.display = (me.role === "superadmin" || me.role === "elder") ? "" : "none";
+    if (seedPanel) {
+      var canSeed = (me.role === "superadmin" || me.role === "elder");
+      seedPanel.style.display = canSeed ? "" : "none";
+      if (canSeed) { try { initSeedOduCombo(); } catch (e) {} }
+    }
     $("logoutBtn").style.display = "";
   } else {
     $("whoami").textContent = "";
