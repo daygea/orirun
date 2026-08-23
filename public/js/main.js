@@ -226,7 +226,26 @@ function _verseReadingHTML(vr, solutionInfo) {
       <div class="enquiry-result" style="margin-top:10px;"></div>
     </div>` : "";
 
-  return leadHTML + eboBox + othersHTML + confirmHTML;
+  // Browse-all — exploration path, distinct from the reading. Shown only when
+  // the corpus holds more verses than the (capped) reading surfaced, so seekers
+  // can reach every verse for this cast — or widen to the whole Odù — if they wish.
+  const corpusTotal = (typeof vr.corpusTotal === "number") ? vr.corpusTotal : 0;
+  const readingShown = (typeof vr.totalOthers === "number") ? vr.totalOthers : (vr.others || []).length;
+  const browseHTML = (corpusTotal > readingShown && vr.odu && vr.orientation) ? `
+    <div class="verse-browse" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--of-line,#e6efe4);"
+         data-odu="${esc(vr.odu)}" data-ori="${esc(vr.orientation)}">
+      <button type="button" class="verse-browse-open btn btn-ghost btn-sm" data-translate>Browse all ${corpusTotal} verses for this cast</button>
+      <div class="verse-browse-panel" style="display:none;margin-top:12px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+          <button type="button" class="browse-scope active" data-scope="cast" style="font-size:12px;padding:5px 10px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:var(--of-tint,#fbfdfa);cursor:pointer;" data-translate>This cast</button>
+          <button type="button" class="browse-scope" data-scope="odu" style="font-size:12px;padding:5px 10px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;" data-translate>Whole Odù</button>
+        </div>
+        <div class="browse-list"></div>
+        <button type="button" class="browse-more btn btn-ghost btn-sm" style="display:none;margin-top:10px;" data-translate>Load more</button>
+      </div>
+    </div>` : "";
+
+  return leadHTML + eboBox + othersHTML + browseHTML + confirmHTML;
 }
 
 /* PART B — wire the "confirm your enquiry" control. Delegated so it works for
@@ -312,6 +331,72 @@ document.addEventListener("input", (e) => {
     input.style.opacity = "1";
   }
 });
+
+// Browse-all (exploration path). Open the panel, switch scope (this cast / whole
+// Odù), and page the full set. Distinct from the reading — this is the corpus.
+document.addEventListener("click", (e) => {
+  const open = e.target.closest(".verse-browse-open");
+  if (!open) return;
+  const wrap = open.closest(".verse-browse");
+  const panel = wrap && wrap.querySelector(".verse-browse-panel");
+  if (!panel) return;
+  const showing = panel.style.display !== "none";
+  panel.style.display = showing ? "none" : "block";
+  if (!showing && !panel.dataset.loaded) {
+    _browseLoad(wrap, "cast", 0, true);
+    panel.dataset.loaded = "1";
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest(".browse-scope");
+  if (!tab) return;
+  const wrap = tab.closest(".verse-browse");
+  const panel = wrap && wrap.querySelector(".verse-browse-panel");
+  if (!panel) return;
+  panel.querySelectorAll(".browse-scope").forEach((b) => {
+    b.classList.toggle("active", b === tab);
+    b.style.background = b === tab ? "var(--of-tint,#fbfdfa)" : "#fff";
+  });
+  _browseLoad(wrap, tab.getAttribute("data-scope"), 0, true);
+});
+
+document.addEventListener("click", (e) => {
+  const more = e.target.closest(".browse-more");
+  if (!more) return;
+  const wrap = more.closest(".verse-browse");
+  const scope = wrap.dataset.scope || "cast";
+  const offset = parseInt(wrap.dataset.offset, 10) || 0;
+  _browseLoad(wrap, scope, offset, false);
+});
+
+async function _browseLoad(wrap, scope, offset, reset) {
+  const odu = wrap.getAttribute("data-odu");
+  const ori = wrap.getAttribute("data-ori");
+  const panel = wrap.querySelector(".verse-browse-panel");
+  const list = panel.querySelector(".browse-list");
+  const moreBtn = panel.querySelector(".browse-more");
+  if (reset) { list.innerHTML = '<span style="font-size:12px;color:#8a9a8f;" data-translate>Loading…</span>'; wrap.dataset.scope = scope; }
+  try {
+    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/browse?scope=${encodeURIComponent(scope)}&offset=${offset}&limit=10`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const cards = (data.items || []).map(_verseCardHTML).join("");
+    if (reset) list.innerHTML = cards || '<span style="font-size:12.5px;color:#7a8a80;" data-translate>No verses to show.</span>';
+    else list.insertAdjacentHTML("beforeend", cards);
+    const newOffset = offset + (data.items || []).length;
+    wrap.dataset.offset = newOffset;
+    if (data.hasMore) {
+      moreBtn.style.display = "";
+      moreBtn.textContent = `Load more (${data.total - newOffset} left)`;
+    } else {
+      moreBtn.style.display = "none";
+    }
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(list); } catch {} }
+  } catch {
+    list.innerHTML = '<span style="font-size:12px;color:#c0392b;" data-translate>Could not load verses.</span>';
+  }
+}
 
 // Lived-outcome capture — the strongest learning signal. On a PAST reading in
 // history, the seeker affirms whether it bore fruit. Records to the per-verse
