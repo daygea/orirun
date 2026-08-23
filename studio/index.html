@@ -484,6 +484,20 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <div id="backupList" style="font-size:13px"></div>
     </div>
     <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>Translation policy · per language</span>
+        <span style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="loadLanguagePolicy()">Reload</button>
+          <button class="btn btn-osun" onclick="saveLanguagePolicy()">Save changes</button>
+        </span>
+      </h3>
+      <div class="log-count" style="margin-bottom:8px">
+        <strong>AI</strong> = full auto-translation · <strong>Curated</strong> = studio/source only, no AI (use for languages the model mistranslates, e.g. Fon) · <strong>Off</strong> = hidden from users.
+      </div>
+      <div id="langPolicyNote" class="log-count" style="margin-bottom:8px"></div>
+      <div id="langPolicyList" style="font-size:13px">Loading…</div>
+    </div>
+    <div class="panel">
       <h3>Recent admin actions</h3>
       <div class="log-count" style="margin-bottom:8px">Destructive operations — who cleared or restored what, and when.</div>
       <div id="opsAudit" style="font-size:13px"></div>
@@ -1641,7 +1655,7 @@ window.showArea = function (area) {
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
-    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit(), loadDiagnostics()]).finally(orTopbarDone);
+    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit(), loadDiagnostics(), loadLanguagePolicy()]).finally(orTopbarDone);
   } else if (area === "logs") {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
@@ -3241,6 +3255,70 @@ async function loadOpsAudit() {
     }).join("") : '<span class="log-count">No destructive actions recorded yet.</span>';
   } catch (err) {
     wrap.innerHTML = '<span class="log-count">Could not load admin actions: ' + err.message + '</span>';
+  }
+}
+
+/* ── Language translation policy (superadmin) ── */
+const _LANG_NAMES = {
+  en:"English", yo:"Yoruba", ig:"Igbo", ha:"Hausa", sw:"Swahili", fr:"French",
+  es:"Spanish", pt:"Portuguese", ht:"Haitian Creole", fon:"Fon", ee:"Eʋegbe",
+  zu:"Zulu", st:"Sotho", sn:"Shona", ny:"Chichewa", rw:"Kinyarwanda",
+  am:"Amharic", ar:"Arabic", ln:"Lingala", wo:"Wolof", bm:"Bambara",
+};
+let _policyTiers = ["ai", "curated", "off"];
+let _policyDraft = {};   // code -> tier (working copy, saved on demand)
+
+async function loadLanguagePolicy() {
+  const wrap = document.getElementById("langPolicyList");
+  if (!wrap) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/language-policy", { credentials: "include" });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) { wrap.innerHTML = '<span class="log-count">Policy unavailable.</span>'; return; }
+    const { policy, tiers } = await res.json();
+    if (Array.isArray(tiers) && tiers.length) _policyTiers = tiers;
+    _policyDraft = { ...policy };
+    renderLanguagePolicy();
+  } catch (err) {
+    wrap.innerHTML = '<span class="log-count">Could not load policy: ' + err.message + '</span>';
+  }
+}
+
+function renderLanguagePolicy() {
+  const wrap = document.getElementById("langPolicyList");
+  if (!wrap) return;
+  const rows = Object.keys(_LANG_NAMES).map((code) => {
+    const tier = _policyDraft[code] || "ai";
+    const opts = _policyTiers.map((t) =>
+      `<option value="${t}"${t === tier ? " selected" : ""}>${t}</option>`).join("");
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(20,40,30,.06)">
+      <span style="min-width:120px">${_LANG_NAMES[code]} <span style="color:#8a9a8f">(${code})</span></span>
+      <select onchange="_policyDraft['${code}']=this.value" style="padding:3px 8px;border-radius:6px;border:1px solid rgba(20,40,30,.18)">${opts}</select>
+    </div>`;
+  }).join("");
+  wrap.innerHTML = rows;
+}
+
+async function saveLanguagePolicy() {
+  const note = document.getElementById("langPolicyNote");
+  try {
+    // Send only non-default overrides is unnecessary — the server stores the
+    // full map as overrides; that's fine and explicit.
+    const res = await fetch(API_BASE + "/api/admin/language-policy", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overrides: _policyDraft }),
+    });
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) { toast("Could not save policy", true); return; }
+    const { policy } = await res.json();
+    _policyDraft = { ...policy };
+    renderLanguagePolicy();
+    if (note) note.textContent = "Saved. Users get the new policy on their next page load.";
+    toast("Translation policy saved");
+  } catch (err) {
+    toast("Save failed: " + err.message, true);
   }
 }
 

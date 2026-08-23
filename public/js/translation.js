@@ -541,9 +541,42 @@ const translations = {
 };
 
 /* ─────────────────────────────────────────────────────────────
- *  SETUP
+ *  TRANSLATION POLICY (per-language tier)
+ *  Mirrors the backend languagePolicy. Fetched from /api/secure-config
+ *  at boot. Tiers:
+ *    "ai"      — full pipeline incl. live AI translation
+ *    "curated" — static dict + curated memory only; NO AI call, source
+ *                fallback (for drift-prone ultra-low-resource langs, e.g. Fon)
+ *    "off"     — hidden from the picker
+ *  Defaults here are a safe fallback if the fetch fails; the server is
+ *  authoritative. Keeping Fon/Bambara/Wolof curated by default means the
+ *  drift fix holds even before the policy fetch resolves.
  * ───────────────────────────────────────────────────────────── */
-let currentLang  = "baseline";
+let _langPolicy = {
+  fon: "curated", bm: "curated", wo: "curated",
+};
+function _tierOf(code) {
+  return (code && _langPolicy[code]) ? _langPolicy[code] : "ai";
+}
+function _policyAllowsAI(code) {
+  return _tierOf(code) === "ai";
+}
+function _policyIsOff(code) {
+  return _tierOf(code) === "off";
+}
+async function _loadLanguagePolicy() {
+  try {
+    const res = await _fetchT("/api/secure-config", {}, 8000);
+    if (res.ok) {
+      const cfg = await res.json();
+      if (cfg && cfg.languagePolicy && typeof cfg.languagePolicy === "object") {
+        _langPolicy = cfg.languagePolicy;
+      }
+    }
+  } catch { /* keep defaults — Fon etc. stay curated */ }
+}
+
+
 const newpreloader  = document.getElementById("new-preloader");
 const languageSelect = document.getElementById("language-select");
 
@@ -729,18 +762,22 @@ function _endActivity() {
 /* ─────────────────────────────────────────────────────────────
  *  LANGUAGE DROPDOWN
  * ───────────────────────────────────────────────────────────── */
-(function populateLanguageDropdown() {
+function populateLanguageDropdown() {
   const savedLang = localStorage.getItem("appLanguage");
   if (savedLang && LANGUAGES[savedLang]) currentLang = savedLang;
   _applyDirection(currentLang);
+  // Rebuild from scratch so a policy refresh can remove "off" languages.
+  languageSelect.innerHTML = "";
   for (const [code, name] of Object.entries(LANGUAGES)) {
+    if (_policyIsOff(code) && code !== currentLang) continue;   // hide off langs
     const option = document.createElement("option");
     option.value = code;
     option.textContent = name;
     if (code === currentLang) option.selected = true;
     languageSelect.appendChild(option);
   }
-})();
+}
+populateLanguageDropdown();   // initial (defaults; policy refresh re-runs it)
 
 /* (single change handler lives in the bootstrap block below) */
 
@@ -810,7 +847,7 @@ function showLoading(lang) {
 const _memCache = new Map();
 const _MAX_LS_VALUE = 4000;            // chars; bigger values -> memory only
 
-const _CACHE_NS = "tr2";   // bump to invalidate stale cached translations
+const _CACHE_NS = "tr3";   // bump to invalidate stale cached translations (tr3: clears poisoned Fon/curated-lang caches)
 function _cacheGet(lang, text) {
   const k = `${_CACHE_NS}:${lang}::${text}`;
   if (_memCache.has(k)) return _memCache.get(k);
@@ -931,8 +968,13 @@ async function _translateRoots(rootEls, targetLang) {
     const uniques = [...needed];
     const map = new Map();
     const apiLang = _langName(targetLang);   // send the NAME, not the code
+    const aiAllowed = _policyAllowsAI(targetLang);   // curated langs never call AI
 
     const translateOne = async (str) => {     // reliable per-string fallback
+      // Curated languages never hit the AI single-endpoint; resolve to source.
+      // (The batch endpoint already served memory+source for these, so this
+      // path is only a mismatch fallback — keep it AI-free too.)
+      if (!aiAllowed) { map.set(str, str); return; }
       try {
         const r = await _fetchT("/api/translate", {
           method: "POST",
@@ -1115,6 +1157,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Save baseline HTML for all translatable elements
   const elements = document.querySelectorAll("[data-translate]");
   for (const el of elements) el.setAttribute("data-original", el.innerHTML);
+
+  // Load the per-language translation policy before any translation runs, then
+  // rebuild the dropdown so any "off" languages are removed. If this fetch
+  // fails, the built-in defaults keep Fon/Bambara/Wolof curated.
+  await _loadLanguagePolicy();
+  populateLanguageDropdown();
 
   // Dropdown change handler
   languageSelect.addEventListener("change", async (e) => {
