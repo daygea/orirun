@@ -247,7 +247,7 @@ document.addEventListener("click", async (e) => {
   const original = btn.textContent;
   btn.textContent = "Loading…";
   try {
-    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/verses?offset=${offset}&limit=20`;
+    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/verses?offset=${offset}&limit=5`;
     const res = await fetch(url);
     const data = await res.json();
     const slot = btn.closest(".verse-others")?.querySelector(".verse-more-slot");
