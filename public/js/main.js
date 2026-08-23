@@ -1345,7 +1345,10 @@ const performUserDivination = async (
       logSilently("/api/history/save", {
         deviceId, syncToken, type: "divination", mainCast, orientation: orientationText,
         specificOrientation, solution, solutionDetails,
-        message: rawMessage, summary: spiritualInsight, timestamp: Date.now()
+        message: rawMessage, summary: spiritualInsight, timestamp: Date.now(),
+        // Carry the verse that led the reading, so the history "did this bear
+        // fruit?" outcome prompt can attach the signal to the right verse.
+        verseId: verseReading?.lead?.verseId || null
       });
 
       // if (typeof offerNotificationAfterDivination === "function") {
