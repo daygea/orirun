@@ -577,6 +577,10 @@ async function _loadLanguagePolicy() {
 }
 
 
+/* ─────────────────────────────────────────────────────────────
+ *  SETUP
+ * ───────────────────────────────────────────────────────────── */
+let currentLang  = "baseline";
 const newpreloader  = document.getElementById("new-preloader");
 const languageSelect = document.getElementById("language-select");
 
