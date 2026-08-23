@@ -313,6 +313,33 @@ document.addEventListener("input", (e) => {
   }
 });
 
+// Lived-outcome capture — the strongest learning signal. On a PAST reading in
+// history, the seeker affirms whether it bore fruit. Records to the per-verse
+// score (outcomes) and stamps the history entry so it isn't asked again.
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".outcome-btn");
+  if (!btn) return;
+  const box = btn.closest(".history-outcome");
+  if (!box) return;
+  const val = btn.getAttribute("data-val"); // "yes" | "no"
+  const verseId = box.getAttribute("data-vid");
+  const odu = box.getAttribute("data-odu");
+  const ori = box.getAttribute("data-ori");
+  const historyId = box.getAttribute("data-hid");
+  if (!verseId || !odu || !ori) return;
+  // Optimistic UI: replace the prompt with the recorded outcome.
+  const label = val === "yes" ? "You affirmed this reading bore fruit ✓" : "You noted this reading did not bear fruit";
+  box.innerHTML = `<div style="font-size:12px;color:var(--of-ink-soft,#7a8a80);" data-translate>${label}</div>`;
+  if (window.translateDynamicContent) { try { window.translateDynamicContent(box); } catch {} }
+  try {
+    fetch("/api/reading/outcome-signal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oduName: odu, specificOrientation: ori, verseId, outcome: val, historyId }),
+    }).catch(() => {});
+  } catch {}
+});
+
 /* "See all" paged loader — fetches the next page of supporting verses for the
    cast's Odù + orientation and appends them as the same collapsed cards. Kept
    as a delegated handler so it works for dynamically-rendered readings. */
@@ -2679,6 +2706,27 @@ function renderHistoryPage() {
         </div>`;
     }
 
+    // Lived-outcome prompt — the strongest learning signal. Ask, on a PAST
+    // reading, whether it bore fruit. Only for divination entries that carry the
+    // verse that led the reading and haven't been answered yet. Once answered,
+    // show the recorded outcome instead of re-asking.
+    const _vid = entry.verseId || entry.lead?.verseId || "";
+    let outcomeBlock = "";
+    if (_vid && (entry.mainCast) ) {
+      if (entry.outcomeAnswered) {
+        const label = entry.outcome === "yes" ? "You affirmed this reading bore fruit ✓" : "You noted this reading did not bear fruit";
+        outcomeBlock = `<div class="history-outcome answered" style="margin-top:8px;font-size:12px;color:var(--of-ink-soft,#7a8a80);" data-translate>${label}</div>`;
+      } else {
+        outcomeBlock = `
+          <div class="history-outcome" style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e6efe4);"
+               data-vid="${_vid}" data-odu="${entry.mainCast || ""}" data-ori="${entry.specificOrientation || ""}" data-hid="${entryId}">
+            <div style="font-size:12px;color:var(--of-ink-soft,#7a8a80);margin-bottom:6px;" data-translate>Did this reading bear fruit?</div>
+            <button type="button" class="outcome-btn" data-val="yes" style="margin-right:6px;padding:5px 12px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;" data-translate>Yes, it did</button>
+            <button type="button" class="outcome-btn" data-val="no" style="padding:5px 12px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;" data-translate>Not yet</button>
+          </div>`;
+      }
+    }
+
     return `
       <div class="history-card">
         <span class="history-badge" data-translate>Ifá Wisdom</span>
@@ -2690,6 +2738,7 @@ function renderHistoryPage() {
           <span class="h-chip" data-translate>${entry.solution} ${entry.solutionDetails}</span>
         </div>
         <div class="h-meta"><span data-translate>Accessed</span>&nbsp;${fmtTs(entry.timestamp)}</div>
+        ${outcomeBlock}
         ${noteBlock}
       </div>`;
   }).join("");
