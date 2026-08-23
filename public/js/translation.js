@@ -941,7 +941,11 @@ async function _translateRoots(rootEls, targetLang) {
         });
         const d = await r.json();
         const v = d.translated || str;
-        map.set(str, v); _cacheSet(targetLang, str, v);
+        map.set(str, v);
+        // Same rule as the batch path: only cache a real translation, never an
+        // unchanged echo of the source (which means the server couldn't
+        // translate it). Caching English here would make the miss permanent.
+        if (v !== str) _cacheSet(targetLang, str, v);
       } catch { map.set(str, str); }
     };
 
@@ -968,8 +972,16 @@ async function _translateRoots(rootEls, targetLang) {
 
       if (arr) {
         chunk.forEach((str, i) => {
-          const v = (typeof arr[i] === "string" && arr[i].trim()) ? arr[i] : str;
-          map.set(str, v); _cacheSet(targetLang, str, v);
+          const raw = (typeof arr[i] === "string" && arr[i].trim()) ? arr[i] : str;
+          // Only cache a GENUINE translation. When the server returns the
+          // string unchanged (its own failure fallback, or the backend was
+          // asleep/unreachable), caching it would freeze the phrase in English
+          // forever — the next switch would read English from cache and never
+          // retry. So we still SHOW the source (graceful), but don't cache it,
+          // leaving the door open to translate it properly on a later pass.
+          const isRealTranslation = raw !== str;
+          map.set(str, raw);
+          if (isRealTranslation) _cacheSet(targetLang, str, raw);
         });
       } else {
         await Promise.all(chunk.map(translateOne));   // mismatch/failure -> per-item
@@ -1042,7 +1054,9 @@ async function translateWithCache(text, targetLang) {
     });
     const d = await res.json();
     const v = d.translated || core;
-    _cacheSet(targetLang, core, v);
+    // Don't cache a failed/no-op translation (echo of the source) — otherwise
+    // the phrase is frozen in the source language and never retried.
+    if (v !== core) _cacheSet(targetLang, core, v);
     return v;
   } catch (err) {
     console.error("Translation failed:", err);
