@@ -464,6 +464,26 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <h3>Accounts</h3>
         <div id="usersPanel" style="font-size:13px"></div>
       </div>
+      <div class="panel">
+        <h3 title="Signals the reading ranking learns from — resonance, confirmations, and lived outcomes. Dormant until data accumulates.">Learning signals</h3>
+        <div id="learningPanel" style="font-size:13px"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="seedPanel" style="display:none">
+      <h3>Seed learning signals</h3>
+      <p style="font-size:12.5px;opacity:.75;margin:4px 0 10px">
+        Record outcome / confirmation signals in bulk from expert knowledge — for verses you know have
+        borne out. These count <strong>the same weight as a real seeker signal</strong>: bulk entry gives reach, not
+        extra authority. One row per line: <code>oduName | specificOrientation | verseId | outcome(yes/no) | confirm(1/0) | count</code>.
+        Example: <code>Osa Owonrin | Aiku | v123 | yes | 1 | 5</code>
+      </p>
+      <textarea id="seedInput" rows="6" placeholder="Osa Owonrin | Aiku | v123 | yes | 0 | 3"
+        style="width:100%;font-family:monospace;font-size:12.5px;padding:10px;border:1px solid var(--line,#e6efe4);border-radius:8px"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="submitBulkSeed(this)" type="button">Seed signals</button>
+        <span id="seedResult" style="font-size:12.5px;opacity:.8"></span>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
@@ -3121,6 +3141,54 @@ function setTrendRange(days) {
   renderTrend();
 }
 
+// Bulk-seed learning signals (superadmin + elder). Parses the textarea rows and
+// posts them; the backend records at seeker weight. Reach, not extra authority.
+async function submitBulkSeed(btn) {
+  const ta = $("seedInput");
+  const out = $("seedResult");
+  const raw = (ta.value || "").trim();
+  if (!raw) { out.textContent = "Nothing to seed."; return; }
+  const items = [];
+  const errors = [];
+  raw.split("\n").forEach((line, i) => {
+    const t = line.trim();
+    if (!t) return;
+    const p = t.split("|").map((x) => x.trim());
+    const [oduName, specificOrientation, verseId, outcome, confirm, count] = p;
+    if (!oduName || !specificOrientation || !verseId) { errors.push("Line " + (i + 1) + ": need at least odu | orientation | verseId"); return; }
+    const item = { oduName, specificOrientation, verseId };
+    if (outcome && ["yes", "no"].includes(outcome.toLowerCase())) item.outcome = outcome.toLowerCase();
+    if (confirm && (confirm === "1" || confirm.toLowerCase() === "true")) item.confirm = true;
+    if (count) item.count = parseInt(count, 10) || 1;
+    if (!item.outcome && !item.confirm) { errors.push("Line " + (i + 1) + ": no outcome or confirm to record"); return; }
+    items.push(item);
+  });
+  if (errors.length) { out.textContent = errors.slice(0, 3).join(" · "); out.style.color = "#c0392b"; return; }
+  if (!items.length) { out.textContent = "No valid rows."; return; }
+  btn.disabled = true; out.style.color = ""; out.textContent = "Seeding…";
+  try {
+    const res = await fetch(API_BASE + "/api/reading/bulk-seed", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+    if (res.status === 401 || res.status === 403) { out.textContent = "Not permitted."; out.style.color = "#c0392b"; return; }
+    const d = await res.json();
+    if (d.success) {
+      out.style.color = "";
+      out.textContent = "Seeded " + d.applied + (d.skipped ? " · " + d.skipped + " skipped" : "") + ". Refreshing…";
+      ta.value = "";
+      loadDashboard(); // refresh the Learning signals panel to show the new totals
+    } else {
+      out.textContent = d.error || "Failed."; out.style.color = "#c0392b";
+    }
+  } catch (e) {
+    out.textContent = "Error: " + e.message; out.style.color = "#c0392b";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function loadDashboard() {
   const grid = $("statGrid");
   grid.innerHTML = '<div class="stat-card" style="grid-column:1/-1">' + orLoaderHTML("Loading dashboard…") + '</div>';
@@ -3199,6 +3267,26 @@ async function loadDashboard() {
           roles.map(([k, v]) => `<div class="bar-row"><span class="bl">${k}</span><span class="bn" style="width:auto">${v}</span></div>`).join("") : "");
     } else {
       $("usersPanel").innerHTML = '<span class="log-count">No account data.</span>';
+    }
+
+    // Learning signals panel — the three captured signals feeding the reading
+    // ranking. Shows nothing but a dormant note until data accumulates.
+    const ls = d.learningSignals || null;
+    if (ls && ls.versesWithSignal > 0) {
+      const r = ls.resonance || { positive: 0, negative: 0 };
+      const o = ls.outcomes || { borneFruit: 0, noFruit: 0 };
+      $("learningPanel").innerHTML =
+        `<div class="bar-row"><span class="bl" style="font-weight:600">Verses with signal</span><span class="bn" style="width:auto;font-weight:600">${ls.versesWithSignal}</span></div>` +
+        `<div style="margin-top:6px;font-size:11px;opacity:.6">Resonance (yes/no)</div>` +
+        `<div class="bar-row"><span class="bl">Positive</span><span class="bn" style="width:auto">${r.positive}</span></div>` +
+        `<div class="bar-row"><span class="bl">Negative</span><span class="bn" style="width:auto">${r.negative}</span></div>` +
+        `<div style="margin-top:6px;font-size:11px;opacity:.6">Confirmed recognition</div>` +
+        `<div class="bar-row"><span class="bl">Confirmations</span><span class="bn" style="width:auto">${ls.confirmations || 0}</span></div>` +
+        `<div style="margin-top:6px;font-size:11px;opacity:.6">Lived outcome (came to pass)</div>` +
+        `<div class="bar-row"><span class="bl">Came to pass</span><span class="bn" style="width:auto">${o.borneFruit}</span></div>` +
+        `<div class="bar-row"><span class="bl">Not yet</span><span class="bn" style="width:auto">${o.noFruit}</span></div>`;
+    } else {
+      $("learningPanel").innerHTML = '<span class="log-count">No learning signals yet. As seekers give feedback, confirm enquiries, and affirm readings that come to pass, the reading ranking learns from them here.</span>';
     }
 
     const top = d.topOdu || [];
@@ -3578,6 +3666,10 @@ async function refreshSessionChip() {
     // once non-superadmin logins exist).
     var usersTab = document.querySelector('.area-tab[data-area="users"]');
     if (usersTab) usersTab.style.display = (me.role === "superadmin") ? "" : "none";
+    // Bulk signal seeding is an authority action — superadmin + elder only
+    // (backend enforces the same). It seeds the reading ranking's signals.
+    var seedPanel = document.getElementById("seedPanel");
+    if (seedPanel) seedPanel.style.display = (me.role === "superadmin" || me.role === "elder") ? "" : "none";
     $("logoutBtn").style.display = "";
   } else {
     $("whoami").textContent = "";
