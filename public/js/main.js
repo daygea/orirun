@@ -328,7 +328,7 @@ document.addEventListener("click", async (e) => {
   const historyId = box.getAttribute("data-hid");
   if (!verseId || !odu || !ori) return;
   // Optimistic UI: replace the prompt with the recorded outcome.
-  const label = val === "yes" ? "You affirmed this reading bore fruit ✓" : "You noted this reading did not bear fruit";
+  const label = val === "yes" ? "This reading has come to pass ✓" : "This reading has not yet come to pass";
   box.innerHTML = `<div style="font-size:12px;color:var(--of-ink-soft,#7a8a80);" data-translate>${label}</div>`;
   if (window.translateDynamicContent) { try { window.translateDynamicContent(box); } catch {} }
   try {
@@ -2717,13 +2717,13 @@ function renderHistoryPage() {
     let outcomeBlock = "";
     if (_vid && (entry.mainCast) ) {
       if (entry.outcomeAnswered) {
-        const label = entry.outcome === "yes" ? "You affirmed this reading bore fruit ✓" : "You noted this reading did not bear fruit";
+        const label = entry.outcome === "yes" ? "This reading has come to pass ✓" : "This reading has not yet come to pass";
         outcomeBlock = `<div class="history-outcome answered" style="margin-top:8px;font-size:12px;color:var(--of-ink-soft,#7a8a80);" data-translate>${label}</div>`;
       } else {
         outcomeBlock = `
           <div class="history-outcome" style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e6efe4);"
                data-vid="${_vid}" data-odu="${entry.mainCast || ""}" data-ori="${entry.specificOrientation || ""}" data-hid="${entryId}">
-            <div style="font-size:12px;color:var(--of-ink-soft,#7a8a80);margin-bottom:6px;" data-translate>Did this reading bear fruit?</div>
+            <div style="font-size:12px;color:var(--of-ink-soft,#7a8a80);margin-bottom:6px;" data-translate>Has this reading come to pass?</div>
             <button type="button" class="outcome-btn" data-val="yes" style="margin-right:6px;padding:5px 12px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;" data-translate>Yes, it did</button>
             <button type="button" class="outcome-btn" data-val="no" style="padding:5px 12px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;font-size:12px;" data-translate>Not yet</button>
           </div>`;
