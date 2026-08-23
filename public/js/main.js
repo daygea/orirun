@@ -209,8 +209,77 @@ function _verseReadingHTML(vr, solutionInfo) {
       </div>`;
   }
 
-  return leadHTML + eboBox + othersHTML;
+  // PART B — optional "confirm your enquiry" step. Mirrors the babaláwo asking
+  // the seeker their enquiry AFTER chanting, to confirm specificity. Opt-in and
+  // post-reading — it never changes the reading above. If used, it surfaces one
+  // verse that speaks to the stated enquiry.
+  const confirmHTML = (vr.odu && vr.orientation) ? `
+    <div class="enquiry-confirm" style="margin-top:22px;padding-top:16px;border-top:1px solid var(--of-line,#e6efe4);">
+      <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Confirm your enquiry</div>
+      <p style="font-size:12.5px;color:var(--of-ink-soft,#7a8a80);margin:0 0 8px;" data-translate>If you wish, share what you came to ask — Ifá may speak to it through a further verse.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" class="enquiry-input" maxlength="500" placeholder="Your enquiry (optional)"
+          data-odu="${esc(vr.odu)}" data-ori="${esc(vr.orientation)}"
+          style="flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--of-line,#e6efe4);border-radius:8px;font-size:13px;" data-translate-attr="placeholder" />
+        <button type="button" class="enquiry-confirm-btn btn btn-ghost btn-sm" data-translate>Confirm</button>
+      </div>
+      <div class="enquiry-result" style="margin-top:10px;"></div>
+    </div>` : "";
+
+  return leadHTML + eboBox + othersHTML + confirmHTML;
 }
+
+/* PART B — wire the "confirm your enquiry" control. Delegated so it works for
+ * dynamically-rendered readings. Sends the enquiry, shows the one matching verse
+ * (or an honest "the reading already speaks to this"). Never alters the reading.
+ * (The confirmation itself is a signal the capture layer will record — built in
+ * the next phase; this phase only surfaces the confirming verse.) */
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".enquiry-confirm-btn");
+  if (!btn) return;
+  const box = btn.closest(".enquiry-confirm");
+  const input = box && box.querySelector(".enquiry-input");
+  const slot = box && box.querySelector(".enquiry-result");
+  if (!input || !slot) return;
+  // Local escape (this handler is top-level; the render helper's esc is not in scope).
+  const escT = (s) => String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const enquiry = (input.value || "").trim();
+  if (!enquiry) { slot.innerHTML = ""; return; }
+  const odu = input.getAttribute("data-odu");
+  const ori = input.getAttribute("data-ori");
+  slot.innerHTML = `<span style="font-size:12px;color:#8a9a8f;" data-translate>Consulting Ifá…</span>`;
+  try {
+    // Relative URL + plain fetch — same pattern as the "see all" loader.
+    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/confirm?enquiry=${encodeURIComponent(enquiry)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data && data.matched && data.verse) {
+      slot.innerHTML = `
+        <div style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;padding:12px;background:var(--of-tint,#fbfdfa);">
+          <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;" data-translate>A verse that speaks to your enquiry</div>
+          <p class="ori-section-text" style="margin:0;" data-translate>${escT(data.verse.interpretation)}</p>
+        </div>`;
+      // Record the confirmed-recognition signal (a stronger signal than a yes/no
+      // vote): the seeker stated their enquiry and this verse matched. Fire-and-
+      // forget — never block or break the reading if it fails.
+      if (data.verse.verseId) {
+        try {
+          fetch("/api/reading/confirm-signal", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ oduName: odu, specificOrientation: ori, verseId: data.verse.verseId }),
+          }).catch(() => {});
+        } catch {}
+      }
+    } else {
+      slot.innerHTML = `<span style="font-size:12.5px;color:#7a8a80;" data-translate>The reading above already speaks to your enquiry.</span>`;
+    }
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
+  } catch {
+    slot.innerHTML = `<span style="font-size:12px;color:#c0392b;" data-translate>Could not reach Ifá just now — please try again.</span>`;
+  }
+});
 
 /* "See all" paged loader — fetches the next page of supporting verses for the
    cast's Odù + orientation and appends them as the same collapsed cards. Kept
