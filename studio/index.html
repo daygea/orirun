@@ -473,17 +473,24 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="panel" id="seedPanel" style="display:none">
       <h3>Seed learning signals</h3>
       <p style="font-size:12.5px;opacity:.75;margin:4px 0 10px">
-        Record outcome / confirmation signals in bulk from expert knowledge — for verses you know have
-        borne out. These count <strong>the same weight as a real seeker signal</strong>: bulk entry gives reach, not
-        extra authority. One row per line: <code>oduName | specificOrientation | verseId | outcome(yes/no) | confirm(1/0) | count</code>.
-        Example: <code>Osa Owonrin | Aiku | v123 | yes | 1 | 5</code>
+        For verses you know have borne out, record the signal directly — no IDs to look up. Choose an Odù and
+        orientation, load its verses, and mark the ones that have come to pass. These count
+        <strong>the same weight as a real seeker signal</strong>: this gives reach, not extra authority.
       </p>
-      <textarea id="seedInput" rows="6" placeholder="Osa Owonrin | Aiku | v123 | yes | 0 | 3"
-        style="width:100%;font-family:monospace;font-size:12.5px;padding:10px;border:1px solid var(--line,#e6efe4);border-radius:8px"></textarea>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="submitBulkSeed(this)" type="button">Seed signals</button>
-        <span id="seedResult" style="font-size:12.5px;opacity:.8"></span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <input type="text" id="seedOdu" placeholder="Odù (e.g. Osa Owonrin)"
+          style="flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line,#e6efe4);border-radius:8px;font-size:13px" />
+        <select id="seedOri" style="padding:8px 10px;border:1px solid var(--line,#e6efe4);border-radius:8px;font-size:13px">
+          <option value="">Orientation…</option>
+          <option>Aiku</option><option>Aje</option><option>Aya</option><option>Bimo</option><option>Isegun</option>
+          <option>Ola</option><option>Ire</option>
+          <option>Iku</option><option>Arun</option><option>Ofo</option><option>Egba</option><option>Oran</option>
+          <option>Epe</option><option>Ewon</option><option>Ayewo</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="loadSeedVerses(this)" type="button">Load verses</button>
       </div>
+      <div id="seedVerseList" style="font-size:13px"></div>
+      <div id="seedResult" style="font-size:12.5px;opacity:.8;margin-top:8px"></div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
@@ -3141,53 +3148,78 @@ function setTrendRange(days) {
   renderTrend();
 }
 
-// Bulk-seed learning signals (superadmin + elder). Parses the textarea rows and
-// posts them; the backend records at seeker weight. Reach, not extra authority.
-async function submitBulkSeed(btn) {
-  const ta = $("seedInput");
+// Seed learning signals by PICKING verses (superadmin + elder) — no IDs typed.
+// Load the verses for an Odù, show their text, and mark the ones that have come
+// to pass. The verseId is resolved from what's shown, never typed. Signals are
+// recorded at seeker weight — reach, not extra authority.
+async function loadSeedVerses(btn) {
+  const odu = ($("seedOdu").value || "").trim();
+  const ori = ($("seedOri").value || "").trim();
+  const list = $("seedVerseList");
   const out = $("seedResult");
-  const raw = (ta.value || "").trim();
-  if (!raw) { out.textContent = "Nothing to seed."; return; }
-  const items = [];
-  const errors = [];
-  raw.split("\n").forEach((line, i) => {
-    const t = line.trim();
-    if (!t) return;
-    const p = t.split("|").map((x) => x.trim());
-    const [oduName, specificOrientation, verseId, outcome, confirm, count] = p;
-    if (!oduName || !specificOrientation || !verseId) { errors.push("Line " + (i + 1) + ": need at least odu | orientation | verseId"); return; }
-    const item = { oduName, specificOrientation, verseId };
-    if (outcome && ["yes", "no"].includes(outcome.toLowerCase())) item.outcome = outcome.toLowerCase();
-    if (confirm && (confirm === "1" || confirm.toLowerCase() === "true")) item.confirm = true;
-    if (count) item.count = parseInt(count, 10) || 1;
-    if (!item.outcome && !item.confirm) { errors.push("Line " + (i + 1) + ": no outcome or confirm to record"); return; }
-    items.push(item);
-  });
-  if (errors.length) { out.textContent = errors.slice(0, 3).join(" · "); out.style.color = "#c0392b"; return; }
-  if (!items.length) { out.textContent = "No valid rows."; return; }
-  btn.disabled = true; out.style.color = ""; out.textContent = "Seeding…";
+  out.textContent = "";
+  if (!odu || !ori) { list.innerHTML = '<span class="log-count">Choose an Odù and an orientation first.</span>'; return; }
+  btn.disabled = true;
+  list.innerHTML = orLoaderHTML ? orLoaderHTML("Loading verses…") : "Loading…";
   try {
-    const res = await fetch(API_BASE + "/api/reading/bulk-seed", {
-      method: "POST", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
-    });
-    if (res.status === 401 || res.status === 403) { out.textContent = "Not permitted."; out.style.color = "#c0392b"; return; }
+    const res = await fetch(API_BASE + "/api/verses/odu/" + encodeURIComponent(odu), { credentials: "include" });
     const d = await res.json();
-    if (d.success) {
-      out.style.color = "";
-      out.textContent = "Seeded " + d.applied + (d.skipped ? " · " + d.skipped + " skipped" : "") + ". Refreshing…";
-      ta.value = "";
-      loadDashboard(); // refresh the Learning signals panel to show the new totals
-    } else {
-      out.textContent = d.error || "Failed."; out.style.color = "#c0392b";
-    }
+    const verses = (d && d.verses) || [];
+    if (!verses.length) { list.innerHTML = '<span class="log-count">No verified verses for this Odù yet.</span>'; return; }
+    // Render each verse with a snippet of its actual text so the authority
+    // recognizes it, plus mark buttons. verseId travels in a data attribute.
+    list.innerHTML = verses.map((v) => {
+      const yor = Array.isArray(v.yoruba) ? v.yoruba.join(" / ") : (v.yoruba || "");
+      const eng = Array.isArray(v.english) ? v.english.join(" / ") : (v.english || "");
+      const snippet = escapeHtml((yor || eng || v.title || "(verse)").slice(0, 140));
+      return '<div class="bar-row" style="align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line,#f0f0ea)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:12.5px;line-height:1.4">' + snippet + '</div>' +
+          (eng && yor ? '<div style="font-size:11.5px;opacity:.6;margin-top:2px">' + escapeHtml(eng.slice(0, 120)) + '</div>' : "") +
+        '</div>' +
+        '<div style="display:flex;gap:4px;flex-wrap:wrap" data-vid="' + escapeHtml(v.id) + '" data-odu="' + escapeHtml(odu) + '" data-ori="' + escapeHtml(ori) + '">' +
+          '<button class="btn btn-ghost btn-sm seed-mark" data-sig="outcome-yes" type="button" title="Record: this reading has come to pass">Came to pass</button>' +
+          '<button class="btn btn-ghost btn-sm seed-mark" data-sig="confirm" type="button" title="Record: enquiry confirmed by this verse">Confirmed</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+    out.textContent = verses.length + " verse" + (verses.length === 1 ? "" : "s") + " loaded. Mark the ones that have borne out.";
   } catch (e) {
-    out.textContent = "Error: " + e.message; out.style.color = "#c0392b";
+    list.innerHTML = '<span class="log-count" style="color:#c0392b">Could not load verses: ' + escapeHtml(e.message) + '</span>';
   } finally {
     btn.disabled = false;
   }
 }
+
+// Delegated: record a single signal when a mark button is tapped.
+document.addEventListener("click", async (e) => {
+  const mark = e.target.closest(".seed-mark");
+  if (!mark) return;
+  const box = mark.closest("[data-vid]");
+  if (!box) return;
+  const verseId = box.getAttribute("data-vid");
+  const oduName = box.getAttribute("data-odu");
+  const specificOrientation = box.getAttribute("data-ori");
+  const sig = mark.getAttribute("data-sig");
+  const item = { oduName, specificOrientation, verseId };
+  if (sig === "outcome-yes") item.outcome = "yes";
+  else if (sig === "confirm") item.confirm = true;
+  else return;
+  mark.disabled = true; mark.textContent = "…";
+  try {
+    const res = await fetch(API_BASE + "/api/reading/bulk-seed", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [item] }),
+    });
+    if (res.status === 401 || res.status === 403) { mark.textContent = "Not permitted"; return; }
+    const d = await res.json();
+    mark.textContent = d.success && d.applied ? "Recorded ✓" : (d.error || "Failed");
+    if (d.success && d.applied) { mark.style.opacity = "0.6"; if (typeof loadDashboard === "function") loadDashboard(); }
+  } catch (err) {
+    mark.textContent = "Error"; mark.disabled = false;
+  }
+});
 
 async function loadDashboard() {
   const grid = $("statGrid");
