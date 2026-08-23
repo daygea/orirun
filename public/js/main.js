@@ -255,20 +255,37 @@ document.addEventListener("click", async (e) => {
     const res = await fetch(url);
     const data = await res.json();
     if (data && data.matched && data.verse) {
+      const v = data.verse;
+      // Show the actual ẹsẹ Ifá (Yorùbá) — same normalized-gate as the main
+      // reading: raw, un-normalized text is held back until an elder normalizes.
+      const yorHTML = (v.normalized && Array.isArray(v.yoruba) && v.yoruba.length)
+        ? `<div style="margin-top:8px;font-size:13px;line-height:1.7;padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${v.yoruba.map(escT).join("<br>")}</div>`
+        : "";
+      const engHTML = (Array.isArray(v.english) && v.english.length)
+        ? `<div style="margin-top:8px;color:var(--of-ink-soft,#7a8a80);font-style:italic;" data-translate>${v.english.map(escT).join("<br>")}</div>`
+        : "";
       slot.innerHTML = `
         <div style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;padding:12px;background:var(--of-tint,#fbfdfa);">
           <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;" data-translate>A verse that speaks to your enquiry</div>
-          <p class="ori-section-text" style="margin:0;" data-translate>${escT(data.verse.interpretation)}</p>
+          <p class="ori-section-text" style="margin:0;" data-translate>${escT(v.interpretation)}</p>
+          ${yorHTML}
+          ${engHTML}
         </div>`;
+      // Confirm the interaction resolved: mark the button done and lock the
+      // input so it's clear the enquiry was received (not left looking inert).
+      btn.textContent = "Confirmed ✓";
+      btn.disabled = true;
+      input.setAttribute("readonly", "readonly");
+      input.style.opacity = "0.7";
       // Record the confirmed-recognition signal (a stronger signal than a yes/no
       // vote): the seeker stated their enquiry and this verse matched. Fire-and-
       // forget — never block or break the reading if it fails.
-      if (data.verse.verseId) {
+      if (v.verseId) {
         try {
           fetch("/api/reading/confirm-signal", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ oduName: odu, specificOrientation: ori, verseId: data.verse.verseId }),
+            body: JSON.stringify({ oduName: odu, specificOrientation: ori, verseId: v.verseId }),
           }).catch(() => {});
         } catch {}
       }
@@ -278,6 +295,21 @@ document.addEventListener("click", async (e) => {
     if (window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
   } catch {
     slot.innerHTML = `<span style="font-size:12px;color:#c0392b;" data-translate>Could not reach Ifá just now — please try again.</span>`;
+  }
+});
+
+// If the seeker edits their enquiry after a confirm, reset the control so they
+// can ask again (the confirm handler locks it on success).
+document.addEventListener("input", (e) => {
+  const input = e.target.closest(".enquiry-input");
+  if (!input) return;
+  const box = input.closest(".enquiry-confirm");
+  const btn = box && box.querySelector(".enquiry-confirm-btn");
+  if (btn && btn.disabled) {
+    btn.disabled = false;
+    btn.textContent = "Confirm";
+    input.removeAttribute("readonly");
+    input.style.opacity = "1";
   }
 });
 
