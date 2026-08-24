@@ -828,6 +828,46 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
             Write an interpretation only for the orientations this verse genuinely speaks to. Leave the rest blank — silence is honest.
             Verifying stamps your name and today's date; an AI draft becomes yours the moment you verify it. Nothing reaches app users until it is <b>verified</b>.
           </div>
+
+          <!-- Verse-pending (Ase Ifá) panel — shown only for verse-optional records.
+               An Ase Ifá is a legitimate pronouncement whose ẹsẹ Ifá may not be
+               transcribed here. This gives the babaláwo the four things they need:
+               (1) understand what this is, (2) set the true orientation,
+               (3) verify WITHOUT a verse if they choose, (4) add the verse now OR later. -->
+          <div id="versePendingPanel" style="display:none;margin-bottom:14px;border:1px solid var(--brass,#b8860b);border-radius:10px;padding:12px;background:#fffdf5">
+            <div style="font-weight:700;color:#8a5a2b;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#8a5a2b;color:#fff;padding:2px 9px;border-radius:20px">Ase Ifá · verse-pending</span>
+              <span id="vpVerseState" style="font-size:12px;font-weight:600;color:#8a5a2b"></span>
+            </div>
+            <div style="font-size:12.5px;opacity:.8;margin-bottom:10px;max-width:74ch">
+              This is an <b>Ase Ifá</b> — a pronouncement extracted from the Ifá texts. The ẹsẹ Ifá verse itself may not be written here yet.
+              That is fine: a babaláwo may speak the Ase Ifá without chanting the verse. You can <b>verify it as it is</b> (with your name),
+              set the <b>orientation</b> it truly speaks to, and add the verse now — or <b>come back and add it later</b>.
+            </div>
+
+            <!-- (2) Set/correct the orientation -->
+            <div style="margin-bottom:10px">
+              <label style="font-size:12px;font-weight:600;color:#5a4326;display:block;margin-bottom:4px">Orientation this Ase Ifá speaks to</label>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <select id="vpOrientation" style="font-size:13px;padding:6px 9px;border:1px solid var(--line);border-radius:6px"></select>
+                <button type="button" id="vpMoveOrientation" class="btn btn-ghost btn-sm" title="Move this Ase Ifá's text to the chosen orientation">Set orientation</button>
+                <span id="vpCurrentOri" style="font-size:11.5px;opacity:.7"></span>
+              </div>
+              <div style="font-size:11px;opacity:.65;margin-top:4px">Migrated Ase Ifá default to “Gbogbo Ire” (general). If it speaks to a specific orientation, set it here.</div>
+            </div>
+
+            <!-- (4) Add the verse now or later -->
+            <div>
+              <label style="font-size:12px;font-weight:600;color:#5a4326;display:block;margin-bottom:4px">The ẹsẹ Ifá verse (Yorùbá) — optional</label>
+              <textarea id="vpYoruba" rows="3" placeholder="Add the Yorùbá verse lines here if you have them — one line per row. Leave blank to verify the Ase Ifá without a transcribed verse; you can add it any time later."
+                style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px"></textarea>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+                <button type="button" id="vpSaveVerse" class="btn btn-ghost btn-sm">Save verse text</button>
+                <span id="vpVerseHint" style="font-size:11.5px;opacity:.7"></span>
+              </div>
+            </div>
+          </div>
+
           <div id="interpRows" style="display:flex;flex-direction:column;gap:10px"></div>
         </div>
       </div>
@@ -1216,10 +1256,99 @@ function interpActorName() {
   return (window.__STAFF_NAME__ || "").trim();
 }
 
+/* ── Verse-pending (Ase Ifá) panel ─────────────────────────────
+   Shown only when the loaded record is a verse-optional Ase Ifá (versePending
+   or hasVerseText===false or provenance.tier "verse-pending"). Gives the
+   babaláwo, in one place: what this is, set/correct the orientation (moving the
+   text off the generic "Gbogbo Ire" to the true one), and add the ẹsẹ Ifá verse
+   now OR later. All edits merge into the JSON editor and persist through the
+   normal validated save path — no bypass of the schema gate. */
+function isVersePending(verse) {
+  return !!(verse && (verse.versePending === true || verse.hasVerseText === false ||
+    (verse.provenance && verse.provenance.tier === "verse-pending")));
+}
+
+function versePendingPopulate(verse) {
+  const panel = $("versePendingPanel");
+  if (!panel) return;
+  if (!isVersePending(verse)) { panel.style.display = "none"; return; }
+  panel.style.display = "block";
+
+  const hasVerse = Array.isArray(verse.yoruba) && verse.yoruba.length > 0;
+  const stateEl = $("vpVerseState");
+  if (stateEl) stateEl.textContent = hasVerse ? "· verse text present" : "· no verse text yet (you can add it any time)";
+
+  // Which orientation currently holds the Ase Ifá text?
+  const interps = (verse.interpretations && typeof verse.interpretations === "object") ? verse.interpretations : {};
+  const currentOri = Object.keys(interps).find((o) => interps[o] && (interps[o].text || "").trim()) || "";
+  const curEl = $("vpCurrentOri");
+  if (curEl) curEl.textContent = currentOri ? `currently: ${currentOri}` : "no interpretation text found";
+
+  // Populate the orientation select (all 10, using the existing lists).
+  const sel = $("vpOrientation");
+  if (sel && !sel._filled) {
+    sel.innerHTML = INTERP_ORIENTATIONS.map((o) =>
+      `<option value="${o}">${o} (${INTERP_IRE.includes(o) ? "Ire" : "Ayewo"})</option>`).join("");
+    sel._filled = true;
+  }
+  if (sel && currentOri) sel.value = currentOri;
+
+  // Prefill the verse textarea with any existing yoruba.
+  const ta = $("vpYoruba");
+  if (ta) ta.value = hasVerse ? verse.yoruba.join("\n") : "";
+  const hint = $("vpVerseHint");
+  if (hint) hint.textContent = hasVerse ? "Saved. Edit and re-save to update." : "";
+
+  // (2) Move the Ase Ifá text to the chosen orientation.
+  const moveBtn = $("vpMoveOrientation");
+  if (moveBtn) moveBtn.onclick = () => {
+    let v; try { v = JSON.parse($("editor").value); } catch { toast("Editor JSON invalid", true); return; }
+    const target = sel.value;
+    const src = Object.keys(v.interpretations || {}).find((o) => v.interpretations[o] && (v.interpretations[o].text || "").trim());
+    if (!src) { toast("No interpretation text to move", true); return; }
+    if (src === target) { toast(`Already set to ${target}`); return; }
+    v.interpretations = v.interpretations || {};
+    v.interpretations[target] = { ...v.interpretations[src] }; // carry text/status/interpretedBy
+    delete v.interpretations[src];
+    $("editor").value = JSON.stringify(v, null, 2);
+    itemDirty = true;
+    toast(`Orientation set to ${target} — Save to persist`);
+    // Re-render the interp rows + this panel from the updated JSON.
+    try { interpPanelPopulate(v); } catch (e) {}
+  };
+
+  // (4) Save/add the verse text — now or later. Merges into the editor JSON and
+  // flips hasVerseText true when present. Persists on the normal Save.
+  const saveVerseBtn = $("vpSaveVerse");
+  if (saveVerseBtn) saveVerseBtn.onclick = () => {
+    let v; try { v = JSON.parse($("editor").value); } catch { toast("Editor JSON invalid", true); return; }
+    const lines = ($("vpYoruba").value || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length) {
+      v.yoruba = lines;
+      v.hasVerseText = true;
+      // Once a real verse is present it's no longer "pending" — but keep the
+      // record honest: only clear the pending tier, never silently verify.
+      if (v.provenance && v.provenance.tier === "verse-pending") v.provenance.tier = "verse-supplied";
+      v.versePending = false;
+      toast("Verse text added — Save to persist. It can still be edited later.");
+    } else {
+      // Cleared the verse: back to verse-optional (honest, not deficient).
+      delete v.yoruba;
+      v.hasVerseText = false;
+      toast("No verse text — this stays a verse-optional Ase Ifá. You can add it later.");
+    }
+    $("editor").value = JSON.stringify(v, null, 2);
+    itemDirty = true;
+    try { interpPanelPopulate(v); } catch (e) {}
+  };
+}
+
 function interpPanelPopulate(verse) {
   const host = $("interpRows");
   if (!host) return;
   if (!activeCol || activeCol.key !== "eseIfa") { host.innerHTML = ""; return; }
+  // Show/populate the verse-pending (Ase Ifá) panel for verse-optional records.
+  try { versePendingPopulate(verse); } catch (e) {}
   const existing = (verse && verse.interpretations) || {};
   host.innerHTML = INTERP_ORIENTATIONS.map((o) => {
     const it = existing[o] || {};
@@ -2028,6 +2157,7 @@ async function loadVerifyQueue(page) {
       row.className = "panel";
       row.style.cssText = "display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap";
       var bits = [];
+      if (it.versePending) bits.push('<span style="font-weight:700;color:#fff;background:#8a5a2b;padding:1px 8px;border-radius:20px;font-size:10px;text-transform:uppercase;letter-spacing:.03em">Ase Ifá</span>');
       if (it.verseNeedsVerify) bits.push('<span style="font-weight:600;color:#b8860b">verse: ' + escapeHtml(it.verseStatus) + '</span>');
       if (it.pendingInterpretations.length) bits.push('<span style="font-weight:600;color:#0f7b3d">' + it.pendingInterpretations.length + ' interp. pending</span>');
       row.innerHTML =
