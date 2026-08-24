@@ -1186,12 +1186,10 @@ const performUserDivination = async (
       `&solution=${encodeURIComponent(solution)}` +
       `&detail=${encodeURIComponent(solutionDetails)}`;
 
-    const [oduRes, fbRes, verseRes, aseifaRes] = await Promise.all([
+    const [oduRes, fbRes, verseRes] = await Promise.all([
       fetch(`/api/odu/${encodeURIComponent(mainCast)}`),
       fetch(feedbackUrl).catch(() => null),
-      fetch(verseReadingUrl).catch(() => null),
-      // Phase 3 read-flip: verified AseIfa from the corpus (replaces raw blob AseIfa).
-      fetch(`/api/verses/aseifa/${encodeURIComponent(mainCast)}`).catch(() => null)
+      fetch(verseReadingUrl).catch(() => null)
     ]);
 
     if (!oduRes.ok) throw new Error("Failed to fetch Odu data");
@@ -1234,18 +1232,11 @@ const performUserDivination = async (
       alias, herb, character, audioData = [], videoData = []
     } = oduData;
 
-    // Phase 3 read-flip: AseIfa now comes VERIFIED from the corpus, not the raw
-    // blob. Only elder-vouched pronouncements are shown. When none are verified
-    // yet, the AseIfa section is simply omitted — the Message baseline still
-    // carries the reading, so nothing is empty.
-    let verifiedAseIfa = [];
-    if (aseifaRes?.ok) {
-      try {
-        const aj = await aseifaRes.json();
-        if (aj && Array.isArray(aj.aseIfa)) verifiedAseIfa = aj.aseIfa;
-      } catch { /* omit AseIfa on parse error */ }
-    }
-    const aseIfaHTML = verifiedAseIfa.map((a) => `<p>${a.text}</p>`).join("");
+    // Verified Ase Ifá is surfaced within the main reading card: composeReading
+    // includes verse-pending Ase Ifá records (verified interpretation, no verse
+    // text) whose orientation matches the cast, so the reading shows the Ase Ifá
+    // relevant to THIS cast. A separate all-orientations accordion duplicated it
+    // and was removed.
 
     const { summaryHTML: oduSummary, characterHTML, aseHTML: oduSummaryAse } =
       getOduSummary(mainCast, orientation);
@@ -1314,39 +1305,48 @@ const performUserDivination = async (
           </div>
           <div class="ori-reading-body" style="padding:18px 20px 20px;">
             ${verseReading ? _verseReadingHTML(verseReading, solutionInfo) : `<p class="ori-section-text" data-translate>${rawMessage} ${solutionInfo}</p>`}
+            ${(Array.isArray(coreMessage) ? coreMessage.length : (coreMessage && String(coreMessage).trim()))
+              ? `<div class="ori-core-message" data-translate>${Array.isArray(coreMessage) ? coreMessage.map(m => `<p>${m}</p>`).join("") : `<p>${coreMessage}</p>`}</div>`
+              : ""}
           </div>
         </div>
       `);
 
-      /* ── Words of Ifa / Ase Ifa — open by default ── */
-      if (aseIfaHTML || coreMessage.length) {
-        const coreMsgHTML = Array.isArray(coreMessage)
-          ? coreMessage.map(m => `<p>${m}</p>`).join("")
-          : `<p>${coreMessage}</p>`;
+      /* ═══════════════════════════════════════════════════════════
+         Reading structure (three-tier, after the content-unification):
+           Tier 1 — the reading itself (verse or Message baseline) — above.
+           Tier 2 — Words of Ifá / verified Ase Ifá (sacred supporting text).
+           Tier 3 — the Odù's nature (character/summary from ifaFigures).
+           Then — reference correspondences, media, deeper insight, credits.
+         The ifaFigures character/summary is now its OWN tier, no longer nested
+         under (and hidden with) the Ase Ifá section — so it shows whether or
+         not verified Ase Ifá exists.
+         ═══════════════════════════════════════════════════════════ */
 
-        const aseBody = `
-          <div class="ase-verse" data-translate>${coreMsgHTML} ${aseIfaHTML}</div>
-          ${(oduSummaryAse || characterHTML) ? `
-            <div style="margin-top:14px;">
-              <button class="ase-more-btn" id="readMoreAse">
-                <span data-translate>Read more for ọmọ ${mainCast} ▼</span>
-              </button>
-              <div id="extraAse" style="display:none;margin-top:12px;line-height:1.75;">
-                ${characterHTML ? `${characterHTML}<hr/>` : ""}
-                ${oduSummaryAse ? `<span data-translate>${oduSummaryAse}</span>` : ""}
-              </div>
-            </div>` : ""}
+      /* ── Tier 2 was a separate "Ase Ifá" accordion. Removed: verified
+         Ase Ifá / interpretations are already surfaced in the main reading
+         card above (the first result div), so a separate section duplicated it.
+         The interpretive core (coreMessage) is folded into that card too. ── */
+
+
+      /* ── Tier 3 · The Odù's nature — character + line-by-line meaning ──
+         From ifaFigures (a separate, always-available dataset). Previously this
+         was buried inside the Ase Ifá "Read more", so it vanished whenever there
+         was no verified Ase Ifá. It now stands as its own section, always shown
+         when the figure data exists. */
+      if (characterHTML || oduSummaryAse) {
+        const natureBody = `
+          ${characterHTML ? `<div class="odu-nature__character" data-translate>${characterHTML}</div>` : ""}
+          ${(characterHTML && oduSummaryAse) ? `<hr style="border:none;border-top:1px solid var(--of-line,rgba(20,40,30,.12));margin:12px 0;">` : ""}
+          ${oduSummaryAse ? `<div class="odu-nature__summary" data-translate>${oduSummaryAse}</div>` : ""}
         `;
-        parts.push(_acc("Words of Ifa / Ase Ifa", aseBody, false));
+        parts.push(_acc(
+          `The nature of ọmọ ${mainCast} ${tip("The character and disposition of those born under this Odù, and the line-by-line meaning of its marks.")}`,
+          natureBody, false
+        ));
       }
 
-            /* ── Audio & Video — collapsed ── */
-      const mediaHTML = generateAllMedia();
-      if (coreAudioData.length || audioData.length || coreVideoData.length || videoData.length) {
-        parts.push(_acc("Audio & Video", mediaHTML, false));
-      }
-
-      /* ── Odù Details — six correspondences grouped into one card ── */
+      /* ── Reference · Odù correspondences (from OduReference) ── */
       const _detailRows = [];
       const _row = (label, tipText, value, translate) => {
         if (!value) return;
@@ -1368,11 +1368,18 @@ const performUserDivination = async (
         ));
       }
 
-      /* ── Spiritual Insight — collapsed ── */
+      /* ── Media — collapsed ── */
+      const mediaHTML = generateAllMedia();
+      if (coreAudioData.length || audioData.length || coreVideoData.length || videoData.length) {
+        parts.push(_acc("Audio & Video", mediaHTML, false));
+      }
+
+      /* ── Deeper insight — the marks decoded line by line — collapsed ── */
       parts.push(_acc(
         `More Insight ${tip("This section decodes the Odu's pattern of marks line by line.")}`,
         spiritualInsight, false
       ));
+
 
       /* ── Action bar: new reading + share ── */
       // parts.push(`
@@ -1426,14 +1433,6 @@ const performUserDivination = async (
         // over time. Absent when the reading fell back to the placeholder Message.
         verseId: verseReading?.lead?.verseId || null
       }, resultElement);
-
-      document.getElementById("readMoreAse")?.addEventListener("click", e => {
-        e.preventDefault();
-        const extra    = document.getElementById("extraAse");
-        const isHidden = extra.style.display === "none";
-        extra.style.display = isHidden ? "block" : "none";
-        e.target.textContent = isHidden ? "Show less ▲" : `Read more for ọmọ ${mainCast} ▼`;
-      });
 
       logSilently("/api/divination/log", {
         oduName: mainCast, orientationText, specificOrientation, solution, solutionDetails

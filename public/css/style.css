@@ -2234,6 +2234,15 @@ body{
 }
 .ase-verse p{ margin:0 0 12px; color:var(--of-ink); }
 .ase-verse p:last-child{ margin:0; }
+/* The Odù's nature (character + line-by-line meaning), its own reading tier.
+   Mirrors .ase-verse but with the gold accent to distinguish the tier. */
+.odu-nature__character, .odu-nature__summary{
+  padding:4px 0 4px 16px;
+  border-left:3px solid var(--of-gold,#b8860b);
+  color:var(--of-ink); font-size:14.5px; line-height:1.85;
+}
+.odu-nature__character p, .odu-nature__summary p{ margin:0 0 12px; }
+.odu-nature__character p:last-child, .odu-nature__summary p:last-child{ margin:0; }
 .ase-more-btn{
   margin-top:14px; padding:8px 14px; cursor:pointer; background:none;
   font-family:var(--font-body); font-weight:600; font-size:13px; color:var(--of-green);
@@ -2565,3 +2574,8 @@ body {
   color: var(--of-ink, #26302a);
   font-family: var(--font-body, 'Source Serif 4', Georgia, serif);
 }
+/* Interpretive core folded into the reading card (rare — ~0.4% of casts). Sits
+   under the main reading as a continuation of the same voice, lightly set off. */
+.ori-core-message{ margin-top:12px; padding-top:12px; border-top:1px solid var(--of-line,rgba(20,40,30,.12)); }
+.ori-core-message p{ margin:0 0 10px; font-size:15px; line-height:1.78; color:var(--of-ink,#26302a); }
+.ori-core-message p:last-child{ margin:0; }
