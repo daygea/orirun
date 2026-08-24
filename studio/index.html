@@ -2250,6 +2250,30 @@ async function openVerifyDetail(verseId) {
         '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml(v.english.join("\n")) + '</div></div>';
     }
 
+    // Verse-pending (Ase Ifá) completion — elders may set the orientation and,
+    // if they know it, supply the ẹsẹ Ifá. Shown only for verse-pending records.
+    const vp = !!(v.versePending === true || v.hasVerseText === false ||
+      (v.provenance && v.provenance.tier === "verse-pending"));
+    if (vp) {
+      const curOri = (v.interpretations || []).find((it) => (it.text || "").trim());
+      const oriOptions = ["Aiku","Aje","Isegun","Igbale Ese","Gbogbo Ire","Iku","Arun","Ejo","Ofo","Okutagbunilese"]
+        .map((o) => '<option value="' + o + '"' + (curOri && curOri.orientation === o ? " selected" : "") + '>' + o + '</option>').join("");
+      html += '<div style="border:1px solid var(--brass,#b8860b);border-radius:10px;padding:12px;margin:14px 0;background:#fffdf5">' +
+        '<div style="font-weight:700;color:#8a5a2b;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<span style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#8a5a2b;color:#fff;padding:2px 9px;border-radius:20px">Ase Ifá · verse-pending</span></div>' +
+        '<div style="font-size:12.5px;opacity:.8;margin-bottom:10px;max-width:74ch">This Ase Ifá may have no transcribed verse. You can <b>set the orientation</b> it speaks to, and — if you know the ẹsẹ Ifá — <b>add the verse</b> now or later. Adding a verse makes it your contribution, so a <b>different elder</b> will verify the completed verse.</div>' +
+        '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:600;color:#5a4326;display:block;margin-bottom:4px">Orientation</label>' +
+          '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+            '<select id="vdOrientation" style="font-size:13px;padding:6px 9px;border:1px solid var(--line);border-radius:6px">' + oriOptions + '</select>' +
+            '<button class="btn btn-ghost btn-sm" onclick="completeAseifa(\'orientation\')">Set orientation</button>' +
+          '</div></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#5a4326;display:block;margin-bottom:4px">The ẹsẹ Ifá verse (Yorùbá) — optional</label>' +
+          '<textarea id="vdYoruba" rows="3" placeholder="Add the Yorùbá verse lines if you know them — one per line. Leave blank to verify the Ase Ifá without a verse; you can add it any time later." style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px">' + escapeHtml((v.yoruba || []).join("\n")) + '</textarea>' +
+          '<div style="margin-top:6px"><button class="btn btn-ghost btn-sm" onclick="completeAseifa(\'verse\')">Save verse text</button></div>' +
+        '</div>' +
+      '</div>';
+    }
+
     // Verse verify + send-back (inline)
     const verseVerified = v.verseStatus === "verified";
     html += '<div style="border-top:1px solid var(--line,#e6efe4);padding-top:12px;margin-top:12px">' +
@@ -2326,6 +2350,34 @@ function toggleSendBack(target) {
     '</div>';
   box.style.display = "block";
   const ta = $("sbtext-" + target); if (ta) ta.focus();
+}
+
+// Complete a verse-pending Ase Ifá from the elder verify panel: set orientation
+// (verification judgment) or add the verse (authoring → a different elder then
+// verifies). Persists via the elder complete-aseifa endpoint.
+async function completeAseifa(kind) {
+  if (!_verifyDetailId) return;
+  const body = {};
+  if (kind === "orientation") {
+    const sel = $("vdOrientation");
+    if (!sel) return;
+    body.setOrientation = sel.value;
+  } else if (kind === "verse") {
+    const ta = $("vdYoruba");
+    if (!ta) return;
+    body.yoruba = (ta.value || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    if (body.yoruba.length && !confirmAct("Add this verse? It becomes your contribution, so a different elder must verify the completed verse.")) return;
+  }
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(_verifyDetailId) + "/complete-aseifa",
+      { method: "POST", body: JSON.stringify(body) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Update failed");
+    toast(d.message || "Ase Ifá updated");
+    openVerifyDetail(_verifyDetailId); // reload the panel to reflect changes
+  } catch (err) {
+    toast("Update failed: " + err.message, true);
+  }
 }
 
 async function verifyPart(kind, oriEnc) {
