@@ -1186,10 +1186,12 @@ const performUserDivination = async (
       `&solution=${encodeURIComponent(solution)}` +
       `&detail=${encodeURIComponent(solutionDetails)}`;
 
-    const [oduRes, fbRes, verseRes] = await Promise.all([
+    const [oduRes, fbRes, verseRes, aseifaRes] = await Promise.all([
       fetch(`/api/odu/${encodeURIComponent(mainCast)}`),
       fetch(feedbackUrl).catch(() => null),
-      fetch(verseReadingUrl).catch(() => null)
+      fetch(verseReadingUrl).catch(() => null),
+      // Phase 3 read-flip: verified AseIfa from the corpus (replaces raw blob AseIfa).
+      fetch(`/api/verses/aseifa/${encodeURIComponent(mainCast)}`).catch(() => null)
     ]);
 
     if (!oduRes.ok) throw new Error("Failed to fetch Odu data");
@@ -1227,12 +1229,23 @@ const performUserDivination = async (
     const solutionInfo = solutionBlock?.[solutionDetails] || "No solution info available.";
 
     const {
-      AseIfa = [], Orisha: orisha, Taboo: taboo, Names: names,
+      Orisha: orisha, Taboo: taboo, Names: names,
       Occupation: occupation, Credit: credit,
       alias, herb, character, audioData = [], videoData = []
     } = oduData;
 
-    const aseIfaHTML = AseIfa.map(p => `<p>${p}</p>`).join("");
+    // Phase 3 read-flip: AseIfa now comes VERIFIED from the corpus, not the raw
+    // blob. Only elder-vouched pronouncements are shown. When none are verified
+    // yet, the AseIfa section is simply omitted — the Message baseline still
+    // carries the reading, so nothing is empty.
+    let verifiedAseIfa = [];
+    if (aseifaRes?.ok) {
+      try {
+        const aj = await aseifaRes.json();
+        if (aj && Array.isArray(aj.aseIfa)) verifiedAseIfa = aj.aseIfa;
+      } catch { /* omit AseIfa on parse error */ }
+    }
+    const aseIfaHTML = verifiedAseIfa.map((a) => `<p>${a.text}</p>`).join("");
 
     const { summaryHTML: oduSummary, characterHTML, aseHTML: oduSummaryAse } =
       getOduSummary(mainCast, orientation);
