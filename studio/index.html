@@ -3926,6 +3926,11 @@ async function refreshSessionChip() {
     // once non-superadmin logins exist).
     var usersTab = document.querySelector('.area-tab[data-area="users"]');
     if (usersTab) usersTab.style.display = (me.role === "superadmin") ? "" : "none";
+    // Verification (the "To Verify" queue + Review panel) is for elders AND
+    // superadmins — both review and complete Ase Ifá the same way, so a
+    // superadmin gets the same tab rather than a separate editor-only path.
+    var verifyTab = document.querySelector('.area-tab[data-area="verify"]');
+    if (verifyTab) verifyTab.style.display = (me.role === "superadmin" || me.role === "elder") ? "" : "none";
     // Bulk signal seeding is an authority action — superadmin + elder only
     // (backend enforces the same). It seeds the reading ranking's signals.
     var seedPanel = document.getElementById("seedPanel");
