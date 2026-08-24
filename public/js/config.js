@@ -185,8 +185,12 @@ const fetchWithTimeout = (url, options = {}, timeout = 12000) => {
 };
 
 const checkServer = async (url) => {
-  // Offline → no server is reachable; don't wait out the timeout.
-  if (navigator.onLine === false) return null;
+  // Offline → remote servers are unreachable; don't wait out the timeout.
+  // BUT localhost/127.0.0.1 needs no internet — a locally-run backend is still
+  // reachable when the browser reports offline (this is exactly the run-from-
+  // local / DB-outage test case), so we must still probe it.
+  const isLocal = url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1");
+  if (navigator.onLine === false && !isLocal) return null;
   try {
     const res = await nativeFetch(`${url}/api/ping`, {
       cache: "no-store",
