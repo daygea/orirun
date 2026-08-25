@@ -95,11 +95,16 @@ function hidePreloader() {
 function _verseReadingHTML(vr, solutionInfo) {
   const esc = (s) => String(s == null ? "" : s);
   const credit = (r) => {
-    // Seeker-facing attribution: keep only the verse's contributor (whose
-    // wisdom this is). The internal workflow names — interpreted-by and
-    // verified-by — are hidden from the reading.
-    if (!r.provenance?.contributor) return "";
-    return `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>`;
+    // Seeker-facing attribution — recognition for those who carry the corpus:
+    // the one who recorded the verse and the elder who verified it. Naming the
+    // verifying elder also dignifies the reading (a real elder vouched for this).
+    const rec = r.provenance?.contributor;
+    const ver = r.verifiedBy;
+    if (!rec && !ver) return "";
+    const bits = [];
+    if (rec) bits.push(`recorded by ${esc(rec)}`);
+    if (ver) bits.push(`verified by ${esc(ver)}`);
+    return `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`;
   };
   // Collapsible verse — the source the interpretation rests on. Shown beneath
   // the interpretation, closed by default so the reading stays clean. Only

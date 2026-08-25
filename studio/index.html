@@ -488,6 +488,10 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <h3 title="Signals the reading ranking learns from — resonance, confirmations, and lived outcomes. Dormant until data accumulates.">Learning signals</h3>
         <div id="learningPanel" style="font-size:13px"></div>
       </div>
+      <div class="panel">
+        <h3 title="Contributors and verifiers by surviving verified work. Private stewardship view — never shown publicly or as a ranking to contributors.">Contributor recognition</h3>
+        <div id="ledgerPanel" style="font-size:13px"></div>
+      </div>
     </div>
 
     <div class="panel" id="seedPanel" style="display:none">
@@ -3637,8 +3641,41 @@ async function loadDashboard() {
     $("latestFeedback").innerHTML = (d.latestFeedbacks || []).map((f) =>
       `<div style="padding:8px 0;border-top:1px dashed var(--line)"><strong>${f.name || f.contextType || f.type || "Feedback"}</strong> <span class="log-count">${f.timestamp ? new Date(f.timestamp).toLocaleString() : ""}</span><br>${(f.message || f.feedback || f.text || "").toString().slice(0, 220)}</div>`).join("")
       || '<span class="log-count">No feedback yet.</span>';
+    loadLedger();
   } catch (err) {
     grid.innerHTML = `<div class="stat-card"><div class="l">Could not load analytics: ${err.message}</div></div>`;
+  }
+}
+
+// Contributor recognition (admin-private reliability ledger). Surviving verified
+// work is the trust signal; raw submissions count for nothing. Not a public
+// ranking — a stewardship view for superadmins only.
+async function loadLedger() {
+  const el = $("ledgerPanel");
+  if (!el) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/ledger", { credentials: "include" });
+    if (!res.ok) { el.innerHTML = '<span class="log-count">Ledger unavailable.</span>'; return; }
+    const d = await res.json();
+    const contribs = (d.contributors || []).filter((c) => c.surviving > 0).slice(0, 8);
+    const verifiers = (d.verifiers || []).filter((v) => v.held > 0).slice(0, 6);
+    let html = "";
+    if (contribs.length) {
+      html += '<div style="margin-bottom:4px;font-size:11px;opacity:.6">Recorders (surviving verified · reliability)</div>';
+      html += contribs.map((c) =>
+        `<div class="bar-row"><span class="bl">${(c.name || c.account)}</span><span class="bn" style="width:auto">${c.surviving} · ${Math.round(c.reliabilityRatio * 100)}%</span></div>`).join("");
+    }
+    if (verifiers.length) {
+      html += '<div style="margin-top:8px;margin-bottom:4px;font-size:11px;opacity:.6">Verifiers (verifications that held)</div>';
+      html += verifiers.map((v) =>
+        `<div class="bar-row"><span class="bl">${v.verifier}</span><span class="bn" style="width:auto">${v.held}</span></div>`).join("");
+    }
+    if ((d.collusionFlags || []).length) {
+      html += `<div style="margin-top:8px;padding:6px 8px;background:#fdf3f0;border-radius:6px;font-size:11px;color:var(--osun)">⚠ ${d.collusionFlags.length} reciprocal verification pattern(s) to review.</div>`;
+    }
+    el.innerHTML = html || '<span class="log-count">No surviving verified contributions yet. As contributors record verses and elders verify them, recognition builds here.</span>';
+  } catch (err) {
+    el.innerHTML = '<span class="log-count">Ledger unavailable.</span>';
   }
 }
 
