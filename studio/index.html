@@ -196,6 +196,26 @@ textarea#editor.invalid{border-color:var(--osun);box-shadow:0 0 0 3px rgba(166,5
 .odu-mark .or{display:flex;gap:6px;justify-content:center;min-height:24px;align-items:center}
 .odu-mark .os{width:6px;height:24px;background:var(--igbo);border-radius:3px}
 .odu-caption{font-family:var(--serif);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin-bottom:14px}
+/* Recruitment landing — purpose / signup / login views, built on the Ifá identity. */
+.auth-view{width:min(440px,94vw);animation:authFade .4s ease}
+@keyframes authFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.auth-lead{font-family:var(--serif);font-size:23px;line-height:1.25;color:var(--ink);margin-bottom:8px}
+.auth-sub{max-width:420px;margin:0 auto;font-size:13.5px;line-height:1.6;color:var(--ink-soft)}
+.auth-pillars{display:flex;flex-direction:column;gap:12px;text-align:left;margin:22px auto 24px;max-width:420px}
+.auth-pillar{display:grid;grid-template-columns:104px 1fr;gap:14px;align-items:baseline;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.auth-pillar:last-child{border-bottom:none;padding-bottom:0}
+.auth-pillar__k{font-family:var(--serif);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--igbo)}
+.auth-pillar__v{font-size:12.5px;line-height:1.55;color:var(--ink-soft)}
+.auth-actions{max-width:360px;margin:0 auto}
+.auth-fineprint{margin-top:16px;font-size:11.5px;color:var(--ink-soft);opacity:.85}
+.auth-label{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px}
+.auth-hint{font-weight:400;opacity:.7}
+.auth-input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:12px;font-family:inherit;color:var(--ink);background:var(--white)}
+.auth-input:focus{outline:none;border-color:var(--igbo);box-shadow:0 0 0 3px rgba(30,43,35,.08)}
+.auth-error{color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin:2px 0 4px}
+.auth-switch{background:none;border:none;color:var(--brass);font-size:12.5px;font-weight:600;cursor:pointer;margin-top:16px;font-family:inherit;text-decoration:underline;text-underline-offset:3px}
+.auth-switch:hover{color:var(--igbo)}
+@media (max-width:480px){ .auth-pillar{grid-template-columns:1fr;gap:2px} .auth-pillar__k{margin-bottom:2px} }
 
 /* Toast */
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -922,45 +942,66 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         </div>
       </div>
       <div class="odu-caption">Ọ̀sá Ọ̀wọ́nrín</div>
-      <h3>Sign in to the Studio</h3>
-      <p>Authorised access only. Sessions last 2 hours.</p>
-      <form id="loginForm" style="width:min(340px,90vw);margin-top:16px;text-align:left" autocomplete="on">
-        <label for="loginUser" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Username</label>
-        <input id="loginUser" autocomplete="username"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
-        <label for="loginPass" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Password</label>
-        <input id="loginPass" type="password" autocomplete="current-password"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px">
-        <div id="loginError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
-        <button type="submit" class="btn btn-green" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
-      </form>
 
-      <!-- Contributor self-signup — anyone may create a CONTRIBUTOR account.
-           Grants identity, not authority: the account can submit verses (which
-           still require a different elder to verify), never verify. -->
-      <div style="width:min(340px,90vw);margin-top:18px;text-align:center">
-        <button type="button" id="showSignupBtn" class="btn btn-ghost btn-sm" style="font-size:12.5px">
-          New contributor? Create an account
-        </button>
-      </div>
-      <form id="signupForm" style="display:none;width:min(340px,90vw);margin-top:12px;text-align:left;border-top:1px solid var(--line);padding-top:16px" autocomplete="on">
-        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5">
-          Create a contributor account to record verses. Your contributions are credited to you and reviewed by an elder before they appear. Verifier access is granted separately.
+      <!-- ══ VIEW 1 · Purpose / invitation (shown first) ══ -->
+      <div id="authWelcome" class="auth-view">
+        <h3 class="auth-lead">A place for the words of Ifá to endure</h3>
+        <p class="auth-sub">The Orírùn Studio is where babaláwo and ìyáònífá record the ẹsẹ Ifá they carry, so the corpus is kept whole for the generations after us.</p>
+        <div class="auth-pillars">
+          <div class="auth-pillar">
+            <div class="auth-pillar__k">Preserve</div>
+            <div class="auth-pillar__v">Set down the verses you hold. What you record becomes part of a living archive of Ifá.</div>
+          </div>
+          <div class="auth-pillar">
+            <div class="auth-pillar__k">Be credited</div>
+            <div class="auth-pillar__v">Every verse carries the name of the one who recorded it and the elder who verified it. Your knowledge is attributed to you.</div>
+          </div>
+          <div class="auth-pillar">
+            <div class="auth-pillar__k">Join the keepers</div>
+            <div class="auth-pillar__v">Contributors whose work is verified are honoured among the keepers of the corpus.</div>
+          </div>
         </div>
-        <label for="suUser" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Choose a username</label>
-        <input id="suUser" autocomplete="username"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
-        <label for="suPass" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Password (8+ characters)</label>
-        <input id="suPass" type="password" autocomplete="new-password"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
-        <label for="suEmail" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Email <span style="font-weight:400;opacity:.7">(optional — for recognition)</span></label>
-        <input id="suEmail" type="email" autocomplete="email"
-          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px">
-        <div id="signupError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
-        <button type="submit" class="btn btn-green" id="signupBtn" style="width:100%;justify-content:center;margin-top:6px">Create account &amp; sign in</button>
-      </form>
+        <div class="auth-actions">
+          <button type="button" class="btn btn-green" id="goSignupBtn" style="width:100%;justify-content:center">Add your voice — create an account</button>
+          <button type="button" class="btn btn-ghost" id="goLoginBtn" style="width:100%;justify-content:center;margin-top:10px">I already have an account — sign in</button>
+        </div>
+        <p class="auth-fineprint">Recording is open to all who carry Ifá. Verifying is entrusted to elders, granted separately.</p>
+      </div>
+
+      <!-- ══ VIEW 2 · Create account ══ -->
+      <div id="authSignup" class="auth-view" style="display:none">
+        <h3 class="auth-lead">Create your contributor account</h3>
+        <p class="auth-sub">Record the verses you carry. Each contribution is credited to you and reviewed by an elder before it appears to seekers.</p>
+        <form id="signupForm" style="width:min(360px,92vw);margin:14px auto 0;text-align:left" autocomplete="on">
+          <label for="suUser" class="auth-label">Choose a username</label>
+          <input id="suUser" autocomplete="username" class="auth-input">
+          <label for="suPass" class="auth-label">Password <span class="auth-hint">(8+ characters)</span></label>
+          <input id="suPass" type="password" autocomplete="new-password" class="auth-input">
+          <label for="suEmail" class="auth-label">Email <span class="auth-hint">(optional — so you can be reached for recognition)</span></label>
+          <input id="suEmail" type="email" autocomplete="email" class="auth-input">
+          <div id="signupError" class="auth-error"></div>
+          <button type="submit" class="btn btn-green" id="signupBtn" style="width:100%;justify-content:center;margin-top:6px">Create account &amp; begin</button>
+        </form>
+        <button type="button" class="auth-switch" id="toLoginFromSignup">Already have an account? Sign in</button>
+      </div>
+
+      <!-- ══ VIEW 3 · Sign in ══ -->
+      <div id="authLogin" class="auth-view" style="display:none">
+        <h3 class="auth-lead">Sign in to the Studio</h3>
+        <p class="auth-sub">Welcome back. Sessions last 2 hours.</p>
+        <form id="loginForm" style="width:min(360px,92vw);margin:14px auto 0;text-align:left" autocomplete="on">
+          <label for="loginUser" class="auth-label">Username</label>
+          <input id="loginUser" autocomplete="username" class="auth-input">
+          <label for="loginPass" class="auth-label">Password</label>
+          <input id="loginPass" type="password" autocomplete="current-password" class="auth-input">
+          <div id="loginError" class="auth-error"></div>
+          <button type="submit" class="btn btn-green" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
+        </form>
+        <button type="button" class="auth-switch" id="toSignupFromLogin">New here? Create a contributor account</button>
+      </div>
     </div>
   </main>
+
 </div>
 
 <dialog id="newModal">
@@ -1051,6 +1092,8 @@ function showAuth() {
   $("emptyState").style.display = "none";
   $("editorWrap").style.display = "none";
   $("authState").style.display = "flex";
+  // Always open on the purpose/welcome view; the user chooses sign-in or sign-up.
+  if (typeof showAuthView === "function") showAuthView("welcome");
 }
 function renderCollections() {
   const wrap = $("colList"); wrap.innerHTML = "";
@@ -4113,14 +4156,20 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   } finally { $("loginBtn").disabled = false; }
 });
 
-// Contributor self-signup: toggle the form, then create the account and sign in.
-document.getElementById("showSignupBtn")?.addEventListener("click", () => {
-  const f = $("signupForm");
-  const shown = f.style.display !== "none";
-  f.style.display = shown ? "none" : "block";
-  $("showSignupBtn").textContent = shown ? "New contributor? Create an account" : "Have an account? Sign in above";
-  if (!shown) $("suUser")?.focus();
-});
+// Landing views: welcome (purpose) → signup or login, mutually exclusive.
+function showAuthView(which) {
+  const views = { welcome: "authWelcome", signup: "authSignup", login: "authLogin" };
+  for (const key of Object.keys(views)) {
+    const el = $(views[key]);
+    if (el) el.style.display = (key === which) ? "block" : "none";
+  }
+  if (which === "signup") $("suUser")?.focus();
+  if (which === "login") $("loginUser")?.focus();
+}
+document.getElementById("goSignupBtn")?.addEventListener("click", () => showAuthView("signup"));
+document.getElementById("goLoginBtn")?.addEventListener("click", () => showAuthView("login"));
+document.getElementById("toLoginFromSignup")?.addEventListener("click", () => showAuthView("login"));
+document.getElementById("toSignupFromLogin")?.addEventListener("click", () => showAuthView("signup"));
 
 document.getElementById("signupForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
