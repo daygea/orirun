@@ -934,6 +934,31 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <div id="loginError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
         <button type="submit" class="btn btn-green" id="loginBtn" style="width:100%;justify-content:center;margin-top:6px">Sign in</button>
       </form>
+
+      <!-- Contributor self-signup — anyone may create a CONTRIBUTOR account.
+           Grants identity, not authority: the account can submit verses (which
+           still require a different elder to verify), never verify. -->
+      <div style="width:min(340px,90vw);margin-top:18px;text-align:center">
+        <button type="button" id="showSignupBtn" class="btn btn-ghost btn-sm" style="font-size:12.5px">
+          New contributor? Create an account
+        </button>
+      </div>
+      <form id="signupForm" style="display:none;width:min(340px,90vw);margin-top:12px;text-align:left;border-top:1px solid var(--line);padding-top:16px" autocomplete="on">
+        <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.5">
+          Create a contributor account to record verses. Your contributions are credited to you and reviewed by an elder before they appear. Verifier access is granted separately.
+        </div>
+        <label for="suUser" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Choose a username</label>
+        <input id="suUser" autocomplete="username"
+          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
+        <label for="suPass" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Password (8+ characters)</label>
+        <input id="suPass" type="password" autocomplete="new-password"
+          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:10px">
+        <label for="suEmail" style="display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:4px">Email <span style="font-weight:400;opacity:.7">(optional — for recognition)</span></label>
+        <input id="suEmail" type="email" autocomplete="email"
+          style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+        <div id="signupError" style="color:var(--osun);font-size:12.5px;font-weight:600;min-height:18px;margin-top:8px"></div>
+        <button type="submit" class="btn btn-green" id="signupBtn" style="width:100%;justify-content:center;margin-top:6px">Create account &amp; sign in</button>
+      </form>
     </div>
   </main>
 </div>
@@ -4086,6 +4111,41 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   } catch (err) {
     $("loginError").textContent = err.message;
   } finally { $("loginBtn").disabled = false; }
+});
+
+// Contributor self-signup: toggle the form, then create the account and sign in.
+document.getElementById("showSignupBtn")?.addEventListener("click", () => {
+  const f = $("signupForm");
+  const shown = f.style.display !== "none";
+  f.style.display = shown ? "none" : "block";
+  $("showSignupBtn").textContent = shown ? "New contributor? Create an account" : "Have an account? Sign in above";
+  if (!shown) $("suUser")?.focus();
+});
+
+document.getElementById("signupForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("signupError").textContent = "";
+  $("signupBtn").disabled = true;
+  try {
+    const username = $("suUser").value.trim();
+    const password = $("suPass").value;
+    const email = $("suEmail").value.trim();
+    if (!username || !password) throw new Error("Username and password are required.");
+    if (password.length < 8) throw new Error("Password must be at least 8 characters.");
+    const res = await fetch(API_BASE + "/api/auth/signup", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password, email: email || undefined }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Sign-up failed");
+    $("suPass").value = "";
+    toast("Account created — welcome, " + (data.username || "contributor"));
+    await refreshSessionChip();
+    await revealApp();
+  } catch (err) {
+    $("signupError").textContent = err.message;
+  } finally { $("signupBtn").disabled = false; }
 });
 $("logoutBtn").onclick = async () => {
   await fetch(API_BASE + "/api/auth/logout", { method: "POST", credentials: "include" });
