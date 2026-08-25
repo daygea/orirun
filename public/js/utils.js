@@ -1068,6 +1068,49 @@ function showContributionModal() {
     };
 }
 
+// Keepers of the Corpus — the public, named, UNRANKED recognition of those who
+// recorded and verified verses. Fetches /api/verses/honored (alphabetical, no
+// counts) and lists them with dignity. No ranking of sacred knowledge.
+function closeHonoredModal() {
+    const m = document.getElementById("honoredModal");
+    if (m) m.style.display = "none";
+}
+async function showHonoredModal() {
+    const modal = document.getElementById("honoredModal");
+    const body = document.getElementById("honoredBody");
+    if (!modal || !body) return;
+    modal.style.display = "block";
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+    body.innerHTML = '<p style="text-align:center;padding:20px 0;"><span class="spinner"></span> Loading…</p>';
+    try {
+        const base = (typeof SERVER_URL !== "undefined" && SERVER_URL) ? SERVER_URL : "";
+        const res = await fetch(base + "/api/verses/honored");
+        const d = await res.json();
+        const recorders = Array.isArray(d.recorders) ? d.recorders : [];
+        const verifiers = Array.isArray(d.verifiers) ? d.verifiers : [];
+        if (!recorders.length && !verifiers.length) {
+            body.innerHTML = '<p class="honored-empty" data-translate>The corpus is young. As babaláwo record verses and elders verify them, their names will be honoured here.</p>';
+            return;
+        }
+        const nameList = (names) => '<div class="honored-names">' +
+            names.map((n) => `<span class="honored-name">${String(n)}</span>`).join("") + '</div>';
+        let html = "";
+        if (recorders.length) {
+            html += '<div class="honored-group"><div class="honored-group__title" data-translate>Recorders</div>' +
+                '<div class="honored-group__note" data-translate>They set down the verses they carry.</div>' +
+                nameList(recorders) + '</div>';
+        }
+        if (verifiers.length) {
+            html += '<div class="honored-group"><div class="honored-group__title" data-translate>Verifying elders</div>' +
+                '<div class="honored-group__note" data-translate>They vouched for what enters the corpus.</div>' +
+                nameList(verifiers) + '</div>';
+        }
+        body.innerHTML = html;
+    } catch (err) {
+        body.innerHTML = '<p class="honored-empty" data-translate>Could not load the keepers just now. Please try again.</p>';
+    }
+}
+
 document.getElementById("contributionCategory").addEventListener("change", function () {
     // Legacy ifaFields block was removed when Ifá + Babaláwo merged; guard
     // against its absence. The unified Ifá fields are handled by

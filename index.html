@@ -721,6 +721,11 @@ if (location.protocol !== 'file:') {
           </a>
           <span style="color:#ccc;">|</span>
           <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
+             onclick="showHonoredModal()">
+            <span data-translate>Keepers of the Corpus</span>
+          </a>
+          <span style="color:#ccc;">|</span>
+          <a href="#" style="color:green;text-decoration:underline;white-space:nowrap;"
              onclick="orirun.restartTour()">
             <span data-translate>Restart Tour</span>
           </a>
@@ -811,6 +816,19 @@ if (location.protocol !== 'file:') {
             <button class="app-btn aboutClose" aria-label="Close" data-translate>Close</button>
             <div id="aboutContent">
               <p><span class="spinner"></span><span data-translate="loading">Loading...</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="honoredModal" class="custom-modal" role="dialog" aria-modal="true" aria-label="Keepers of the Corpus">
+          <div class="custom-modal-content">
+            <button class="app-btn customClose" aria-label="Close" onclick="closeHonoredModal()" data-translate>Close</button>
+            <div class="honored-head">
+              <h3 data-translate>Keepers of the Corpus</h3>
+              <p class="honored-intro" data-translate>Those who have recorded and verified the verses of Ifá kept in Orírùn. Their knowledge endures here, credited to them, for the generations after us.</p>
+            </div>
+            <div id="honoredBody">
+              <p style="text-align:center;padding:20px 0;"><span class="spinner"></span> <span data-translate="loading">Loading...</span></p>
             </div>
           </div>
         </div>

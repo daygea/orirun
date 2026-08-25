@@ -2579,3 +2579,18 @@ body {
 .ori-core-message{ margin-top:12px; padding-top:12px; border-top:1px solid var(--of-line,rgba(20,40,30,.12)); }
 .ori-core-message p{ margin:0 0 10px; font-size:15px; line-height:1.78; color:var(--of-ink,#26302a); }
 .ori-core-message p:last-child{ margin:0; }
+/* Keepers of the Corpus — public, named, UNRANKED recognition. Names as gentle
+   pills, grouped by role, alphabetical. No counts, no ranking of sacred work. */
+.honored-head{ text-align:center; margin-bottom:6px; }
+.honored-head h3{ font-family:var(--of-serif,'Source Serif 4',Georgia,serif); color:var(--of-green-ink,#0c3d24); margin:0 0 8px; }
+.honored-intro{ font-size:13px; line-height:1.6; color:var(--of-ink-soft,#6b7770); max-width:400px; margin:0 auto 6px; }
+.honored-group{ margin-top:22px; }
+.honored-group__title{ font-family:var(--of-serif,'Source Serif 4',Georgia,serif); font-size:13px; font-weight:700; letter-spacing:.02em; color:var(--of-green,#0f7b3d); text-transform:uppercase; }
+.honored-group__note{ font-size:12px; color:var(--of-ink-soft,#6b7770); margin:2px 0 10px; font-style:italic; }
+.honored-names{ display:flex; flex-wrap:wrap; gap:8px; }
+.honored-name{
+  display:inline-block; padding:6px 13px; border-radius:999px;
+  background:var(--of-paper-deep,#f4f1e8); border:1px solid var(--of-line,rgba(20,40,30,.12));
+  font-size:13.5px; color:var(--of-ink,#26302a); line-height:1.3;
+}
+.honored-empty{ text-align:center; color:var(--of-ink-soft,#6b7770); padding:28px 12px; line-height:1.6; }
