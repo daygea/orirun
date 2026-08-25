@@ -725,6 +725,12 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           <input id="vfThemes" type="text" autocomplete="off" placeholder="sacrifice, patience, destiny"
             style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
         </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Recording <span style="font-weight:400;opacity:.6">(audio/video link — optional)</span>
+          <input id="vfMedia" type="url" autocomplete="off" placeholder="https://… a chant recording, YouTube, etc."
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+          <span style="font-weight:400;opacity:.55;font-size:11px">Shown with the reading once an elder verifies this verse.</span>
+        </label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-green" id="vfSave" type="button" onclick="saveVerse()">Save draft</button>
           <button class="btn btn-ghost" type="button" onclick="closeVerseForm()">Cancel</button>
@@ -2330,6 +2336,19 @@ async function openVerifyDetail(verseId) {
         '<div style="white-space:pre-wrap;font-size:14px;line-height:1.7">' + escapeHtml(v.english.join("\n")) + '</div></div>';
     }
 
+    // Attached recording (if any) — the elder should review it before vouching,
+    // since verifying the verse vouches for its recording too.
+    if (Array.isArray(v.media) && v.media.length) {
+      const mediaLinks = v.media.map((m) => {
+        const url = escapeHtml(m.url || "");
+        const kind = m.type === "audio" ? "🎧 audio recording" : "🎥 video recording";
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:var(--igbo,#0f7b3d)">' + kind + '</a>';
+      }).join(" · ");
+      html += '<div style="margin:12px 0;padding:8px 11px;background:#f6faf6;border:1px solid var(--line,#e6efe4);border-radius:8px">' +
+        '<div style="font-size:12px;font-weight:600;opacity:.7;margin-bottom:4px">Attached recording — review before verifying</div>' +
+        '<div style="font-size:13px">' + mediaLinks + '</div></div>';
+    }
+
     // Verse-pending (Ase Ifá) completion — elders may set the orientation and,
     // if they know it, supply the ẹsẹ Ifá. Shown only for verse-pending records.
     const vp = !!(v.versePending === true || v.hasVerseText === false ||
@@ -2744,10 +2763,12 @@ async function openVerseForm(verseId) {
       $("vfYoruba").value = (v.yoruba || []).join("\n");
       $("vfEnglish").value = (v.english || []).join("\n");
       $("vfThemes").value = (v.themes || []).join(", ");
+      if ($("vfMedia")) $("vfMedia").value = (Array.isArray(v.media) && v.media[0] && v.media[0].url) ? v.media[0].url : "";
     } catch (err) { toast("Couldn't load verse: " + err.message, true); }
   } else {
     _vfOduValue = ""; $("vfOduSearch").value = "";
     $("vfTitle").value = ""; $("vfYoruba").value = ""; $("vfEnglish").value = ""; $("vfThemes").value = "";
+    if ($("vfMedia")) $("vfMedia").value = "";
   }
   $("verseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -2764,11 +2785,12 @@ async function saveVerse() {
   const english = $("vfEnglish").value.split("\n").map((l) => l.trim()).filter(Boolean);
   const title = $("vfTitle").value.trim();
   const themes = $("vfThemes").value.split(",").map((t) => t.trim()).filter(Boolean);
+  const media = ($("vfMedia") && $("vfMedia").value.trim()) || "";
   if (!odu) { toast("Choose an Odù for this verse", true); return; }
   if (!yoruba.length) { toast("Enter the verse in Yorùbá", true); return; }
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const payload = { odu, yoruba, english, title, themes };
+    const payload = { odu, yoruba, english, title, themes, media };
     const res = _editingVerseId
       ? await studioApi("/verses/" + encodeURIComponent(_editingVerseId), { method: "PUT", body: JSON.stringify(payload) })
       : await studioApi("/verses", { method: "POST", body: JSON.stringify(payload) });

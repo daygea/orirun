@@ -1250,10 +1250,33 @@ const performUserDivination = async (
       mainCast, orientation, specificOrientation, solution, solutionDetails
     );
 
+    // Collect verse recordings in the SAME order the verses appear in the
+    // reading (lead first, then supporting verses in display order), split by
+    // type. Each is labelled "from the verse" to distinguish it from the Odù-
+    // level blob media, and credited to whoever recorded it.
+    const collectVerseMedia = (kind) => {
+      if (!verseReading) return [];
+      const out = [];
+      const push = (r) => {
+        const items = Array.isArray(r?.media) ? r.media : [];
+        for (const m of items) {
+          if (m && m.url && (m.type === kind)) out.push({ url: m.url, author: m.author || "", fromVerse: true });
+        }
+      };
+      if (verseReading.lead) push(verseReading.lead);
+      for (const r of (verseReading.others || [])) push(r);
+      return out;
+    };
+    const verseAudio = collectVerseMedia("audio");
+    const verseVideo = collectVerseMedia("video");
+
+    // Verse recordings render first (top), then the Odù-level blob media below.
     const generateAllMedia = () =>
+      generateMediaLinks(verseAudio,    "audio", "openAudioModal", "🎧", `<span data-translate>Listen to the verse recording</span>`) +
       generateMediaLinks(coreAudioData, "audio", "openAudioModal", "🎧", `<span data-translate>Listen to Audio</span>`) +
       generateMediaLinks(audioData,     "audio", "openAudioModal", "🎧", `<span data-translate>Listen to Audio</span>`) +
       "<hr/>" +
+      generateMediaLinks(verseVideo,    "video", "openVideoModal", "🎥", `<span data-translate>Watch the verse recording</span>`) +
       generateMediaLinks(coreVideoData, "video", "openVideoModal", "🎥", `<span data-translate>Watch Video</span>`) +
       generateMediaLinks(videoData,     "video", "openVideoModal", "🎥", `<span data-translate>Watch Video</span>`) +
       "<hr/>";
@@ -1375,7 +1398,7 @@ const performUserDivination = async (
 
       /* ── Media — collapsed ── */
       const mediaHTML = generateAllMedia();
-      if (coreAudioData.length || audioData.length || coreVideoData.length || videoData.length) {
+      if (coreAudioData.length || audioData.length || coreVideoData.length || videoData.length || verseAudio.length || verseVideo.length) {
         parts.push(_acc("Audio & Video", mediaHTML, false));
       }
 
