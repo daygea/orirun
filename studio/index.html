@@ -494,6 +494,14 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
     </div>
 
+    <div class="panel" id="appreciationPanel">
+      <h3 title="Contributors worth encouraging, by surviving verified work. Orírùn is an NGO — this is for appreciation, not payment. Any gesture is decided and given offline through the NGO's own process; this view just tracks who and whether it's been done.">Appreciation worklist</h3>
+      <p style="font-size:12px;opacity:.7;margin:4px 0 10px">
+        Orírùn encourages those who help preserve Ifá. This is not payment — no money moves here. Decide and give any appreciation offline through the NGO; record it here so no one is missed or thanked twice.
+      </p>
+      <div id="appreciationBody" style="font-size:13px"></div>
+    </div>
+
     <div class="panel" id="seedPanel" style="display:none">
       <h3>Seed learning signals</h3>
       <p style="font-size:12.5px;opacity:.75;margin:4px 0 10px">
@@ -3642,6 +3650,7 @@ async function loadDashboard() {
       `<div style="padding:8px 0;border-top:1px dashed var(--line)"><strong>${f.name || f.contextType || f.type || "Feedback"}</strong> <span class="log-count">${f.timestamp ? new Date(f.timestamp).toLocaleString() : ""}</span><br>${(f.message || f.feedback || f.text || "").toString().slice(0, 220)}</div>`).join("")
       || '<span class="log-count">No feedback yet.</span>';
     loadLedger();
+    loadAppreciation();
   } catch (err) {
     grid.innerHTML = `<div class="stat-card"><div class="l">Could not load analytics: ${err.message}</div></div>`;
   }
@@ -3679,7 +3688,63 @@ async function loadLedger() {
   }
 }
 
-// Recent destructive operational actions (clear logs, delete/restore backups).
+// Appreciation worklist — who the NGO might encourage, with contact + history.
+// NOT payment: recording here just notes that appreciation was given offline.
+async function loadAppreciation() {
+  const el = $("appreciationBody");
+  if (!el) return;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/appreciation/worklist", { credentials: "include" });
+    if (!res.ok) { el.innerHTML = '<span class="log-count">Worklist unavailable.</span>'; return; }
+    const d = await res.json();
+    const rows = d.worklist || [];
+    if (!rows.length) {
+      el.innerHTML = '<span class="log-count">No contributors with verified work yet. As verses are recorded and verified, those worth encouraging appear here.</span>';
+      return;
+    }
+    const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    el.innerHTML = rows.map((r) => {
+      const done = r.timesAppreciated > 0;
+      const last = r.lastAppreciation
+        ? `<span style="font-size:11px;opacity:.7"> · last: ${esc(r.lastAppreciation.form)}${r.lastAppreciation.at ? " (" + new Date(r.lastAppreciation.at).toLocaleDateString() + ")" : ""}</span>`
+        : "";
+      const contact = r.email ? ` · <a href="mailto:${esc(r.email)}" style="color:var(--brass)">${esc(r.email)}</a>` : ' · <span style="opacity:.6">no email on file</span>';
+      return `<div style="padding:9px 0;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="min-width:0">
+          <div style="font-weight:600">${esc(r.name)}${done ? ' <span style="font-size:10px;color:var(--igbo);border:1px solid var(--igbo);border-radius:999px;padding:1px 7px;vertical-align:middle">appreciated ×' + r.timesAppreciated + '</span>' : ''}</div>
+          <div style="font-size:11.5px;opacity:.75">${r.surviving} surviving verified · ${r.reliabilityPercent}% reliable${contact}${last}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm appreciate-btn" style="white-space:nowrap" data-account="${esc(r.account)}" data-name="${esc(r.name)}">Record appreciation</button>
+      </div>`;
+    }).join("");
+    // Wire the buttons via listeners (robust against apostrophes/quotes in names).
+    el.querySelectorAll(".appreciate-btn").forEach((b) => {
+      b.addEventListener("click", () => recordAppreciation(b.dataset.account, b.dataset.name));
+    });
+  } catch (err) {
+    el.innerHTML = '<span class="log-count">Worklist unavailable.</span>';
+  }
+}
+
+async function recordAppreciation(account, name) {
+  const form = prompt(`How was ${name} appreciated?\n(e.g. Certificate of appreciation, Honorarium sent, Thanked at gathering)\n\nThis records that it happened — it does not move any money.`);
+  if (!form || !form.trim()) return;
+  const note = prompt("Any note for the record? (optional)") || "";
+  try {
+    const res = await fetch(API_BASE + "/api/admin/appreciation", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ account, contributorName: name, form: form.trim(), note: note.trim() }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not record");
+    toast("Appreciation recorded for " + name);
+    loadAppreciation();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
 const OPS_LABEL = {
   "logs.clear": "Cleared log", "logs.clear-all": "Cleared ALL logs",
   "backup.delete": "Deleted backup", "backup.delete-all": "Deleted ALL backups",
