@@ -476,6 +476,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab" data-area="logs" onclick="showArea('logs')">Logs</button>
       <button class="area-tab" data-area="verses" onclick="showArea('verses')">Verses</button>
       <button class="area-tab" data-area="users" onclick="showArea('users')">Users</button>
+      <button class="area-tab" data-area="settings" onclick="showArea('settings')">Settings</button>
       <button class="area-tab" data-area="authoring" onclick="showArea('authoring')" style="display:none">My Verses</button>
       <button class="area-tab" data-area="verify" onclick="showArea('verify')" style="display:none">To Verify</button>
     </nav>
@@ -618,20 +619,6 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <div id="backupList" style="font-size:13px"></div>
     </div>
     <div class="panel">
-      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
-        <span>Translation policy · per language</span>
-        <span style="display:flex;gap:8px">
-          <button class="btn btn-ghost" onclick="loadLanguagePolicy()">Reload</button>
-          <button class="btn btn-osun" onclick="saveLanguagePolicy()">Save changes</button>
-        </span>
-      </h3>
-      <div class="log-count" style="margin-bottom:8px">
-        <strong>AI</strong> = full auto-translation · <strong>Curated</strong> = studio/source only, no AI (use for languages the model mistranslates, e.g. Fon) · <strong>Off</strong> = hidden from users.
-      </div>
-      <div id="langPolicyNote" class="log-count" style="margin-bottom:8px"></div>
-      <div id="langPolicyList" style="font-size:13px">Loading…</div>
-    </div>
-    <div class="panel">
       <h3>Recent admin actions</h3>
       <div class="log-count" style="margin-bottom:8px">Destructive operations — who cleared or restored what, and when.</div>
       <div id="opsAudit" style="font-size:13px"></div>
@@ -749,6 +736,86 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 
     <div class="log-count" id="usersNote" style="margin-bottom:10px"></div>
     <div id="usersList" style="display:flex;flex-direction:column;gap:8px"></div>
+  </section>
+
+  <section class="ops" id="area-settings" aria-label="Settings" style="display:none">
+    <h2 style="margin:0 0 4px">Settings</h2>
+    <p style="font-size:12.5px;opacity:.7;margin:0 0 4px;max-width:80ch">
+      Operational preferences you can change without a redeploy. <strong>API keys and secrets are managed as server environment variables, not here</strong>, for security.
+    </p>
+
+    <!-- Notifications -->
+    <div class="panel">
+      <h3>Notifications</h3>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">
+        <!-- Contribution alert email -->
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:3px">Contribution alert email</div>
+          <div style="font-size:12px;opacity:.7;margin-bottom:6px">Where "Share Insight" contribution alerts are sent. Leave blank to use the server default.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="email" id="setNotifyEmail" placeholder="alerts@orirun.com"
+              style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:220px">
+            <button class="btn btn-ghost" onclick="saveNotifyEmail()">Save</button>
+            <span id="setNotifyEmailSource" style="font-size:11px;opacity:.6"></span>
+          </div>
+        </div>
+        <!-- Weekly backup email -->
+        <div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="setBackupEmail" onchange="saveBackupEmail()" style="width:18px;height:18px;cursor:pointer">
+            <span>Send the periodic offsite backup email</span>
+          </label>
+          <div style="font-size:12px;opacity:.7;margin-top:3px">When on, content-backup snapshots are emailed offsite to the contribution alert address.</div>
+        </div>
+        <!-- Verse review digest -->
+        <div style="border-top:1px solid var(--line);padding-top:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:3px">Verse review digest</div>
+          <div style="font-size:12px;opacity:.7;margin-bottom:8px">
+            When on, elders receive a periodic email summarising how many verses await their review — one digest, not an email per verse. Elders need an email on file to be reached.
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:10px">
+            <input type="checkbox" id="digestToggle" onchange="saveDigestToggle()" style="width:18px;height:18px;cursor:pointer">
+            <span id="digestToggleLabel">Digest is off</span>
+          </label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-ghost" onclick="runDigestNow()">Send digest now</button>
+            <input type="email" id="digestTestEmail" placeholder="your@email.com"
+              style="padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;min-width:180px">
+            <button class="btn btn-ghost" onclick="sendDigestTest()">Send test</button>
+          </div>
+          <div id="digestResult" style="font-size:12px;margin-top:10px;min-height:16px;opacity:.85"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content & language -->
+    <div class="panel">
+      <h3 style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>Translation policy · per language</span>
+        <span style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="loadLanguagePolicy()">Reload</button>
+          <button class="btn btn-osun" onclick="saveLanguagePolicy()">Save changes</button>
+        </span>
+      </h3>
+      <div class="log-count" style="margin-bottom:8px">
+        <strong>AI</strong> = full auto-translation · <strong>Curated</strong> = studio/source only, no AI (use for languages the model mistranslates, e.g. Fon) · <strong>Off</strong> = hidden from users.
+      </div>
+      <div id="langPolicyNote" class="log-count" style="margin-bottom:8px"></div>
+      <div id="langPolicyList" style="font-size:13px">Loading…</div>
+    </div>
+
+    <!-- Access -->
+    <div class="panel">
+      <h3>Access</h3>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">
+        <input type="checkbox" id="setLegacyLogin" onchange="saveLegacyLogin()" style="width:18px;height:18px;cursor:pointer">
+        <span>Allow legacy password-only sign-in</span>
+      </label>
+      <div style="font-size:12px;opacity:.7;margin-top:3px;max-width:80ch">
+        A migration bridge that lets old shared passwords sign in. Keep this <strong>off</strong> unless you need it — proper username + password accounts are the secure path. Turning it off does not affect normal accounts.
+      </div>
+      <div id="setLegacyNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+    </div>
   </section>
 
   <section class="ops" id="area-authoring" aria-label="My verses" style="display:none">
@@ -1953,6 +2020,8 @@ window.showArea = function (area) {
   if (!isAuthed && area !== "content") return;
   // User management is superadmin-only (backend enforces it too).
   if (area === "users" && window.__STAFF_ROLE__ && window.__STAFF_ROLE__ !== "superadmin") return;
+  // Settings is superadmin-only (backend enforces it too).
+  if (area === "settings" && window.__STAFF_ROLE__ && window.__STAFF_ROLE__ !== "superadmin") return;
   document.querySelectorAll(".area-tab").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.area === area));
   // content area = the original three grid panes. The rail is the nav
@@ -1966,6 +2035,8 @@ window.showArea = function (area) {
   document.getElementById("area-logs").style.display = area === "logs" ? "flex" : "none";
   document.getElementById("area-verses").style.display = area === "verses" ? "flex" : "none";
   document.getElementById("area-users").style.display = area === "users" ? "flex" : "none";
+  var settingsArea = document.getElementById("area-settings");
+  if (settingsArea) settingsArea.style.display = area === "settings" ? "flex" : "none";
   var authArea = document.getElementById("area-authoring");
   if (authArea) authArea.style.display = area === "authoring" ? "flex" : "none";
   var verifyArea = document.getElementById("area-verify");
@@ -1973,7 +2044,10 @@ window.showArea = function (area) {
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
-    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit(), loadDiagnostics(), loadLanguagePolicy()]).finally(orTopbarDone);
+    Promise.all([loadDashboard(), loadBackups(), loadOpsAudit(), loadDiagnostics()]).finally(orTopbarDone);
+  } else if (area === "settings") {
+    orTopbarStart();
+    Promise.all([loadSettings(), loadDigestState(), loadLanguagePolicy()]).finally(orTopbarDone);
   } else if (area === "logs") {
     if (!logState.loadedOnce) { orTopbarStart(); Promise.resolve(loadLogs(logState.type)).finally(orTopbarDone); }
   } else if (area === "verses") {
@@ -3881,6 +3955,122 @@ const _LANG_NAMES = {
 let _policyTiers = ["ai", "curated", "off"];
 let _policyDraft = {};   // code -> tier (working copy, saved on demand)
 
+/* ── Verse review notifications (superadmin) ── */
+function _setDigestToggleUI(enabled) {
+  const box = $("digestToggle"), label = $("digestToggleLabel");
+  if (box) box.checked = !!enabled;
+  if (label) label.textContent = enabled ? "Digest is on" : "Digest is off";
+}
+
+/* ── App settings (superadmin) ── */
+async function loadSettings() {
+  try {
+    const res = await fetch(API_BASE + "/api/admin/settings", { credentials: "include" });
+    if (!res.ok) return;
+    const { settings } = await res.json();
+    if (!settings) return;
+    // Contribution alert email
+    if ($("setNotifyEmail")) {
+      $("setNotifyEmail").value = settings.notifyEmail.overridden ? (settings.notifyEmail.value || "") : "";
+      $("setNotifyEmail").placeholder = settings.notifyEmail.value || "not set";
+      $("setNotifyEmailSource").textContent = settings.notifyEmail.overridden ? "" : "(using server default)";
+    }
+    // Backup email toggle
+    if ($("setBackupEmail")) $("setBackupEmail").checked = !!settings.backupEmailWeekly.value;
+    // Legacy login toggle
+    if ($("setLegacyLogin")) {
+      $("setLegacyLogin").checked = !!settings.allowLegacyLogin.value;
+      $("setLegacyNote").textContent = settings.allowLegacyLogin.overridden ? "" : "(using server default)";
+    }
+  } catch { /* leave as-is */ }
+}
+async function _saveSettings(patch, okMsg) {
+  try {
+    const res = await fetch(API_BASE + "/api/admin/settings", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not save");
+    if (typeof toast === "function" && okMsg) toast(okMsg);
+    loadSettings();
+    return true;
+  } catch (err) {
+    if (typeof toast === "function") toast(err.message, true);
+    loadSettings(); // resync toggles to real state
+    return false;
+  }
+}
+function saveNotifyEmail() {
+  _saveSettings({ notifyEmail: ($("setNotifyEmail").value || "").trim() }, "Alert email saved");
+}
+function saveBackupEmail() {
+  _saveSettings({ backupEmailWeekly: $("setBackupEmail").checked }, "Backup email preference saved");
+}
+function saveLegacyLogin() {
+  _saveSettings({ allowLegacyLogin: $("setLegacyLogin").checked }, "Access setting saved");
+}
+async function loadDigestState() {
+  try {
+    const res = await fetch(API_BASE + "/api/admin/verify-digest", { credentials: "include" });
+    if (!res.ok) return;
+    const d = await res.json();
+    _setDigestToggleUI(d.enabled);
+  } catch { /* leave UI as-is */ }
+}
+async function saveDigestToggle() {
+  const enabled = $("digestToggle").checked;
+  try {
+    const res = await fetch(API_BASE + "/api/admin/verify-digest/toggle", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not save");
+    _setDigestToggleUI(d.enabled);
+    $("digestResult").textContent = d.enabled ? "Notifications switched on." : "Notifications switched off.";
+  } catch (err) {
+    $("digestResult").textContent = err.message;
+    loadDigestState(); // resync the checkbox to the real state
+  }
+}
+async function runDigestNow() {
+  $("digestResult").textContent = "Sending…";
+  try {
+    const res = await fetch(API_BASE + "/api/admin/verify-digest/run", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" }, body: "{}",
+    });
+    const d = await res.json();
+    if (!res.ok || d.ran === false) throw new Error(d.error || d.reason || "Did not run");
+    $("digestResult").textContent =
+      `Sent ${d.sent} digest${d.sent === 1 ? "" : "s"}.` +
+      (d.skippedNoEmail ? ` ${d.skippedNoEmail} elder(s) had no email on file.` : "") +
+      (d.skippedNoPending ? ` ${d.skippedNoPending} had nothing pending.` : "");
+  } catch (err) {
+    $("digestResult").textContent = err.message;
+  }
+}
+async function sendDigestTest() {
+  const to = ($("digestTestEmail").value || "").trim();
+  if (!to) { $("digestResult").textContent = "Enter an email to send the test to."; return; }
+  $("digestResult").textContent = "Sending test…";
+  try {
+    const res = await fetch(API_BASE + "/api/admin/verify-digest/test", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to }),
+    });
+    const d = await res.json();
+    if (!res.ok || d.ran === false) throw new Error(d.error || d.reason || "Test failed");
+    $("digestResult").textContent = "Test sent to " + (d.sentTo || to) + ".";
+  } catch (err) {
+    $("digestResult").textContent = err.message;
+  }
+}
+
 async function loadLanguagePolicy() {
   const wrap = document.getElementById("langPolicyList");
   if (!wrap) return;
@@ -4289,7 +4479,7 @@ async function revealApp() {
     // A superadmin has every right: the standard console tabs PLUS "To Verify"
     // (so they can sign off on content like an elder). "My Verses" stays hidden
     // — it's the contributor's own-authoring view, not a console feature.
-    const superTabs = ["content", "dashboard", "logs", "verses", "users", "verify"];
+    const superTabs = ["content", "dashboard", "logs", "verses", "users", "settings", "verify"];
     document.querySelectorAll(".area-tab").forEach((t) => {
       t.style.display = superTabs.includes(t.dataset.area) ? "" : "none";
     });
