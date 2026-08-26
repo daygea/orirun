@@ -727,6 +727,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
             <option value="superadmin">Superadmin</option>
           </select>
         </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Email <span style="font-weight:400;opacity:.6">(optional)</span>
+          <input id="nuEmail" type="email" autocomplete="off" placeholder="for review notifications"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;min-width:200px">
+        </label>
         <button class="btn btn-green" id="nuCreate" type="button" onclick="createUser()">Create account</button>
       </div>
       <div style="font-size:11.5px;opacity:.65;margin-top:8px">
@@ -734,8 +739,34 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
     </div>
 
+    <div class="panel" style="margin-bottom:12px;padding:12px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="uSearch" type="text" placeholder="Search username or email…" oninput="onUserSearch()"
+          style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;flex:1;min-width:180px">
+        <select id="uRoleFilter" onchange="reloadUsers(1)" style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+          <option value="">All roles</option>
+          <option value="superadmin">Superadmin</option>
+          <option value="elder">Elder</option>
+          <option value="babalawo">Babaláwo</option>
+        </select>
+        <select id="uStatusFilter" onchange="reloadUsers(1)" style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+          <option value="">Any status</option>
+          <option value="active">Active</option>
+          <option value="disabled">Disabled</option>
+          <option value="locked">Locked</option>
+        </select>
+        <select id="uSort" onchange="reloadUsers(1)" style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+          <option value="username">Name A–Z</option>
+          <option value="role">Role</option>
+          <option value="created">Newest</option>
+          <option value="lastLogin">Recently active</option>
+        </select>
+      </div>
+    </div>
+
     <div class="log-count" id="usersNote" style="margin-bottom:10px"></div>
     <div id="usersList" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="usersPager" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"></div>
   </section>
 
   <section class="ops" id="area-settings" aria-label="Settings" style="display:none">
@@ -2170,20 +2201,52 @@ const ROLE_COLOR = {
   superadmin: "#b8860b", elder: "#0f7b3d", babalawo: "#6a4bb8",
 };
 
+let _userPage = 1;
+let _userSearchTimer = null;
+
+function onUserSearch() {
+  clearTimeout(_userSearchTimer);
+  _userSearchTimer = setTimeout(() => reloadUsers(1), 300); // debounce typing
+}
+function reloadUsers(page) {
+  _userPage = page || 1;
+  loadUsers();
+}
+
 async function loadUsers() {
   const list = $("usersList");
   const note = $("usersNote");
+  const pager = $("usersPager");
   if (!list) return;
   list.innerHTML = orLoaderHTML("Loading accounts…");
+  if (pager) pager.innerHTML = "";
+
+  const params = new URLSearchParams();
+  const search = ($("uSearch")?.value || "").trim();
+  if (search) params.set("search", search);
+  const roleF = $("uRoleFilter")?.value || "";
+  if (roleF) params.set("role", roleF);
+  const statusF = $("uStatusFilter")?.value || "";
+  if (statusF) params.set("status", statusF);
+  params.set("sort", $("uSort")?.value || "username");
+  params.set("page", String(_userPage));
+  params.set("limit", "25");
+
   try {
-    const res = await api("/users");
+    const res = await api("/users?" + params.toString());
     if (res.status === 401 || res.status === 403) return gateToLogin();
     const d = await res.json();
     const users = d.users || [];
     const me = window.__STAFF_NAME__ || "";
-    if (note) note.textContent = users.length + " account" + (users.length === 1 ? "" : "s");
+    if (note) {
+      note.textContent = d.total + " account" + (d.total === 1 ? "" : "s") +
+        (d.pages > 1 ? ` · page ${d.page} of ${d.pages}` : "");
+    }
     list.innerHTML = "";
-    if (!users.length) { list.innerHTML = '<div style="opacity:.6">No accounts yet.</div>'; return; }
+    if (!users.length) {
+      list.innerHTML = '<div style="opacity:.6">' + (search || roleF || statusF ? "No accounts match." : "No accounts yet.") + '</div>';
+      return;
+    }
 
     for (const u of users) {
       const isSelf = u.username === me;
@@ -2195,6 +2258,7 @@ async function loadUsers() {
       const statusBits = [];
       if (u.disabled) statusBits.push('<span style="color:#c0392b;font-weight:600">disabled</span>');
       if (u.locked) statusBits.push('<span style="color:#b8860b;font-weight:600">locked</span>');
+      if (u.selfRegistered) statusBits.push('<span style="opacity:.6">self-registered</span>');
       if (isSelf) statusBits.push('<span style="opacity:.6">you</span>');
 
       card.innerHTML =
@@ -2209,10 +2273,27 @@ async function loadUsers() {
           (u.createdBy ? " · created by " + escapeHtml(u.createdBy) : "") +
         '</div>';
 
+      // Email row — inline view + edit, since email drives digest/appreciation.
+      const emailRow = document.createElement("div");
+      emailRow.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px";
+      const emailInput = document.createElement("input");
+      emailInput.type = "email";
+      emailInput.value = u.email || "";
+      emailInput.placeholder = "no email — won't receive notifications";
+      emailInput.style.cssText = "padding:6px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:12px;flex:1;min-width:180px" +
+        (u.email ? "" : ";background:#fffbe9");
+      const emailBtn = document.createElement("button");
+      emailBtn.className = "btn btn-ghost btn-sm";
+      emailBtn.textContent = "Save email";
+      emailBtn.onclick = () => setUserEmail(u.id, emailInput.value.trim(), u.username);
+      emailRow.appendChild(document.createTextNode("✉"));
+      emailRow.appendChild(emailInput);
+      emailRow.appendChild(emailBtn);
+      card.appendChild(emailRow);
+
       const actions = document.createElement("div");
       actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center";
 
-      // Role changer
       const roleSel = document.createElement("select");
       roleSel.style.cssText = "padding:6px 8px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:12px";
       ["babalawo", "elder", "superadmin"].forEach((r) => {
@@ -2221,17 +2302,15 @@ async function loadUsers() {
         roleSel.appendChild(o);
       });
       roleSel.onchange = () => changeUserRole(u.id, roleSel.value, u.username);
-      if (isSelf && u.role === "superadmin") roleSel.disabled = true; // can't demote self
+      if (isSelf && u.role === "superadmin") roleSel.disabled = true;
       actions.appendChild(roleSel);
 
-      // Reset password
       const resetBtn = document.createElement("button");
       resetBtn.className = "btn btn-ghost btn-sm";
       resetBtn.textContent = "Reset password";
       resetBtn.onclick = () => resetUserPassword(u.id, u.username);
       actions.appendChild(resetBtn);
 
-      // Enable / disable
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn btn-ghost btn-sm";
       toggleBtn.textContent = u.disabled ? "Enable" : "Disable";
@@ -2239,7 +2318,6 @@ async function loadUsers() {
       if (isSelf) toggleBtn.disabled = true;
       actions.appendChild(toggleBtn);
 
-      // Delete
       const delBtn = document.createElement("button");
       delBtn.className = "btn btn-sm";
       delBtn.style.cssText = "background:#fbeaea;color:#c0392b";
@@ -2251,9 +2329,39 @@ async function loadUsers() {
       card.appendChild(actions);
       list.appendChild(card);
     }
+
+    // Pager — Prev / page indicator / Next, only when more than one page.
+    if (pager && d.pages > 1) {
+      const mkBtn = (label, targetPage, disabled) => {
+        const b = document.createElement("button");
+        b.className = "btn btn-ghost btn-sm";
+        b.textContent = label;
+        b.disabled = !!disabled;
+        b.onclick = () => reloadUsers(targetPage);
+        return b;
+      };
+      pager.appendChild(mkBtn("‹ Prev", d.page - 1, d.page <= 1));
+      const ind = document.createElement("span");
+      ind.style.cssText = "font-size:12px;opacity:.7";
+      ind.textContent = `${d.page} / ${d.pages}`;
+      pager.appendChild(ind);
+      pager.appendChild(mkBtn("Next ›", d.page + 1, d.page >= d.pages));
+    }
   } catch (err) {
     list.innerHTML = "";
     toast("Failed to load accounts: " + err.message, true);
+  }
+}
+
+async function setUserEmail(id, email, username) {
+  try {
+    const res = await api("/users/" + id + "/email", { method: "POST", body: JSON.stringify({ email }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Could not save email");
+    toast(email ? ("Email saved for " + username) : ("Email cleared for " + username));
+    loadUsers();
+  } catch (err) {
+    toast("Email save failed: " + err.message, true);
   }
 }
 
@@ -2262,16 +2370,17 @@ async function createUser() {
   const username = $("nuUsername").value.trim();
   const password = $("nuPassword").value;
   const role = $("nuRole").value;
+  const email = ($("nuEmail")?.value || "").trim();
   if (!username || !password) { toast("Username and password are required", true); return; }
   if (password.length < 8) { toast("Password must be at least 8 characters", true); return; }
   if (btn) { btn.disabled = true; btn.textContent = "Creating…"; }
   try {
-    const res = await api("/users", { method: "POST", body: JSON.stringify({ username, password, role }) });
+    const res = await api("/users", { method: "POST", body: JSON.stringify({ username, password, role, email }) });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || "Create failed");
     toast("Account created: " + username);
-    $("nuUsername").value = ""; $("nuPassword").value = "";
-    loadUsers();
+    $("nuUsername").value = ""; $("nuPassword").value = ""; if ($("nuEmail")) $("nuEmail").value = "";
+    reloadUsers(1);
   } catch (err) {
     toast("Create failed: " + err.message, true);
   } finally {
