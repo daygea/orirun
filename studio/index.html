@@ -879,6 +879,21 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
             style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
         </label>
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+          Lineage <span style="font-weight:400;opacity:.6">(optional — how the verse was transmitted)</span>
+          <select id="vfLineage"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+            <option value="">— not specified —</option>
+            <option value="Ọ̀yọ́">Ọ̀yọ́</option>
+            <option value="Ifẹ̀">Ifẹ̀</option>
+            <option value="Ìjẹ̀bú">Ìjẹ̀bú</option>
+            <option value="Ẹ̀gbá">Ẹ̀gbá</option>
+            <option value="Èkìtì">Èkìtì</option>
+            <option value="Ọ̀ṣun">Ọ̀ṣun</option>
+            <option value="Diaspora">Diaspora</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
           The verse in Yorùbá <span style="font-weight:400;opacity:.6">(one line per line of verse)</span>
           <textarea id="vfYoruba" rows="5" placeholder="Ifá ní kí a rúbọ&#10;kí a tó délé ayé…"
             style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
@@ -1737,6 +1752,16 @@ function interpPanelPopulate(verse) {
   if (aiBtn) {
     aiBtn.onclick = async () => {
       if (!activeKey) return;
+      // The AI drafts interpretations FROM the verse text. With no ẹsẹ Ifá
+      // transcribed (a legacy Ase Ifá), there is nothing to interpret — it would
+      // judge every orientation "silent". Guide the user to add the text first
+      // rather than run a useless pass.
+      let curVerse; try { curVerse = JSON.parse($("editor").value); } catch { curVerse = {}; }
+      const hasText = Array.isArray(curVerse.yoruba) && curVerse.yoruba.some((l) => String(l).trim());
+      if (!hasText) {
+        toast("Add the verse text (the Yorùbá lines) first — the AI drafts interpretations from the verse, so there's nothing to work from yet.", true);
+        return;
+      }
       aiBtn.disabled = true; aiBtn.textContent = "✨ Drafting…";
       try {
         const res = await api(`/verses/${encodeURIComponent(activeKey)}/draft-interpretations`, {
@@ -3020,11 +3045,13 @@ async function openVerseForm(verseId) {
       $("vfEnglish").value = (v.english || []).join("\n");
       $("vfThemes").value = (v.themes || []).join(", ");
       if ($("vfMedia")) $("vfMedia").value = (Array.isArray(v.media) && v.media[0] && v.media[0].url) ? v.media[0].url : "";
+      if ($("vfLineage")) $("vfLineage").value = v.lineage || "";
     } catch (err) { toast("Couldn't load verse: " + err.message, true); }
   } else {
     _vfOduValue = ""; $("vfOduSearch").value = "";
     $("vfTitle").value = ""; $("vfYoruba").value = ""; $("vfEnglish").value = ""; $("vfThemes").value = "";
     if ($("vfMedia")) $("vfMedia").value = "";
+    if ($("vfLineage")) $("vfLineage").value = "";
   }
   $("verseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3042,11 +3069,12 @@ async function saveVerse() {
   const title = $("vfTitle").value.trim();
   const themes = $("vfThemes").value.split(",").map((t) => t.trim()).filter(Boolean);
   const media = ($("vfMedia") && $("vfMedia").value.trim()) || "";
+  const lineage = ($("vfLineage") && $("vfLineage").value) || "";
   if (!odu) { toast("Choose an Odù for this verse", true); return; }
   if (!yoruba.length) { toast("Enter the verse in Yorùbá", true); return; }
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
-    const payload = { odu, yoruba, english, title, themes, media };
+    const payload = { odu, yoruba, english, title, themes, media, lineage };
     const res = _editingVerseId
       ? await studioApi("/verses/" + encodeURIComponent(_editingVerseId), { method: "PUT", body: JSON.stringify(payload) })
       : await studioApi("/verses", { method: "POST", body: JSON.stringify(payload) });
