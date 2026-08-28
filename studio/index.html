@@ -970,14 +970,26 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   <section class="ops" id="area-verify" aria-label="To verify" style="display:none">
     <div id="verifyNotice" style="display:none"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <h2 style="margin:0">To Verify</h2>
-      <button class="btn btn-ghost btn-sm" type="button" onclick="loadVerifyQueue()">Refresh</button>
+      <h2 style="margin:0" id="verifyAreaTitle">To Verify</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:inline-flex;border:1px solid var(--line,#d9e4dc);border-radius:8px;overflow:hidden">
+          <button class="btn btn-sm" id="vmodePending" type="button" onclick="setVerifyMode('pending')" style="border-radius:0;border:0">To verify</button>
+          <button class="btn btn-ghost btn-sm" id="vmodeAll" type="button" onclick="setVerifyMode('all')" style="border-radius:0;border:0;border-left:1px solid var(--line,#d9e4dc)">All verses</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="refreshVerifyArea()">Refresh</button>
+      </div>
     </div>
-    <p style="font-size:13px;opacity:.8;margin:6px 0 14px;max-width:74ch">
+    <p style="font-size:13px;opacity:.8;margin:6px 0 14px;max-width:74ch" id="verifyIntroPending">
       Work from other contributors awaiting your sign-off. Verifying a verse or an interpretation makes it live and
       records your name as the elder who vouched for it. You won't see your own contributions here — those must be
       verified by a different elder. If something isn't right, <strong>send it back</strong> with a note instead of
       changing the contributor's words.
+    </p>
+    <p style="font-size:13px;opacity:.8;margin:6px 0 14px;max-width:74ch;display:none" id="verifyIntroAll">
+      Every verse in the corpus, including verified ones. If a verified verse is wrong — a mis-keyed interpretation,
+      incorrect tone marks — you can <strong>re-open it for correction</strong>. Re-opening sets aside the existing
+      verification (the corrected words must be re-verified) and notifies the superadmin, the original verifier, and
+      the contributor. Corrections are logged.
     </p>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
       <input type="search" id="verifySearch" placeholder="Search work to verify…" aria-label="Search work to verify"
@@ -1109,7 +1121,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </details>
     </div>
 
-    <div class="center-state" id="emptyState">
+    <div class="center-state" id="emptyState" style="display:none">
       <div class="odu-mark" aria-hidden="true">
         <div class="oc"><!-- Ọ̀wọ́nrín (left): II II I I -->
           <div class="or"><span class="os"></span><span class="os"></span></div>
@@ -2492,6 +2504,108 @@ let _allOrientations = [];
 let _verifyElderName = ""; // remembered signer name for this session
 
 let _verifyPage = 1;
+let _verifyMode = "pending"; // "pending" | "all"
+function setVerifyMode(mode) {
+  _verifyMode = mode;
+  $("vmodePending").className = "btn btn-sm" + (mode === "pending" ? "" : " btn-ghost");
+  $("vmodeAll").className = "btn btn-sm" + (mode === "all" ? "" : " btn-ghost");
+  $("verifyAreaTitle").textContent = mode === "all" ? "All Verses" : "To Verify";
+  $("verifyIntroPending").style.display = mode === "pending" ? "" : "none";
+  $("verifyIntroAll").style.display = mode === "all" ? "" : "none";
+  refreshVerifyArea();
+}
+function refreshVerifyArea() {
+  if (_verifyMode === "all") loadAllVerses(1);
+  else loadVerifyQueue(1);
+}
+
+async function loadAllVerses(page) {
+  const list = $("verifyList");
+  const pager = $("verifyPager");
+  const note = $("verifyNote");
+  list.innerHTML = orLoaderHTML("Loading verses…");
+  if (pager) pager.innerHTML = "";
+  const params = new URLSearchParams();
+  const q = ($("verifySearch")?.value || "").trim();
+  if (q) params.set("q", q);
+  params.set("page", String(page || 1));
+  params.set("limit", "25");
+  try {
+    const res = await studioApi("/all-verses?" + params.toString());
+    if (res.status === 403) { list.innerHTML = '<div style="opacity:.6">Elders only.</div>'; return; }
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Load failed");
+    if (note) note.textContent = (d.total || 0) + " verse" + (d.total === 1 ? "" : "s");
+    list.innerHTML = "";
+    if (!(d.items || []).length) { list.innerHTML = '<div style="opacity:.6">No verses match.</div>'; return; }
+    for (const v of d.items) {
+      const card = document.createElement("div");
+      card.className = "panel";
+      card.style.cssText = "display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center";
+      const isVerified = v.verseStatus === "verified";
+      const statusColor = isVerified ? "#0f7b3d" : (v.verseStatus === "reviewed" ? "#b8860b" : "#8a8a8a");
+      card.innerHTML =
+        '<div style="min-width:0">' +
+          '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">' +
+            '<strong style="font-size:14px">' + escapeHtml(v.odu || "—") + '</strong>' +
+            (v.title ? '<span style="font-size:12px;opacity:.7">' + escapeHtml(v.title) + '</span>' : "") +
+            '<span style="font-size:11px;font-weight:600;color:' + statusColor + '">' + escapeHtml(v.verseStatus) + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;opacity:.7;margin-top:2px">' +
+            (v.contributor ? "by " + escapeHtml(v.contributor) : "") +
+            (v.verifiedBy ? " · verified by " + escapeHtml(v.verifiedBy) : "") +
+            " · " + v.interpretationCount + " interpretation" + (v.interpretationCount === 1 ? "" : "s") +
+          '</div>' +
+        '</div>';
+      const actions = document.createElement("div");
+      actions.style.cssText = "display:flex;gap:8px";
+      const openBtn = document.createElement("button");
+      openBtn.className = "btn btn-ghost btn-sm";
+      openBtn.textContent = "Open";
+      openBtn.onclick = () => openInterpEditor(v.id);
+      actions.appendChild(openBtn);
+      if (isVerified) {
+        const reopenBtn = document.createElement("button");
+        reopenBtn.className = "btn btn-sm";
+        reopenBtn.style.cssText = "background:#fff4e6;color:#b8860b";
+        reopenBtn.textContent = "Re-open to correct";
+        reopenBtn.onclick = () => reopenVerse(v.id, v.odu);
+        actions.appendChild(reopenBtn);
+      }
+      card.appendChild(actions);
+      list.appendChild(card);
+    }
+    if (pager && d.pages > 1) {
+      const mk = (label, tp, dis) => { const b = document.createElement("button"); b.className = "btn btn-ghost btn-sm"; b.textContent = label; b.disabled = !!dis; b.onclick = () => loadAllVerses(tp); return b; };
+      pager.appendChild(mk("‹ Prev", d.page - 1, d.page <= 1));
+      const ind = document.createElement("span"); ind.style.cssText = "font-size:12px;opacity:.7"; ind.textContent = d.page + " / " + d.pages;
+      pager.appendChild(ind); pager.appendChild(mk("Next ›", d.page + 1, d.page >= d.pages));
+    }
+  } catch (err) {
+    list.innerHTML = "";
+    toast("Failed to load verses: " + err.message, true);
+  }
+}
+
+async function reopenVerse(id, odu) {
+  const reason = prompt(
+    "Re-open this verified verse for correction?\n\n" +
+    "This sets aside the current verification — the corrected verse must be re-verified — and notifies the superadmin, the original verifier, and the contributor.\n\n" +
+    "Optionally, a short note on what needs correcting:", "");
+  if (reason === null) return; // cancelled
+  try {
+    const res = await studioApi("/verify/" + encodeURIComponent(id) + "/reopen", {
+      method: "POST", body: JSON.stringify({ scope: "verse", reason: reason.trim() }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Re-open failed");
+    toast("Re-opened for correction. It now awaits re-verification." + (d.notified?.length ? " Notified " + d.notified.length + "." : ""));
+    refreshVerifyArea();
+  } catch (err) {
+    toast("Re-open failed: " + err.message, true);
+  }
+}
+
 async function loadVerifyQueue(page) {
   const list = $("verifyList");
   const note = $("verifyNote");
@@ -2570,7 +2684,7 @@ function renderVerifyPager(d) {
 let _verifySearchDebounce = null;
 $("verifySearch").addEventListener("input", () => {
   clearTimeout(_verifySearchDebounce);
-  _verifySearchDebounce = setTimeout(() => loadVerifyQueue(1), 300);
+  _verifySearchDebounce = setTimeout(() => refreshVerifyArea(), 300);
 });
 
 const STATUS_LABEL = {
