@@ -3219,6 +3219,15 @@ function initVerseFormCombo() {
   });
 }
 
+let _elderCorrectingVerseId = null; // set when an elder adds text via the correction flow
+// Elder adds missing verse text to another contributor's record. Flags the flow
+// so that after saving we return to the interpretation editor (not "My Verses",
+// where this verse won't appear).
+function addVerseTextForCorrection(verseId) {
+  _elderCorrectingVerseId = verseId;
+  openVerseForm(verseId);
+}
+
 async function openVerseForm(verseId) {
   _editingVerseId = verseId || null;
   $("verseFormPanel").style.display = "block";
@@ -3274,8 +3283,19 @@ async function saveVerse() {
     const d = await res.json();
     if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
     toast(_editingVerseId ? "Verse updated" : "Draft verse saved");
+    const savedId = _editingVerseId;
+    const cameFromCorrection = _elderCorrectingVerseId && _elderCorrectingVerseId === savedId;
     closeVerseForm();
-    loadMyVerses();
+    // If an elder reached this form via the "Add the verse text" correction flow
+    // (on another contributor's verse), return them to that verse's
+    // interpretation editor — the natural next step now that there's text to
+    // interpret. Otherwise refresh the contributor's own "My Verses" list.
+    if (savedId && cameFromCorrection) {
+      _elderCorrectingVerseId = null;
+      openInterpEditor(savedId);
+    } else {
+      loadMyVerses();
+    }
   } catch (err) {
     toast("Save failed: " + err.message, true);
   } finally {
@@ -3437,7 +3457,14 @@ async function refreshInterpList() {
       if (v.title) html += '<div style="font-weight:600;font-size:13px;margin-bottom:6px">' + escapeHtml(v.title) + '</div>';
       if (yLines.length) html += '<div style="font-size:13.5px;line-height:1.7">' + yLines.map(escapeHtml).join("<br>") + '</div>';
       if (eLines.length) html += '<div style="font-size:12.5px;line-height:1.6;opacity:.75;margin-top:8px;font-style:italic">' + eLines.map(escapeHtml).join("<br>") + '</div>';
-      if (!yLines.length && !eLines.length) html = '<div style="opacity:.6;font-size:12.5px">(This verse has no text — unusual; check the verse record.)</div>';
+      if (!yLines.length && !eLines.length) {
+        // No ẹsẹ Ifá transcribed yet (a legacy Ase Ifá). Rather than a dead-end,
+        // offer to add it — opening the verse form, which transcribes the text
+        // and promotes the record to a full verse.
+        html = '<div style="font-size:12.5px;opacity:.8;margin-bottom:8px">This record has no verse text yet — only its Ase Ifá. If you have the ẹsẹ Ifá, you can add it.</div>' +
+          '<button class="btn btn-green btn-sm" type="button" onclick="addVerseTextForCorrection(\'' +
+          String(_openInterpVerseId).replace(/'/g, "\\'") + '\')">+ Add the verse text</button>';
+      }
       verseBox.innerHTML = html;
       verseBox.style.display = "block";
     }
