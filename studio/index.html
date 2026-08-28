@@ -461,6 +461,61 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   #authState .auth-fineprint{display:none}
   #authState .odu-caption{display:none}
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile for the newer studio AREAS (verify, all-verses, authoring,
+   settings, users). The console (nav/items/editor) is handled in the
+   900px block; these areas were written desktop-first with inline
+   flex rows, so on a phone their inputs, action rows, and cards need
+   to wrap and fill the width instead of overflowing sideways.
+   ───────────────────────────────────────────────────────────── */
+@media (max-width:640px){
+  /* Section titles and panels sit tighter. */
+  .ops h2{font-size:18px}
+  .panel{padding:13px 13px;border-radius:10px}
+
+  /* Any inline flex row inside a panel wraps rather than overflowing. */
+  .panel > div[style*="display:flex"]{flex-wrap:wrap}
+
+  /* Inputs, selects, textareas fill the width and use 16px text so iOS
+     doesn't zoom on focus. Buttons get a comfortable tap height. */
+  .ops input:not([type="checkbox"]):not([type="radio"]),
+  .ops select,
+  .ops textarea{
+    width:100%; box-sizing:border-box; font-size:16px; min-height:42px;
+  }
+  .ops textarea{min-height:80px}
+  .ops .btn{min-height:42px}
+
+  /* Form labels that were side-by-side stack full width. */
+  .ops label[style*="flex-direction:column"]{width:100%}
+
+  /* Verify + all-verses + user cards: header/actions stack instead of
+     being pushed apart on a narrow screen. */
+  #verifyList .panel,
+  #usersList .panel{flex-direction:column;align-items:stretch}
+  #verifyList .panel > div,
+  #usersList .panel > div{width:100%}
+  /* Action button groups go full-width and space evenly. */
+  #verifyList .panel [style*="display:flex"],
+  #usersList .panel [style*="display:flex"]{flex-wrap:wrap;gap:8px}
+  #verifyList .panel .btn,
+  #usersList .panel .btn{flex:1 1 auto}
+
+  /* The verify-mode toggle + search toolbar wrap cleanly. */
+  #area-verify > div[style*="justify-content:space-between"]{flex-wrap:wrap;gap:8px}
+
+  /* Pagers center and don't crowd. */
+  #verifyPager,#usersPager{flex-wrap:wrap}
+
+  /* Settings groups: the inline "input + Save" rows wrap. */
+  #area-settings .panel [style*="display:flex"]{flex-wrap:wrap}
+
+  /* Give the toast room on small screens and keep it readable. Reset the
+     desktop centering transform since we pin both edges instead. */
+  #toast{left:12px;right:12px;transform:translateX(0) translateY(20px)}
+  #toast.show{left:12px;right:12px;max-width:none;font-size:14px;line-height:1.4;transform:translateX(0) translateY(0)}
+}
 </style>
 </head>
 <body>
@@ -1233,7 +1288,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
   </div>
 </dialog>
 
-<div id="toast" role="status" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="polite" onclick="this.className=''" style="cursor:pointer"></div>
 
 <script>
 /* ── Configuration ─────────────────────────────────────────── */
@@ -1267,7 +1322,11 @@ const $ = (id) => document.getElementById(id);
 function toast(msg, isErr) {
   const t = $("toast");
   t.textContent = msg; t.className = "show" + (isErr ? " err" : "");
-  clearTimeout(t._h); t._h = setTimeout(() => (t.className = ""), 2600);
+  // Duration scales with how much there is to read (≈45ms/char), longer for
+  // errors, so multi-part messages don't vanish before they can be read.
+  const base = isErr ? 4200 : 3200;
+  const ms = Math.min(12000, Math.max(base, String(msg).length * 45));
+  clearTimeout(t._h); t._h = setTimeout(() => (t.className = ""), ms);
 }
 function fmtDate(d) {
   if (!d) return "never";
@@ -2562,7 +2621,7 @@ async function loadAllVerses(page) {
       const openBtn = document.createElement("button");
       openBtn.className = "btn btn-ghost btn-sm";
       openBtn.textContent = "Open";
-      openBtn.onclick = () => openInterpEditor(v.id);
+      openBtn.onclick = () => openVerseForCorrection(v.id);
       actions.appendChild(openBtn);
       if (isVerified) {
         const reopenBtn = document.createElement("button");
@@ -2585,6 +2644,14 @@ async function loadAllVerses(page) {
     list.innerHTML = "";
     toast("Failed to load verses: " + err.message, true);
   }
+}
+
+// Elder opens a verse from the all-verses browse: the interpretation editor
+// lives in the authoring area, so switch there first, then open it. Without
+// this, the editor panel toggles inside a hidden section and nothing appears.
+async function openVerseForCorrection(verseId) {
+  if (typeof showArea === "function") showArea("authoring");
+  await openInterpEditor(verseId);
 }
 
 async function reopenVerse(id, odu) {
@@ -2889,6 +2956,7 @@ async function verifyPart(kind, oriEnc) {
     if (!res.ok) throw new Error(d.error || "Verify failed");
     toast(what + " verified");
     openVerifyDetail(_verifyDetailId);
+    refreshVerifyArea();      // update the underlying list instantly, not just the detail
   } catch (err) { toast("Verify failed: " + err.message, true); }
 }
 
@@ -2904,6 +2972,7 @@ async function submitSendBack(target) {
     if (!res.ok) throw new Error(d.error || "Send-back failed");
     toast("Sent back with your note");
     openVerifyDetail(_verifyDetailId);
+    refreshVerifyArea();      // update the underlying list instantly
   } catch (err) { toast("Send-back failed: " + err.message, true); }
 }
 
