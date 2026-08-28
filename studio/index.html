@@ -2950,6 +2950,16 @@ $("myVersesSearch").addEventListener("input", () => {
 
 
 
+// Load just the orientation catalogue (lightweight — no Odù-name build).
+async function loadOrientations() {
+  if (_allOrientations.length) return;
+  try {
+    const res = await studioApi("/orientations");
+    const d = await res.json();
+    _allOrientations = d.all || [];
+  } catch { _allOrientations = []; }
+}
+
 async function loadAuthoringOdus() {
   // The Odù names come from the same generator the main app uses; the studio
 
@@ -3119,9 +3129,11 @@ async function suggestVerseDiacritics() {
 /* ── Interpretations editor ── */
 async function openInterpEditor(verseId) {
   _openInterpVerseId = verseId;
+  _interpTaken = []; _interpTakenFor = null; // clear any prior verse's state
   $("verseFormPanel").style.display = "none";
   $("interpEditorPanel").style.display = "block";
   closeInterpCompose();
+  await loadOrientations();       // ensure the catalogue is ready before compose
   await refreshInterpList();
   $("interpEditorPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3135,11 +3147,29 @@ function closeInterpEditor() {
 
 /* Inline compose: pick an orientation the verse doesn't yet cover, optionally
    pull an AI draft to rewrite, then save. Replaces the old prompt(). */
-function openInterpCompose(existingOrientations) {
+async function openInterpCompose(existingOrientations) {
   const sel = $("interpComposeOri");
   sel.innerHTML = "";
+  // Ensure the orientation catalogue is loaded. If it isn't (the contributor
+  // reached the interpretation editor without first opening the verse form,
+  // which is what lazy-loads it), an empty _allOrientations would make EVERY
+  // orientation look "taken" — the false "every orientation already has an
+  // interpretation" message. Load it first.
+  if (!_allOrientations.length) await loadOrientations();
+  // Staleness guard: if the taken-list wasn't computed for the verse currently
+  // open (e.g. a variable left over from a previously-viewed verse), refresh it
+  // first. This is the fix for "every orientation already has an interpretation"
+  // appearing wrongly — it was comparing against another verse's data.
+  if (!existingOrientations && _interpTakenFor !== _openInterpVerseId) {
+    await refreshInterpList();
+  }
   // Offer only orientations not already interpreted (so we don't clobber one).
   const taken = existingOrientations || _interpTaken || [];
+  if (!_allOrientations.length) {
+    // Still empty after trying to load → a real fetch problem, not "all taken".
+    toast("Couldn't load the orientations list. Check your connection and try again.", true);
+    return;
+  }
   const avail = _allOrientations.filter((o) => !taken.includes(o));
   if (!avail.length) {
     toast("Every orientation already has an interpretation. Edit one above instead.", false);
@@ -3202,6 +3232,7 @@ async function saveComposedInterpretation() {
 }
 
 let _interpTaken = []; // orientations already interpreted on the open verse
+let _interpTakenFor = null; // the verse id _interpTaken was computed for (staleness guard)
 
 async function refreshInterpList() {
   const wrap = $("interpList");
@@ -3245,7 +3276,12 @@ async function refreshInterpList() {
       $("interpList").parentNode.insertBefore(banner, $("interpList"));
     }
     const interps = v.interpretations || [];
-    _interpTaken = interps.map((it) => it.orientation);
+    // Only orientations with ACTUAL text count as "taken" — an empty slot should
+    // remain available to compose into. Tag the list with the verse id so a
+    // stale value from a previously-open verse can never be used (see
+    // openInterpCompose).
+    _interpTaken = interps.filter((it) => (it.text || "").trim()).map((it) => it.orientation);
+    _interpTakenFor = _openInterpVerseId;
     wrap.innerHTML = "";
     if (!interps.length) {
       wrap.innerHTML = '<div style="opacity:.6;font-size:13px">No interpretations yet. Add one below.</div>';
