@@ -982,7 +982,10 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="panel" id="interpEditorPanel" style="display:none;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <h3 style="margin:0" id="interpEditorTitle">Interpretations</h3>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="closeInterpEditor()">Done</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" id="editVerseTextBtn" type="button" style="display:none;background:#eef4ff;color:#2b5ca8" onclick="editVerseTextFromInterp()">✎ Edit verse text</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="closeInterpEditor()">Done</button>
+        </div>
       </div>
       <p style="font-size:12.5px;opacity:.75;margin:6px 0 12px">
         Add what this verse says for each orientation it speaks to. Add only the orientations it addresses — not all ten.
@@ -3353,11 +3356,28 @@ async function suggestVerseDiacritics() {
 }
 
 /* ── Interpretations editor ── */
+// From the interpretation editor (correction flow), jump to the verse form to
+// fix the verse text / tone marks. After saving, saveVerse returns the elder to
+// the interpretation editor (cameFromCorrection path), so it's a round-trip.
+function editVerseTextFromInterp() {
+  if (!_openInterpVerseId) return;
+  _elderCorrectingVerseId = _openInterpVerseId; // so saveVerse returns here
+  openVerseForm(_openInterpVerseId);
+}
+
 async function openInterpEditor(verseId) {
   _openInterpVerseId = verseId;
   _interpTaken = []; _interpTakenFor = null; // clear any prior verse's state
   $("verseFormPanel").style.display = "none";
   $("interpEditorPanel").style.display = "block";
+  // Offer verse-text editing to elders/superadmins (the correction flow needs it
+  // — e.g. fixing tone marks — not just interpretation edits). Contributors edit
+  // their own verse text through the normal "Edit" path in My Verses.
+  const evb = $("editVerseTextBtn");
+  if (evb) {
+    const role = window.__STAFF_ROLE__ || "";
+    evb.style.display = (role === "elder" || role === "superadmin") ? "" : "none";
+  }
   closeInterpCompose();
   await loadOrientations();       // ensure the catalogue is ready before compose
   await refreshInterpList();
