@@ -2610,6 +2610,7 @@ async function loadAllVerses(page) {
             '<strong style="font-size:14px">' + escapeHtml(v.odu || "—") + '</strong>' +
             (v.title ? '<span style="font-size:12px;opacity:.7">' + escapeHtml(v.title) + '</span>' : "") +
             '<span style="font-size:11px;font-weight:600;color:' + statusColor + '">' + escapeHtml(v.verseStatus) + '</span>' +
+            (v.selfVerified ? '<span title="Verified by a superadmin on their own work — review and re-open if needed" style="font-size:10px;font-weight:700;color:#a15c00;background:#fff1dc;border:1px solid #f0d3a0;padding:1px 7px;border-radius:20px">self-verified</span>' : "") +
           '</div>' +
           '<div style="font-size:12px;opacity:.7;margin-top:2px">' +
             (v.contributor ? "by " + escapeHtml(v.contributor) : "") +
