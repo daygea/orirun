@@ -141,17 +141,53 @@ function _verseReadingHTML(vr, solutionInfo) {
       </details>`;
   };
 
-  const credit2 = (r) => credit(r); // reuse
+  // Lead VERSE — the ẹsẹ Ifá itself now leads the reading, prominent and open.
+  // Its interpretation follows as an expandable beneath, so the words of Ifá are
+  // what the seeker meets first and the reading rests on the verse, not the gloss.
+  // (Verse shown only when normalized/tone-marked; otherwise we lead with the
+  // interpretation as a fallback so the reading still stands.)
+  const leadVerseBlock = (r) => {
+    if (!r.normalized || !(r.yoruba && r.yoruba.length)) return "";
+    const yor = r.yoruba.map((l) => esc(l)).join("<br>");
+    const eng = (r.english && r.english.length)
+      ? `<div style="margin-top:8px;color:var(--of-ink-soft);font-style:italic;" data-translate>${r.english.map(esc).join("<br>")}</div>` : "";
+    let struct = "";
+    if (r.structure && typeof r.structure === "object") {
+      const parts = Object.entries(r.structure)
+        .filter(([, v]) => v && v.origin !== "absent" && (v.lines || []).length)
+        .map(([k, v]) => {
+          const recon = v.origin === "reconstructed"
+            ? ` <span style="font-size:10px;color:#b8860b;font-style:italic;">(reconstructed)</span>` : "";
+          return `<div style="margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>${STRUCT_LABEL[k] || k}</span>${recon}<br><span data-translate>${(v.lines || []).map(esc).join(" ")}</span></div>`;
+        }).join("");
+      if (parts) struct = `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e0efe0);">${parts}</div>`;
+    }
+    return `
+      <div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;">
+        <div data-translate>${yor}</div>
+        ${eng}
+        ${struct}
+      </div>`;
+  };
+  const interpDisc = (r) => `
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+        <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
+      </details>`;
 
-  // Lead interpretation — expanded, the primary answer. (No separate verdict
-  // box above it: with the interpretation leading, a summary box would just
-  // repeat these same words.)
   const leadR = vr.lead;
-  const leadHTML = `
+  const _leadVerse = leadVerseBlock(leadR);
+  const leadHTML = _leadVerse
+    ? `
+    <div>
+      ${_leadVerse}
+      ${interpDisc(leadR)}
+      ${credit(leadR)}
+    </div>`
+    : `
     <div>
       <p class="ori-section-text" data-translate>${esc(leadR.interpretation)}</p>
       ${credit(leadR)}
-      ${verseDisc(leadR)}
     </div>`;
 
   // Ẹbọ — the actionable heart, surfaced into its own box rather than buried.
