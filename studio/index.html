@@ -3468,21 +3468,43 @@ async function refreshInterpList() {
       verseBox.innerHTML = html;
       verseBox.style.display = "block";
     }
-    // Surface any elder send-back notes so the contributor knows what to revise.
-    const notes = Array.isArray(v.reviewNotes) ? v.reviewNotes : [];
+    // Surface elder notes. Two distinct kinds: genuine send-back FEEDBACK (a
+    // task — "revise this"), and re-open HISTORY (an audit trail — "this was
+    // re-opened for correction"). They must not be conflated: feedback is a to-do
+    // for whoever is editing; history is just context.
+    const allNotes = Array.isArray(v.reviewNotes) ? v.reviewNotes : [];
+    const isReopen = (n) => n.kind === "reopen" || /^Re-opened for correction/.test(n.note || "");
+    const feedbackNotes = allNotes.filter((n) => !isReopen(n) && !n.resolved);
+    const historyNotes = allNotes.filter(isReopen);
     const existingBanner = document.getElementById("interpReviewNotes");
     if (existingBanner) existingBanner.remove();
-    if (notes.length) {
+    if (feedbackNotes.length || historyNotes.length) {
       const banner = document.createElement("div");
       banner.id = "interpReviewNotes";
-      banner.style.cssText = "background:#fdf6e3;border:1px solid #e8d9a8;border-radius:8px;padding:10px 12px;margin-bottom:12px";
-      banner.innerHTML = '<div style="font-size:12px;font-weight:700;color:#8a6d1b;margin-bottom:6px">✎ Elder feedback</div>' +
-        notes.map((n) =>
-          '<div style="font-size:12.5px;line-height:1.5;margin-bottom:4px">' +
-          (n.orientation ? '<strong>' + escapeHtml(n.orientation) + ':</strong> ' : '') +
-          escapeHtml(n.note || "") +
-          (n.by ? ' <span style="opacity:.6">— ' + escapeHtml(n.by) + '</span>' : '') +
-          '</div>').join("");
+      banner.style.cssText = "margin-bottom:12px";
+      let inner = "";
+      if (feedbackNotes.length) {
+        inner += '<div style="background:#fdf6e3;border:1px solid #e8d9a8;border-radius:8px;padding:10px 12px;margin-bottom:8px">' +
+          '<div style="font-size:12px;font-weight:700;color:#8a6d1b;margin-bottom:6px">✎ Elder feedback</div>' +
+          feedbackNotes.map((n) =>
+            '<div style="font-size:12.5px;line-height:1.5;margin-bottom:4px">' +
+            (n.orientation ? '<strong>' + escapeHtml(n.orientation) + ':</strong> ' : '') +
+            escapeHtml(n.note || "") +
+            (n.by ? ' <span style="opacity:.6">— ' + escapeHtml(n.by) + '</span>' : '') +
+            '</div>').join("") +
+          '</div>';
+      }
+      if (historyNotes.length) {
+        inner += '<div style="background:#eef4ff;border:1px solid #cddcf5;border-radius:8px;padding:8px 12px">' +
+          '<div style="font-size:11px;font-weight:700;color:#2b5ca8;margin-bottom:4px">↻ Correction history</div>' +
+          historyNotes.map((n) =>
+            '<div style="font-size:12px;line-height:1.5;opacity:.85;margin-bottom:3px">' +
+            escapeHtml(n.note || "") +
+            (n.by ? ' <span style="opacity:.6">— ' + escapeHtml(n.by) + '</span>' : '') +
+            '</div>').join("") +
+          '</div>';
+      }
+      banner.innerHTML = inner;
       $("interpList").parentNode.insertBefore(banner, $("interpList"));
     }
     const interps = v.interpretations || [];
