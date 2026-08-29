@@ -114,32 +114,6 @@ function _verseReadingHTML(vr, solutionInfo) {
     awo: "The diviners", client: "Cast for", reason: "The reason",
     instruction: "The instruction", outcome: "The outcome", thanksgiving: "Thanksgiving",
   };
-  const verseDisc = (r) => {
-    if (!r.normalized || !(r.yoruba && r.yoruba.length)) return "";
-    const yor = r.yoruba.map((l) => esc(l)).join("<br>");
-    const eng = (r.english && r.english.length)
-      ? `<div style="margin-top:8px;color:var(--of-ink-soft);font-style:italic;" data-translate>${r.english.map(esc).join("<br>")}</div>` : "";
-    let struct = "";
-    if (r.structure && typeof r.structure === "object") {
-      const parts = Object.entries(r.structure)
-        .filter(([, v]) => v && v.origin !== "absent" && (v.lines || []).length)
-        .map(([k, v]) => {
-          const recon = v.origin === "reconstructed"
-            ? ` <span style="font-size:10px;color:#b8860b;font-style:italic;">(reconstructed)</span>` : "";
-          return `<div style="margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>${STRUCT_LABEL[k] || k}</span>${recon}<br><span data-translate>${(v.lines || []).map(esc).join(" ")}</span></div>`;
-        }).join("");
-      if (parts) struct = `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e0efe0);">${parts}</div>`;
-    }
-    return `
-      <details style="margin-top:10px;">
-        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>The verse</summary>
-        <div style="margin-top:8px;font-size:13px;line-height:1.7;color:var(--of-ink);padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;">
-          <div data-translate>${yor}</div>
-          ${eng}
-          ${struct}
-        </div>
-      </details>`;
-  };
 
   // Lead VERSE — the ẹsẹ Ifá itself now leads the reading, prominent and open.
   // Its interpretation follows as an expandable beneath, so the words of Ifá are
@@ -215,16 +189,27 @@ function _verseReadingHTML(vr, solutionInfo) {
     const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
     return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
   };
+  // A short teaser of the VERSE itself (its first Yorùbá line) for the collapsed
+  // card summary — so supporting verses, like the lead, are met as verse first.
+  const verseTeaser = (r) => {
+    if (r.normalized && r.yoruba && r.yoruba.length) {
+      const first = esc(r.yoruba[0]);
+      return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+    }
+    // No public verse text (un-normalized) → fall back to the interpretation
+    // teaser so the card still says something meaningful.
+    return esc(teaser(r.interpretation));
+  };
   const card = (r) => `
     <details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${esc(teaser(r.interpretation))}</span>
+        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser(r)}</span>
         ${r.provenance?.contributor ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : ""}
       </summary>
       <div style="padding:0 12px 12px;">
-        <p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>
+        ${leadVerseBlock(r) || `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`}
+        ${leadVerseBlock(r) ? interpDisc(r) : ""}
         ${credit(r)}
-        ${verseDisc(r)}
       </div>
     </details>`;
 
@@ -479,16 +464,24 @@ function _verseCardHTML(r) {
     ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
   const cred = r.provenance?.contributor
     ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
-  let verse = "";
-  if (r.normalized && r.yoruba && r.yoruba.length) {
-    verse = `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>The verse</summary>
-      <div style="margin-top:8px;font-size:13px;line-height:1.7;padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${r.yoruba.map(esc).join("<br>")}</div></details>`;
-  }
+  // Verse-first, matching the lead and the initial supporting cards: the ẹsẹ Ifá
+  // shows prominently, its interpretation is the collapsed "What Ifá says".
+  const hasVerse = r.normalized && r.yoruba && r.yoruba.length;
+  const verseTeaser = hasVerse
+    ? (esc(r.yoruba[0]).length > 90 ? esc(r.yoruba[0]).slice(0, 88).trim() + "…" : esc(r.yoruba[0]))
+    : esc(teaser(r.interpretation));
+  const verseBlock = hasVerse
+    ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${r.yoruba.map(esc).join("<br>")}</div>`
+    : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
+  const interp = hasVerse
+    ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+      <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
+    : "";
   return `<details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${esc(teaser(r.interpretation))}</span>${contributor}
+        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser}</span>${contributor}
       </summary>
-      <div style="padding:0 12px 12px;"><p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>${cred}${verse}</div>
+      <div style="padding:0 12px 12px;">${verseBlock}${interp}${cred}</div>
     </details>`;
 }
 
