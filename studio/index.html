@@ -2577,6 +2577,7 @@ function setVerifyMode(mode) {
 function refreshVerifyArea() {
   if (_verifyMode === "all") loadAllVerses(1);
   else loadVerifyQueue(1);
+  loadNotifications(); // keep badges/notices live after any verify-area action
 }
 
 async function loadAllVerses(page) {
@@ -3317,6 +3318,7 @@ async function saveVerse() {
     } else {
       loadMyVerses();
     }
+    loadNotifications(); // saving may resolve feedback or change status → update badges
   } catch (err) {
     toast("Save failed: " + err.message, true);
   } finally {
@@ -3596,6 +3598,7 @@ async function saveInterpretation(orientation, text, baseText) {
     if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
     toast("Interpretation for " + orientation + " saved");
     refreshInterpList();
+    loadNotifications(); // revising may resolve elder feedback → update badge
   } catch (err) {
     toast("Save failed: " + err.message, true);
   }
@@ -3610,6 +3613,7 @@ async function removeInterpretation(orientation) {
     if (!res.ok) throw new Error(d.error || "Remove failed");
     toast("Removed " + orientation);
     refreshInterpList();
+    loadNotifications();
   } catch (err) {
     toast("Remove failed: " + err.message, true);
   }
