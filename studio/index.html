@@ -2250,6 +2250,7 @@ async function loadReviewQueue() {
             escapeHtml(it.odu || "—") +
             (it.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(it.title) + '</span>' : '') +
           '</div>' +
+          (it.extract ? '<div style="font-size:12px;color:var(--of-ink-soft,#6b7a70);font-style:italic;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(it.extract) + '</div>' : '') +
           '<div style="display:flex;gap:10px;margin-top:3px">' + badges + '</div>' +
         '</div>';
 
@@ -2616,6 +2617,7 @@ async function loadAllVerses(page) {
             '<span style="font-size:11px;font-weight:600;color:' + statusColor + '">' + escapeHtml(v.verseStatus) + '</span>' +
             (v.selfVerified ? '<span title="Verified by a superadmin on their own work — review and re-open if needed" style="font-size:10px;font-weight:700;color:#a15c00;background:#fff1dc;border:1px solid #f0d3a0;padding:1px 7px;border-radius:20px">self-verified</span>' : "") +
           '</div>' +
+          (v.extract ? '<div style="font-size:12px;color:var(--of-ink-soft,#6b7a70);font-style:italic;margin-top:3px;line-height:1.5">' + escapeHtml(v.extract) + '</div>' : "") +
           '<div style="font-size:12px;opacity:.7;margin-top:2px">' +
             (v.contributor ? "by " + escapeHtml(v.contributor) : "") +
             (v.verifiedBy ? " · verified by " + escapeHtml(v.verifiedBy) : "") +
@@ -2718,6 +2720,7 @@ async function loadVerifyQueue(page) {
         '<div style="min-width:0">' +
           '<div style="font-weight:600;font-size:14px">' + escapeHtml(it.odu) +
             (it.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(it.title) + '</span>' : '') + '</div>' +
+          (it.extract ? '<div style="font-size:12.5px;color:var(--of-ink-soft,#6b7a70);font-style:italic;margin-top:2px;line-height:1.5">' + escapeHtml(it.extract) + '</div>' : '') +
           '<div style="font-size:12px;margin-top:3px">' + bits.join(" · ") +
             (it.contributor ? ' · <span style="opacity:.7">from ' + escapeHtml(it.contributor) + '</span>' : '') + '</div>' +
         '</div>';
@@ -3066,6 +3069,7 @@ async function loadMyVerses(page) {
       info.innerHTML =
         '<div style="font-weight:600;font-size:14px">' + escapeHtml(v.odu) +
           (v.title ? ' <span style="opacity:.6;font-weight:400">· ' + escapeHtml(v.title) + '</span>' : '') + '</div>' +
+        (v.extract ? '<div style="font-size:12.5px;color:var(--of-ink-soft,#6b7a70);font-style:italic;margin-top:2px;line-height:1.5">' + escapeHtml(v.extract) + '</div>' : '') +
         '<div style="font-size:12px;margin-top:3px">' +
           '<span style="font-weight:600;color:' + sc + '">' + escapeHtml(STATUS_LABEL[v.verseStatus] || v.verseStatus) + '</span>' +
           ' · ' + v.interpretationCount + ' interpretation' + (v.interpretationCount === 1 ? '' : 's') +
