@@ -2552,6 +2552,7 @@ const studioApi = (p, opts = {}) =>
 let _authoringOdus = [];   // full Odù name list for the picker
 let _vfOduValue = "";      // currently chosen Odù in the form
 let _editingVerseId = null; // set when editing an existing verse
+let _editingFingerprint = null; // content fingerprint captured at open, for concurrency
 let _openInterpVerseId = null;
 let _allOrientations = [];
 
@@ -3248,12 +3249,14 @@ async function openVerseForm(verseId) {
       $("vfThemes").value = (v.themes || []).join(", ");
       if ($("vfMedia")) $("vfMedia").value = (Array.isArray(v.media) && v.media[0] && v.media[0].url) ? v.media[0].url : "";
       if ($("vfLineage")) $("vfLineage").value = v.lineage || "";
+      _editingFingerprint = v.fingerprint || null; // baseline for concurrency check
     } catch (err) { toast("Couldn't load verse: " + err.message, true); }
   } else {
     _vfOduValue = ""; $("vfOduSearch").value = "";
     $("vfTitle").value = ""; $("vfYoruba").value = ""; $("vfEnglish").value = ""; $("vfThemes").value = "";
     if ($("vfMedia")) $("vfMedia").value = "";
     if ($("vfLineage")) $("vfLineage").value = "";
+    _editingFingerprint = null;
   }
   $("verseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3277,10 +3280,27 @@ async function saveVerse() {
   if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
   try {
     const payload = { odu, yoruba, english, title, themes, media, lineage };
-    const res = _editingVerseId
+    if (_editingVerseId && _editingFingerprint) payload.baseFingerprint = _editingFingerprint;
+    let res = _editingVerseId
       ? await studioApi("/verses/" + encodeURIComponent(_editingVerseId), { method: "PUT", body: JSON.stringify(payload) })
       : await studioApi("/verses", { method: "POST", body: JSON.stringify(payload) });
-    const d = await res.json();
+    let d = await res.json();
+    // Concurrency: another elder changed this verse since we opened it. Warn and
+    // let the user decide whether to overwrite their changes.
+    if (res.status === 409 && d.reason === "stale_edit") {
+      const proceed = confirm(
+        "Another elder has edited this verse since you opened it.\n\n" +
+        "If you save now, your version will overwrite theirs.\n\n" +
+        "OK = overwrite with my version · Cancel = keep theirs (reload to see it)");
+      if (!proceed) {
+        toast("Save cancelled — reopen the verse to see the latest version.", false);
+        if (btn) { btn.disabled = false; btn.textContent = "Save draft"; }
+        return;
+      }
+      payload.force = true;
+      res = await studioApi("/verses/" + encodeURIComponent(_editingVerseId), { method: "PUT", body: JSON.stringify(payload) });
+      d = await res.json();
+    }
     if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
     toast(_editingVerseId ? "Verse updated" : "Draft verse saved");
     const savedId = _editingVerseId;
@@ -3533,7 +3553,7 @@ async function refreshInterpList() {
         acts.style.cssText = "display:flex;gap:8px;margin-top:8px";
         const save = document.createElement("button");
         save.className = "btn btn-green btn-sm"; save.textContent = "Save";
-        save.onclick = () => saveInterpretation(it.orientation, row.querySelector("textarea").value);
+        save.onclick = () => saveInterpretation(it.orientation, row.querySelector("textarea").value, it.text || "");
         const del = document.createElement("button");
         del.className = "btn btn-ghost btn-sm"; del.textContent = "Remove";
         del.onclick = () => removeInterpretation(it.orientation);
@@ -3553,12 +3573,25 @@ async function refreshInterpList() {
   }
 }
 
-async function saveInterpretation(orientation, text) {
+async function saveInterpretation(orientation, text, baseText) {
   if (!text || !text.trim()) { toast("Write the interpretation before saving", true); return; }
   try {
-    const res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
-      { method: "PUT", body: JSON.stringify({ text: text.trim() }) });
-    const d = await res.json();
+    const body = { text: text.trim() };
+    if (typeof baseText === "string") body.baseText = baseText;
+    let res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
+      { method: "PUT", body: JSON.stringify(body) });
+    let d = await res.json();
+    if (res.status === 409 && d.reason === "stale_edit") {
+      const proceed = confirm(
+        "Another elder edited this interpretation since you opened it.\n\n" +
+        "Save now to overwrite their version, or cancel to keep theirs.\n\n" +
+        "OK = overwrite · Cancel = keep theirs (reload to see it)");
+      if (!proceed) { toast("Save cancelled — reopen to see the latest.", false); return; }
+      body.force = true;
+      res = await studioApi("/verses/" + encodeURIComponent(_openInterpVerseId) + "/interpretations/" + encodeURIComponent(orientation),
+        { method: "PUT", body: JSON.stringify(body) });
+      d = await res.json();
+    }
     if (!res.ok) throw new Error((d.validationErrors && d.validationErrors[0]) || d.error || "Save failed");
     toast("Interpretation for " + orientation + " saved");
     refreshInterpList();
