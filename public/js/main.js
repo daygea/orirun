@@ -1470,6 +1470,13 @@ const performUserDivination = async (
 
       resultElement.innerHTML = parts.join("");
 
+      // The reading is rendered dynamically here — translate it into the seeker's
+      // language explicitly, so the whole result (verse, interpretation, labels)
+      // is localised rather than relying on the passive observer catching it.
+      if (window.translateDynamicContent) {
+        try { window.translateDynamicContent(resultElement); } catch {}
+      }
+
       /* Download / Share the reading as a branded PDF */
       if (window.orirunExport) {
         window.orirunExport.attachBar({
@@ -1535,6 +1542,11 @@ const performUserDivination = async (
     }
 
     displayConfiguration(mainCast);
+    // Covers both branches above (full reading OR the paywall prompt) — ensure
+    // whichever rendered is shown in the seeker's language.
+    if (window.translateDynamicContent) {
+      try { window.translateDynamicContent(resultElement); } catch {}
+    }
     window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
 
     setTimeout(() => {
@@ -1547,6 +1559,7 @@ const performUserDivination = async (
   } catch (err) {
     resultElement.innerHTML = `
       <center><span class="alert alert-info" data-translate>${err.message}</span></center>`;
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   } finally {
     hidePreloader();
     removeControl();
@@ -1806,6 +1819,8 @@ async function displayMeaning(number) {
           </p>
         </div>
       </div>`;
+
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(resultEl); } catch {} }
 
     _dedupeSectionHeadings(resultEl);
 
@@ -2229,7 +2244,7 @@ const performBirthChart = async () => {
           <button class="acc-header"
             onclick="var b=document.getElementById('${id}');var a=this.querySelector('.acc-arrow');var isOpen=b.style.display!=='none';b.style.display=isOpen?'none':'block';a.style.transform=isOpen?'rotate(0deg)':'rotate(180deg)';"
             style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,#f0f7f0,#e8f5e8);border:none;cursor:pointer;font-size:14px;font-weight:bold;color:#1b4332;text-align:left;gap:8px;">
-            <span>${title}</span>
+            <span data-translate>${title}</span>
             <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:12px;flex-shrink:0;">▼</span>
           </button>
           <div id="${id}" style="display:${open ? "block" : "none"};padding:14px 16px;line-height:1.7;">
@@ -2343,6 +2358,13 @@ function parseEnergyAccordion(text) {
     `);
     resultElement.innerHTML = parts.join("");
 
+    // Translate the freshly-rendered chart card (labels, headings, toggles) into
+    // the seeker's language right away — before the AI reading arrives — so no
+    // part of the result flashes or lingers in English.
+    if (window.translateDynamicContent) {
+      try { window.translateDynamicContent(resultElement); } catch {}
+    }
+
     /* Download / Share the numerology chart as a branded PDF */
     if (window.orirunExport) {
       window.orirunExport.attachBar({
@@ -2417,10 +2439,24 @@ function parseEnergyAccordion(text) {
             + _energyRow("Personal Day",   data.vibrations?.day?.number,   "", "day"));
       }
       window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
+      // The Voice-of-Òrì reading, its accordions, and the energy breakdown are
+      // rendered here dynamically (the AI arrives in this .then, well after the
+      // initial page render). Explicitly translate the whole result container so
+      // a non-English seeker sees it in their language — the passive observer
+      // alone doesn't reliably catch this multi-stage async render.
+      if (window.translateDynamicContent) {
+        try {
+          window.translateDynamicContent(document.getElementById("ori-voice-slot"));
+          const _bd = document.getElementById("energy-breakdown");
+          if (_bd) window.translateDynamicContent(_bd);
+          if (resultElement) window.translateDynamicContent(resultElement);
+        } catch {}
+      }
     }).catch(() => {
       const slot = document.getElementById("ori-voice-slot");
       if (slot) slot.innerHTML =
         `<em style="color:var(--of-muted);" data-translate>The spiritual interpretation could not be generated at this moment. Please try again later.</em>`;
+      if (slot && window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
       // If the breakdown numbers did get populated before the failure,
       // still let the user open them; otherwise leave the toggle hidden.
       const _etBtn = document.getElementById("energy-toggle-btn");
@@ -2913,6 +2949,9 @@ function renderHistoryPage() {
   paginationEl.style.display = totalPages <= 1 ? "none" : "flex";
   prevBtn.disabled = historyPage === 1;
   nextBtn.disabled = historyPage === totalPages;
+  if (window.translateDynamicContent && historyListEl) {
+    try { window.translateDynamicContent(historyListEl); } catch {}
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
