@@ -1202,27 +1202,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
 let inactivityTimer;
-const INACTIVITY_TIME = 9 * 60 * 1000;   // 9 minutes
+const INACTIVITY_TIME = 9 * 60 * 1000;   // 9 minutes (retained for reference)
 
 /**
- * resetInactivityTimer — kept here so translation.js can call it.
- * showGuidancePopup / closeGuidancePopup now live in dailyGuidance.js.
+ * resetInactivityTimer — intentionally a NO-OP.
+ *
+ * The inactivity-triggered Daily Guidance popup was removed: an overlay that
+ * appears after 9 idle minutes is interruptive noise, especially in a
+ * contemplative app where pausing to reflect on a reading is normal. Daily
+ * guidance is still delivered by the disciplined once-per-24h path in
+ * dailyGuidance.js (_checkDailyGuidance → OS notification, or a single popup),
+ * and offered contextually via the post-reading banner. Both are opt-in and
+ * rate-limited.
+ *
+ * This function is kept (rather than deleted) so existing callers — including
+ * closeGuidancePopup() in dailyGuidance.js — remain safe no-ops instead of
+ * throwing a ReferenceError.
  */
 function resetInactivityTimer(lang) {
   clearTimeout(inactivityTimer);
-  inactivityTimer = setTimeout(async () => {
-    if (typeof showGuidancePopup === "function") {
-      await showGuidancePopup(lang || currentLang || "en");
-    }
-  }, INACTIVITY_TIME);
+  // No re-arm: the idle popup is disabled by design.
 }
 
-["mousemove", "keydown", "click", "touchstart"].forEach((ev) => {
-  document.addEventListener(ev, () =>
-    resetInactivityTimer(typeof currentLang !== "undefined" ? currentLang : "en")
-  );
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  resetInactivityTimer(typeof currentLang !== "undefined" ? currentLang : "en");
-});
+// (No idle listeners registered — the inactivity popup is disabled.)
