@@ -55,6 +55,14 @@ async function _getDailyAIMessage(p) {
     // p.planetaryHour ? `Hour: ${p.planetaryHour} (${p.planetaryOrisha})` : ""
   ].filter(Boolean).join("\n");
 
+  // Generate directly in the seeker's language when it isn't English — faster and
+  // more natural than post-translating this short message.
+  const _lang = (typeof currentLang !== "undefined") ? currentLang : "en";
+  const _langNm = (typeof _langName === "function") ? _langName(_lang) : "English";
+  const _langInstr = (_lang && _lang !== "en" && _lang !== "baseline")
+    ? ` Write the entire message in ${_langNm}, natural and fluent.`
+    : "";
+
   const res = await fetch("/api/ai/chat", {
     method:      "POST",
     headers:     { "Content-Type": "application/json" },
@@ -70,7 +78,7 @@ async function _getDailyAIMessage(p) {
                    "Speak to the quality of the energy, not the numbers themselves. " +
                    "Be practical and grounded — not vague or poetic for its own sake. " +
                    "ONE short paragraph, max 54 words. " +
-                   "No greetings, no ritual language, no bullet points, no line breaks."
+                   "No greetings, no ritual language, no bullet points, no line breaks." + _langInstr
         },
         { role: "user", content: lines }
       ]

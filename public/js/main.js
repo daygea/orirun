@@ -294,6 +294,7 @@ document.addEventListener("click", async (e) => {
   const odu = input.getAttribute("data-odu");
   const ori = input.getAttribute("data-ori");
   slot.innerHTML = `<span style="font-size:12px;color:#8a9a8f;" data-translate>Consulting Ifá…</span>`;
+  if (window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
   try {
     // Relative URL + plain fetch — same pattern as the "see all" loader.
     const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/confirm?enquiry=${encodeURIComponent(enquiry)}`;
@@ -340,6 +341,7 @@ document.addEventListener("click", async (e) => {
     if (window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
   } catch {
     slot.innerHTML = `<span style="font-size:12px;color:#c0392b;" data-translate>Could not reach Ifá just now — please try again.</span>`;
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(slot); } catch {} }
   }
 });
 
@@ -1958,7 +1960,7 @@ function parseEnergyAccordion(text) {
           <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
         </button>
         <div id="${id}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
-          <span data-translate>${formatResponseAsHTML(body)}</span>
+          <span ${window._aiWroteInLanguage ? "" : "data-translate"}>${formatResponseAsHTML(body)}</span>
         </div>
       </div>`;
   }).join("");
@@ -1987,6 +1989,20 @@ function buildPinnacleArc(phases, currentNumber, age) {
   return lines.join("\n");
 }
 const pinnacleArc = buildPinnacleArc(payload.pinnaclePhases, payload.pinnacleNumber, payload.age);
+
+// Language-aware generation: when the seeker is reading in a non-English
+// language, ask the model to WRITE the reading directly in that language. This
+// is faster and higher-quality than generating English then translating it —
+// and the render path skips re-translating this block (it arrives already
+// localised). Section TITLES stay in a fixed form the UI translates separately.
+const _dgLang = (typeof currentLang !== "undefined") ? currentLang : "en";
+const _dgLangName = (typeof _langName === "function") ? _langName(_dgLang) : "English";
+const _writeInLanguage = (_dgLang && _dgLang !== "en" && _dgLang !== "baseline")
+  ? `\n\nIMPORTANT — LANGUAGE:\nWrite the ENTIRE reading in ${_dgLangName}. Every sentence of the body must be in ${_dgLangName}, natural and fluent, not translated word-for-word. Keep the section header lines (the ones starting with 1️⃣, 2️⃣, etc.) EXACTLY as given in the structure below — do not translate those header labels. Only the sentences under each header are in ${_dgLangName}.`
+  : "";
+// Remember whether this reading was generated already-localised, so the render
+// path can skip re-translating the AI prose (the static labels still translate).
+window._aiWroteInLanguage = !!_writeInLanguage;
 
 const prompt = `
 Interpret this life chart using African spiritual wisdom, with Yoruba cosmology as the primary lens.
@@ -2096,6 +2112,7 @@ FINAL LINE:
 - After the eight sections, add one short sentence on its own, exposing a real pattern this person has already lived through.
 
 Do not rush. Speak as one who has seen this life before.
+${_writeInLanguage}
 `.trim();
 
   try {
@@ -2300,7 +2317,7 @@ function parseEnergyAccordion(text) {
           <span class="ori-section-rule"></span>
           <span class="ori-section-label" data-translate>${displayTitle}</span>
         </div>
-        <p class="ori-section-text" data-translate>${formatResponseAsHTML(body || heading)}</p>
+        <p class="ori-section-text" ${window._aiWroteInLanguage ? "" : "data-translate"}>${formatResponseAsHTML(body || heading)}</p>
       </div>`;
   }).filter(Boolean).join("");
 }
