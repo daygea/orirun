@@ -1933,7 +1933,7 @@ function parseEnergyAccordion(text) {
 
   if (rawSections.length < 2) {
     /* AI didn't use expected structure — fall back to plain render */
-    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;">
+    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;" data-translate>
       ${formatResponseAsHTML(text)}
     </div>`;
   }
@@ -1960,7 +1960,7 @@ function parseEnergyAccordion(text) {
           <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
         </button>
         <div id="${id}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
-          <span data-translate>${formatResponseAsHTML(body)}</span>
+          <div data-translate>${formatResponseAsHTML(body)}</div>
         </div>
       </div>`;
   }).join("");
@@ -2282,7 +2282,7 @@ function parseEnergyAccordion(text) {
   const rawSections  = text.split(sectionRegex).filter(s => s.trim());
 
   if (rawSections.length < 2) {
-    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;">
+    return `<div style="border-left:4px solid var(--of-green);padding:12px;border-radius:6px;line-height:1.65;" data-translate>
       ${formatResponseAsHTML(text)}
     </div>`;
   }
@@ -2317,7 +2317,7 @@ function parseEnergyAccordion(text) {
           <span class="ori-section-rule"></span>
           <span class="ori-section-label" data-translate>${displayTitle}</span>
         </div>
-        <p class="ori-section-text" data-translate>${formatResponseAsHTML(body || heading)}</p>
+        <div class="ori-section-text" data-translate>${formatResponseAsHTML(body || heading)}</div>
       </div>`;
   }).filter(Boolean).join("");
 }
