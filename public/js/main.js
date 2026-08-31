@@ -132,13 +132,13 @@ function _verseReadingHTML(vr, solutionInfo) {
         .map(([k, v]) => {
           const recon = v.origin === "reconstructed"
             ? ` <span style="font-size:10px;color:#b8860b;font-style:italic;">(reconstructed)</span>` : "";
-          return `<div style="margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>${STRUCT_LABEL[k] || k}</span>${recon}<br><span data-translate>${(v.lines || []).map(esc).join(" ")}</span></div>`;
+          return `<div style="margin-top:6px;"><span style="font-size:11px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>${STRUCT_LABEL[k] || k}</span>${recon}<br><span lang="yo" translate="no">${(v.lines || []).map(esc).join(" ")}</span></div>`;
         }).join("");
       if (parts) struct = `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--of-line,#e0efe0);">${parts}</div>`;
     }
     return `
       <div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;">
-        <div data-translate>${yor}</div>
+        <div lang="yo" translate="no">${yor}</div>
         ${eng}
         ${struct}
       </div>`;
@@ -305,7 +305,7 @@ document.addEventListener("click", async (e) => {
       // Show the actual ẹsẹ Ifá (Yorùbá) — same normalized-gate as the main
       // reading: raw, un-normalized text is held back until an elder normalizes.
       const yorHTML = (v.normalized && Array.isArray(v.yoruba) && v.yoruba.length)
-        ? `<div style="margin-top:8px;font-size:13px;line-height:1.7;padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${v.yoruba.map(escT).join("<br>")}</div>`
+        ? `<div style="margin-top:8px;font-size:13px;line-height:1.7;padding:10px 12px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${v.yoruba.map(escT).join("<br>")}</div>`
         : "";
       const engHTML = (Array.isArray(v.english) && v.english.length)
         ? `<div style="margin-top:8px;color:var(--of-ink-soft,#7a8a80);font-style:italic;" data-translate>${v.english.map(escT).join("<br>")}</div>`
@@ -473,7 +473,7 @@ function _verseCardHTML(r) {
     ? (esc(r.yoruba[0]).length > 90 ? esc(r.yoruba[0]).slice(0, 88).trim() + "…" : esc(r.yoruba[0]))
     : esc(teaser(r.interpretation));
   const verseBlock = hasVerse
-    ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" data-translate>${r.yoruba.map(esc).join("<br>")}</div>`
+    ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${r.yoruba.map(esc).join("<br>")}</div>`
     : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
   const interp = hasVerse
     ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
