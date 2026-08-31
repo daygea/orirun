@@ -1960,7 +1960,7 @@ function parseEnergyAccordion(text) {
           <span class="acc-arrow" style="transition:transform 0.25s;transform:${open ? "rotate(180deg)" : "rotate(0deg)"};font-size:11px;flex-shrink:0;">▼</span>
         </button>
         <div id="${id}" style="display:${open ? "block" : "none"};padding:12px 14px;line-height:1.65;font-size:14px;">
-          <span ${window._aiWroteInLanguage ? "" : "data-translate"}>${formatResponseAsHTML(body)}</span>
+          <span data-translate>${formatResponseAsHTML(body)}</span>
         </div>
       </div>`;
   }).join("");
@@ -2317,7 +2317,7 @@ function parseEnergyAccordion(text) {
           <span class="ori-section-rule"></span>
           <span class="ori-section-label" data-translate>${displayTitle}</span>
         </div>
-        <p class="ori-section-text" ${window._aiWroteInLanguage ? "" : "data-translate"}>${formatResponseAsHTML(body || heading)}</p>
+        <p class="ori-section-text" data-translate>${formatResponseAsHTML(body || heading)}</p>
       </div>`;
   }).filter(Boolean).join("");
 }
