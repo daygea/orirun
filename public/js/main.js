@@ -1336,7 +1336,7 @@ const performUserDivination = async (
           <div class="dv-card${open ? " is-open" : ""}">
             <button type="button" class="dv-card__header"
               onclick="var c=this.parentNode;var b=c.querySelector('.dv-card__body');var o=c.classList.toggle('is-open');b.style.display=o?'block':'none';">
-              <span class="dv-card__title">${title}</span>
+              <span class="dv-card__title" data-translate>${title}</span>
               <span class="dv-arrow">▼</span>
             </button>
             <div id="${id}" class="dv-card__body" style="display:${open ? "block" : "none"};">
