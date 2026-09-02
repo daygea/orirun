@@ -1549,6 +1549,21 @@ const performUserDivination = async (
     if (window.translateDynamicContent) {
       try { window.translateDynamicContent(resultElement); } catch {}
     }
+    // Comprehensive, deferred re-translation. displayConfiguration renders into a
+    // SEPARATE container (#configurationResult) that the resultElement pass above
+    // doesn't reach, and some content settles after paint. Re-run across BOTH
+    // containers on the next frame so nothing (accordion titles, Odù details,
+    // media labels, export bar) is left in English.
+    if (window.translateDynamicContent) {
+      const _translateReading = () => {
+        try {
+          window.translateDynamicContent(resultElement);
+          const cfg = document.getElementById("configurationResult");
+          if (cfg) window.translateDynamicContent(cfg);
+        } catch {}
+      };
+      requestAnimationFrame(() => { _translateReading(); setTimeout(_translateReading, 250); });
+    }
     window.scrollTo({ top: resultElement.offsetTop, behavior: "smooth" });
 
     setTimeout(() => {

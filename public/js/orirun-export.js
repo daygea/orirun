@@ -459,8 +459,11 @@
     shareBtn.type = "button";
     shareBtn.className = "orexp-btn orexp-btn-primary";
     shareBtn.setAttribute("data-orirun-export", "1");
-    shareBtn.innerHTML = "⤓ " + (opts.label || "Download / Share PDF");
+    var _shareLabel = opts.label || "Download / Share PDF";
+    shareBtn.innerHTML = "⤓ <span data-translate>" + _shareLabel + "</span>";
     shareBtn.setAttribute("data-label", shareBtn.innerHTML);
+    // Translate the button label if a non-default language is active.
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(shareBtn); } catch (e) {} }
     shareBtn.addEventListener("click", function () {
       pdf({
         sourceEl: opts.sourceEl,
