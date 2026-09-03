@@ -222,12 +222,28 @@ function _anotherModalOpen() {
   });
 }
 
+// True when the seeker is actively loading or viewing a reading — so the daily
+// popup holds off rather than landing on top of their result. Covers the
+// loading spinner (#preloader visible) and a populated result (#result or
+// #configurationResult has content).
+function _readingInProgress() {
+  var pre = document.getElementById("preloader");
+  if (pre && window.getComputedStyle(pre).display !== "none") return true;
+  var res = document.getElementById("result");
+  if (res && res.innerHTML.trim() !== "") return true;
+  var cfg = document.getElementById("configurationResult");
+  if (cfg && cfg.innerHTML.trim() !== "") return true;
+  return false;
+}
+
 async function showGuidancePopup(lang, _retries) {
   if (document.getElementById("guidance-overlay")) return;
   /* Do not interrupt the onboarding tour */
   if (document.querySelector("#driver-page-overlay") || document.querySelector("#or-tour-dim") || document.getElementById("or-onboard")) return;
-  /* Do not stack on top of another open modal — wait until it is dismissed */
-  if (_anotherModalOpen()) {
+  /* Do not stack on top of another open modal, and do not interrupt a reading
+     the seeker is actively loading or viewing — that would feel like noise.
+     Wait politely and retry until they're at rest. */
+  if (_anotherModalOpen() || _readingInProgress()) {
     if ((_retries || 0) < 20) {
       setTimeout(function () { showGuidancePopup(lang, (_retries || 0) + 1); }, 3000);
     }
@@ -271,6 +287,9 @@ async function showGuidancePopup(lang, _retries) {
       </div>
     </div>`;
   document.body.appendChild(overlay);
+  // Translate the modal shell (title, Close, Share, Loading…) into the seeker's
+  // language on open — the passive observer alone doesn't reliably catch this.
+  if (window.translateDynamicContent) { try { window.translateDynamicContent(overlay); } catch (e) {} }
 
   /* Fetch cached guidance AND live planetary hour in parallel */
   try {
@@ -304,12 +323,12 @@ async function showGuidancePopup(lang, _retries) {
       bodyEl.innerHTML = `
         <div style="width:100%;">
           <p style="margin:0 0 6px;font-size:11px;color:#2e7d32;font-weight:bold;">
-            Energy:
+            <span data-translate>Energy:</span>
             <span style="font-weight:normal;opacity:.7;">
-              Today ${personal.day}
-              ·&nbsp;Month ${personal.month}
-              ·&nbsp;Year ${personal.year}
-              ·&nbsp;Lifepath ${personal.lifepath}
+              <span data-translate>Today</span> ${personal.day}
+              ·&nbsp;<span data-translate>Month</span> ${personal.month}
+              ·&nbsp;<span data-translate>Year</span> ${personal.year}
+              ·&nbsp;<span data-translate>Lifepath</span> ${personal.lifepath}
             </span>
           </p>
           <p style="
@@ -329,21 +348,25 @@ async function showGuidancePopup(lang, _retries) {
             border-top:1px solid #e8f5e8;
             padding-top:8px;
           ">
-            Current hour: 🪐 <strong>${livePh.orisha} (${livePh.planet})</strong>
+            <span data-translate>Current hour:</span> 🪐 <strong>${livePh.orisha} (${livePh.planet})</strong>
             <br/>
             <span style="opacity:.7;">
               &nbsp;·&nbsp;${livePh.energy}
             </span>
           </p>` : ""}
         </div>`;
+      if (window.translateDynamicContent) { try { window.translateDynamicContent(bodyEl); } catch (e) {} }
       _showShareButton();
     } else {
-      bodyEl.innerHTML = `<p style="text-align:center;"><em>${fallback}</em></p>`;
+      bodyEl.innerHTML = `<p style="text-align:center;"><em data-translate>${fallback}</em></p>`;
+      if (window.translateDynamicContent) { try { window.translateDynamicContent(bodyEl); } catch (e) {} }
     }
   } catch {
     const bodyEl = document.getElementById("dg-popup-body");
-    if (bodyEl)
-      bodyEl.innerHTML = `<p style="text-align:center;"><em>${fallback}</em></p>`;
+    if (bodyEl) {
+      bodyEl.innerHTML = `<p style="text-align:center;"><em data-translate>${fallback}</em></p>`;
+      if (window.translateDynamicContent) { try { window.translateDynamicContent(bodyEl); } catch (e) {} }
+    }
   }
 }
 
