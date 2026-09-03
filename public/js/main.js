@@ -102,8 +102,8 @@ function _verseReadingHTML(vr, solutionInfo) {
     const ver = r.verifiedBy;
     if (!rec && !ver) return "";
     const bits = [];
-    if (rec) bits.push(`recorded by ${esc(rec)}`);
-    if (ver) bits.push(`verified by ${esc(ver)}`);
+    if (rec) bits.push(`<span data-translate>recorded by</span> ${esc(rec)}`);
+    if (ver) bits.push(`<span data-translate>verified by</span> ${esc(ver)}`);
     return `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`;
   };
   // Collapsible verse — the source the interpretation rests on. Shown beneath
@@ -1411,7 +1411,7 @@ const performUserDivination = async (
         if (!value) return;
         const v = translate ? `<span data-translate>${value}</span>` : value;
         _detailRows.push(
-          `<div class="odu-detail"><div class="odu-detail__k">${label} ${tip(tipText)}</div><div class="odu-detail__v">${v}</div></div>`
+          `<div class="odu-detail"><div class="odu-detail__k"><span data-translate>${label}</span> ${tip(tipText)}</div><div class="odu-detail__v">${v}</div></div>`
         );
       };
       _row("Alias (Inagije)", "Alternative sacred names this Odu is known by among Babalawo.", alias, false);
@@ -1601,7 +1601,7 @@ const displayConfiguration = (oduName) => {
   const numerology = odu?.numerology ?? "N/A";
 
   const parts = [
-  `<p><strong>No. ${oduId} Odù:</strong> ${oduName}</p>`,
+  `<p><strong><span data-translate>No.</span> ${oduId} <span data-translate>Odù:</span></strong> ${oduName}</p>`,
   `<div class="odu-container" id="odu-container"
      style="
        background-image: url('public/img/opon.png');
@@ -1642,7 +1642,7 @@ const displayConfiguration = (oduName) => {
       const num = _oduNumerology(oduName);
       const n = (num === null) ? numerology : num; // fallback to index-based if unresolved
       return `<br/><p><a style="cursor:pointer;" class="btn btn-sm"
-       onclick="displayMeaning(${n})">Numerology: ${_numerologyLabel(n)}</a></p>`;
+       onclick="displayMeaning(${n})"><span data-translate>Numerology:</span> ${_numerologyLabel(n)}</a></p>`;
     })()
   );
 
