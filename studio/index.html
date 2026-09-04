@@ -752,6 +752,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 
   <section class="ops" id="area-users" aria-label="User management">
     <h2>Users · account management</h2>
+    <div id="elderRequestNotice" style="display:none;margin:0 0 12px"></div>
     <p style="font-size:13px;opacity:.8;margin:-4px 0 12px;max-width:74ch">
       Accounts that sign in to the studio. <strong>Elder</strong> — a senior babaláwo who
       authors and verifies others' work. <strong>Babaláwo</strong> — a contributor: authors
@@ -2534,6 +2535,7 @@ async function changeUserRole(id, role, username) {
     if (!res.ok) throw new Error(body.error || "Role change failed");
     toast(username + " is now " + (ROLE_LABEL[role] || role));
     loadUsers();
+    loadNotifications(); // promoting an elder-requester clears their pending badge
   } catch (err) {
     toast("Role change failed: " + err.message, true);
     loadUsers(); // re-sync the dropdown to the true value
@@ -3043,6 +3045,21 @@ async function loadNotifications() {
       } else { vNotice.style.display = "none"; }
     }
     setTabBadge("verify", d.toVerify);
+
+    // Superadmin notice: contributors offering to serve as verifiers.
+    const erNotice = $("elderRequestNotice");
+    const n = d.pendingElderRequests || 0;
+    if (erNotice) {
+      if (n > 0) {
+        erNotice.innerHTML =
+          '<div style="background:#fff1dc;border:1px solid #f0d3a0;border-radius:8px;padding:12px 14px">' +
+          '<strong style="color:#a15c00">🙋 ' + n + ' contributor' + (n === 1 ? '' : 's') +
+          ' offered to serve as a verifier.</strong> ' +
+          '<span style="font-size:13px;opacity:.85">Review the accounts marked “wants to verify” below and promote to elder if appropriate.</span></div>';
+        erNotice.style.display = "block";
+      } else { erNotice.style.display = "none"; }
+    }
+    setTabBadge("users", n);
   } catch { /* notifications are best-effort */ }
 }
 
