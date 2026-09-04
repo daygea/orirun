@@ -916,6 +916,26 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       it has been verified. You can keep editing a verse until it's verified.
     </p>
 
+    <!-- Offer to serve as a verifier — shown only to contributors (babaláwo). It's
+         a request; an administrator confirms elder standing. -->
+    <div class="panel" id="verifierOfferPanel" style="display:none;margin-bottom:16px;background:#fbf7ee;border:1px solid #ecdcb8">
+      <div id="verifierOfferIdle">
+        <div style="font-size:13px;line-height:1.55;max-width:74ch">
+          Are you an elder or senior babaláwo willing to help <strong>verify</strong> others' contributions?
+          You can offer to serve as a verifier. You'll keep contributing as now; an administrator will
+          review and confirm elder standing.
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="requestVerifierRole()">Offer to serve as a verifier</button>
+      </div>
+      <div id="verifierOfferPending" style="display:none">
+        <div style="font-size:13px;line-height:1.55;color:#8a6d1b">
+          <strong>Your offer to verify has been recorded.</strong> An administrator will review it and
+          confirm elder standing. Thank you for offering your discernment to the tradition.
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="withdrawVerifierRequest()">Withdraw the offer</button>
+      </div>
+    </div>
+
     <!-- The verse form (create / edit) — hidden until "New verse" or "Edit" -->
     <div class="panel" id="verseFormPanel" style="display:none;margin-bottom:16px">
       <h3 id="verseFormTitle" style="margin:0 0 12px">New verse</h3>
@@ -1252,6 +1272,10 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           <input id="suPass" type="password" autocomplete="new-password" class="auth-input">
           <label for="suEmail" class="auth-label">Email <span class="auth-hint">(optional — so you can be reached for recognition)</span></label>
           <input id="suEmail" type="email" autocomplete="email" class="auth-input">
+          <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12.5px;line-height:1.5;cursor:pointer">
+            <input id="suElderWish" type="checkbox" style="margin-top:3px;flex-shrink:0">
+            <span data-translate>I am an elder or senior babaláwo willing to help <strong>verify</strong> others' contributions. (You'll start as a contributor; an administrator will confirm elder standing.)</span>
+          </label>
           <div id="signupError" class="auth-error"></div>
           <button type="submit" class="btn btn-green" id="signupBtn" style="width:100%;justify-content:center;margin-top:6px">Create account &amp; begin</button>
         </form>
@@ -2359,6 +2383,7 @@ async function loadUsers() {
       if (u.disabled) statusBits.push('<span style="color:#c0392b;font-weight:600">disabled</span>');
       if (u.locked) statusBits.push('<span style="color:#b8860b;font-weight:600">locked</span>');
       if (u.selfRegistered) statusBits.push('<span style="opacity:.6">self-registered</span>');
+      if (u.elderRequest && u.role !== "elder" && u.role !== "superadmin") statusBits.push('<span title="Asked to serve as a verifier at signup — review and promote to elder if appropriate" style="font-weight:700;color:#a15c00;background:#fff1dc;border:1px solid #f0d3a0;padding:1px 8px;border-radius:20px">🙋 wants to verify</span>');
       if (isSelf) statusBits.push('<span style="opacity:.6">you</span>');
 
       card.innerHTML =
@@ -4980,6 +5005,52 @@ function enterAuthoringMode(role) {
   showArea("authoring");
   loadMyVerses();
   loadNotifications();
+  // Only contributors (babaláwo) see the "offer to verify" panel — elders and
+  // superadmins already verify. Load their current request state.
+  const offer = document.getElementById("verifierOfferPanel");
+  if (offer) {
+    if (role === "babalawo") { offer.style.display = ""; loadVerifierRequestState(); }
+    else offer.style.display = "none";
+  }
+}
+
+// Reflects whether the logged-in contributor already has an open verifier offer.
+async function loadVerifierRequestState() {
+  try {
+    const res = await studioApi("/me/verifier-request");
+    if (!res.ok) return;
+    const d = await res.json();
+    _setVerifierOfferUI(!!d.elderRequest);
+  } catch { /* non-blocking */ }
+}
+function _setVerifierOfferUI(pending) {
+  const idle = document.getElementById("verifierOfferIdle");
+  const pend = document.getElementById("verifierOfferPending");
+  if (idle) idle.style.display = pending ? "none" : "";
+  if (pend) pend.style.display = pending ? "" : "none";
+}
+
+async function requestVerifierRole() {
+  try {
+    const res = await studioApi("/me/verifier-request", { method: "POST", body: JSON.stringify({ wish: true }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not record your offer");
+    _setVerifierOfferUI(true);
+    toast("Your offer to serve as a verifier has been recorded.");
+  } catch (err) {
+    toast("Couldn't record your offer: " + err.message, true);
+  }
+}
+async function withdrawVerifierRequest() {
+  try {
+    const res = await studioApi("/me/verifier-request", { method: "POST", body: JSON.stringify({ wish: false }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not withdraw");
+    _setVerifierOfferUI(false);
+    toast("Your offer has been withdrawn.");
+  } catch (err) {
+    toast("Couldn't withdraw: " + err.message, true);
+  }
 }
 
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -5034,12 +5105,13 @@ document.getElementById("signupForm")?.addEventListener("submit", async (e) => {
     const username = $("suUser").value.trim();
     const password = $("suPass").value;
     const email = $("suEmail").value.trim();
+    const wishesToVerify = !!$("suElderWish")?.checked;
     if (!username || !password) throw new Error("Username and password are required.");
     if (password.length < 8) throw new Error("Password must be at least 8 characters.");
     const res = await fetch(API_BASE + "/api/auth/signup", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, email: email || undefined }),
+      body: JSON.stringify({ username, password, email: email || undefined, wishesToVerify }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Sign-up failed");
