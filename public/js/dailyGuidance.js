@@ -236,19 +236,23 @@ function _readingInProgress() {
   return false;
 }
 
-async function showGuidancePopup(lang, _retries) {
+async function showGuidancePopup(lang, _retries, explicit) {
   if (document.getElementById("guidance-overlay")) return;
-  /* Do not interrupt the onboarding tour */
+  /* Do not interrupt the onboarding tour (even on an explicit click — the tour
+     is a guided flow that must finish first). */
   if (document.querySelector("#driver-page-overlay") || document.querySelector("#or-tour-dim") || document.getElementById("or-onboard")) return;
-  /* Do not stack on top of another open modal, and do not interrupt a reading
-     the seeker is actively loading or viewing — that would feel like noise.
-     Wait politely and retry until they're at rest. */
-  if (_anotherModalOpen() || _readingInProgress()) {
+  /* Do not stack on another open modal, and (for the AUTOMATIC daily trigger)
+     do not interrupt a reading the seeker is loading or viewing. But an EXPLICIT
+     click on "Today's Guidance" is a deliberate request — always honour it, even
+     mid-reading. */
+  if (!explicit && (_anotherModalOpen() || _readingInProgress())) {
     if ((_retries || 0) < 20) {
       setTimeout(function () { showGuidancePopup(lang, (_retries || 0) + 1); }, 3000);
     }
     return;
   }
+  /* On an explicit click, still don't stack directly on top of another modal —
+     but here we simply proceed; the guidance modal is an overlay of its own. */
 
   const fallback =
     typeof getGuidance === "function"

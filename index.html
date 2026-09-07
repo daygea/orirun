@@ -695,7 +695,7 @@ if (location.protocol !== 'file:') {
         ">
           🧿 <a href="#" id="tour-guidance-link"
                style="color:green;text-decoration:underline;white-space:nowrap;"
-               onclick="showGuidancePopup(currentLang || 'en'); return false;">
+               onclick="showGuidancePopup(currentLang || 'en', 0, true); return false;">
             <span data-translate>Today's Guidance</span>
           </a>
           <span style="color:#ccc;">|</span>
@@ -863,7 +863,7 @@ if (location.protocol !== 'file:') {
               <div class="mb-3">
                 <label data-translate>Odù this verse or teaching belongs to</label>
                 <input type="text" id="babOdu" class="form-control allow-paste"
-                  data-translate-attr="placeholder" placeholder="e.g. Ejiogbe, Osa owonrin, etc.">
+                  data-translate-attr="placeholder" placeholder="e.g. Èjì Ogbè, Ọ̀yẹ̀kú Méjì">
               </div>
               <div class="mb-3">
                 <label data-translate>Title (optional)</label>
