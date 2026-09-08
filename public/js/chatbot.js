@@ -239,9 +239,19 @@ async function sendMessage(userInput, options = {}) {
 
   const normalized = message.toLowerCase();
 
+  // Match help commands on WHOLE words/phrases, not substrings — otherwise a
+  // natural sentence like "this app helps with divination" trips "help" (it's a
+  // substring of "helps") and dumps the topic index instead of answering.
   const helpTriggers    = ["help", "help me", "show help", "show topics", "list topics", "what can you teach", "topics"];
   const knowledgeCommands = ["araba", "akoda", "aseda", "ojubona"];
-  const isHelpRequest   = helpTriggers.some(t => normalized.includes(t)) || knowledgeCommands.includes(normalized);
+  const _hasWholePhrase = (text, phrase) => {
+    // word-boundary match: the phrase must be bounded by non-letter chars
+    const esc = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp("(^|[^a-z])" + esc + "([^a-z]|$)", "i").test(text);
+  };
+  const isHelpRequest   =
+    helpTriggers.some(t => _hasWholePhrase(normalized, t)) ||
+    knowledgeCommands.includes(normalized.trim());
 
   const nonLogCommands  = ["help", "araba", "akoda", "aseda", "ojubona"];
   const shouldLog       = !nonLogCommands.includes(normalized);
