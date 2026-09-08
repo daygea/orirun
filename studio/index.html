@@ -951,7 +951,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <h3 id="verseFormTitle" style="margin:0 0 12px">New verse</h3>
       <div style="display:flex;flex-direction:column;gap:12px">
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Odù
+          Odù <span style="font-weight:400;color:#b8860b">· required</span>
           <div id="vfOduCombo" style="position:relative">
             <input id="vfOduSearch" type="text" autocomplete="off" placeholder="Type to search the 256 Odù…"
               style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;width:100%;box-sizing:border-box">
@@ -959,55 +959,64 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           </div>
         </label>
         <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Title <span style="font-weight:400;opacity:.6">(a short handle — optional)</span>
-          <input id="vfTitle" type="text" autocomplete="off" placeholder="e.g. Ẹjìogbè on patience"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Lineage <span style="font-weight:400;opacity:.6">(optional — how the verse was transmitted)</span>
-          <select id="vfLineage"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-            <option value="">— not specified —</option>
-            <option value="Ọ̀yọ́">Ọ̀yọ́</option>
-            <option value="Ifẹ̀">Ifẹ̀</option>
-            <option value="Ìjẹ̀bú">Ìjẹ̀bú</option>
-            <option value="Ẹ̀gbá">Ẹ̀gbá</option>
-            <option value="Èkìtì">Èkìtì</option>
-            <option value="Ọ̀ṣun">Ọ̀ṣun</option>
-            <option value="Diaspora">Diaspora</option>
-            <option value="Other">Other</option>
-          </select>
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          The verse in Yorùbá <span style="font-weight:400;opacity:.6">(one line per line of verse)</span>
+          The verse in Yorùbá <span style="font-weight:400;color:#b8860b">· required</span> <span style="font-weight:400;opacity:.6">(one line per line of verse)</span>
           <textarea id="vfYoruba" rows="5" placeholder="Ifá ní kí a rúbọ&#10;kí a tó délé ayé…"
             style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
           <button class="btn btn-ghost btn-sm" id="vfDiacritics" type="button" onclick="suggestVerseDiacritics()"
             style="align-self:flex-start">◌́ Suggest tone marks</button>
         </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          The English meaning <span style="font-weight:400;opacity:.6">(one line per line)</span>
-          <textarea id="vfEnglish" rows="5" placeholder="Ifá says we should make sacrifice&#10;before we arrive in the world…"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Medicine, ẹbọ materials, àkóse &amp; other practical notes
-          <span style="font-weight:400;opacity:.6">(optional — for practitioners)</span>
-          <textarea id="vfPractical" rows="4" placeholder="Àkóse: ewé… &#10;Ẹbọ / ètùtù materials: … &#10;Any other practical guidance a practitioner should know…"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
-          <span style="font-weight:400;opacity:.55;font-size:11px">Hidden from ordinary seekers by default; always visible to logged-in practitioners. A superadmin can choose to show it to seekers from the dashboard.</span>
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Themes <span style="font-weight:400;opacity:.6">(comma-separated — optional)</span>
-          <input id="vfThemes" type="text" autocomplete="off" placeholder="sacrifice, patience, destiny"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
-          Recording <span style="font-weight:400;opacity:.6">(audio/video link — optional)</span>
-          <input id="vfMedia" type="url" autocomplete="off" placeholder="https://… a chant recording, YouTube, etc."
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-          <span style="font-weight:400;opacity:.55;font-size:11px">Shown with the reading once an elder verifies this verse.</span>
-        </label>
+
+        <details id="vfMorePanel" style="border:1px solid var(--line,#e6efe4);border-radius:8px;padding:0">
+          <summary style="cursor:pointer;padding:10px 12px;font-size:13px;font-weight:600;color:var(--of-green-deep,#0a5a2c);list-style:none">
+            + Add more details <span style="font-weight:400;opacity:.6">(all optional — English meaning, lineage, medicine, recording…)</span>
+          </summary>
+          <div style="display:flex;flex-direction:column;gap:12px;padding:4px 12px 12px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              The English meaning <span style="font-weight:400;opacity:.6">(one line per line — helps seekers, and enables translation)</span>
+              <textarea id="vfEnglish" rows="5" placeholder="Ifá says we should make sacrifice&#10;before we arrive in the world…"
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              Title <span style="font-weight:400;opacity:.6">(a short handle)</span>
+              <input id="vfTitle" type="text" autocomplete="off" placeholder="e.g. Ẹjìogbè on patience"
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              Lineage <span style="font-weight:400;opacity:.6">(how the verse was transmitted)</span>
+              <select id="vfLineage"
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+                <option value="">— not specified —</option>
+                <option value="Ọ̀yọ́">Ọ̀yọ́</option>
+                <option value="Ifẹ̀">Ifẹ̀</option>
+                <option value="Ìjẹ̀bú">Ìjẹ̀bú</option>
+                <option value="Ẹ̀gbá">Ẹ̀gbá</option>
+                <option value="Èkìtì">Èkìtì</option>
+                <option value="Ọ̀ṣun">Ọ̀ṣun</option>
+                <option value="Diaspora">Diaspora</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              Medicine, ẹbọ materials, àkóse &amp; other practical notes
+              <span style="font-weight:400;opacity:.6">(for practitioners)</span>
+              <textarea id="vfPractical" rows="4" placeholder="Àkóse: ewé… &#10;Ẹbọ / ètùtù materials: … &#10;Any other practical guidance a practitioner should know…"
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
+              <span style="font-weight:400;opacity:.55;font-size:11px">Hidden from ordinary seekers by default; always visible to logged-in practitioners. A superadmin can choose to show it to seekers from the dashboard.</span>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              Themes <span style="font-weight:400;opacity:.6">(comma-separated)</span>
+              <input id="vfThemes" type="text" autocomplete="off" placeholder="sacrifice, patience, destiny"
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600">
+              Recording <span style="font-weight:400;opacity:.6">(audio/video link)</span>
+              <input id="vfMedia" type="url" autocomplete="off" placeholder="https://… a chant recording, YouTube, etc."
+                style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+              <span style="font-weight:400;opacity:.55;font-size:11px">Shown with the reading once an elder verifies this verse.</span>
+            </label>
+          </div>
+        </details>
+
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-green" id="vfSave" type="button" onclick="saveVerse()">Save draft</button>
           <button class="btn btn-ghost" type="button" onclick="closeVerseForm()">Cancel</button>
@@ -3323,6 +3332,16 @@ async function openVerseForm(verseId) {
       if ($("vfMedia")) $("vfMedia").value = (Array.isArray(v.media) && v.media[0] && v.media[0].url) ? v.media[0].url : "";
       if ($("vfLineage")) $("vfLineage").value = v.lineage || "";
       _editingFingerprint = v.fingerprint || null; // baseline for concurrency check
+      // If this verse already has any optional detail, open the "more details"
+      // section so the contributor sees (and can edit) it — otherwise it would
+      // look like the data vanished.
+      const _more = $("vfMorePanel");
+      if (_more) {
+        const hasOptional = (v.english || []).length || (v.practicalNotes || []).length ||
+          (v.themes || []).length || (v.title && v.title.trim()) || (v.lineage && v.lineage.trim()) ||
+          (Array.isArray(v.media) && v.media.length);
+        _more.open = !!hasOptional;
+      }
     } catch (err) { toast("Couldn't load verse: " + err.message, true); }
   } else {
     _vfOduValue = ""; $("vfOduSearch").value = "";
@@ -3331,6 +3350,7 @@ async function openVerseForm(verseId) {
     if ($("vfMedia")) $("vfMedia").value = "";
     if ($("vfLineage")) $("vfLineage").value = "";
     _editingFingerprint = null;
+    if ($("vfMorePanel")) $("vfMorePanel").open = false; // new verse → start collapsed
   }
   $("verseFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
