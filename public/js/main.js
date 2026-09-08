@@ -149,6 +149,17 @@ function _verseReadingHTML(vr, solutionInfo) {
         <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
       </details>`;
 
+  // Practical/ritual notes — only present when the seeker is allowed to see them
+  // (the backend gates this by the dashboard toggle). The Yorùbá terms within are
+  // preserved; the surrounding label translates.
+  const practicalDisc = (r) => (r.practicalNotes && r.practicalNotes.length)
+    ? `
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2b6b3a;" data-translate>Medicine · ẹbọ · àkóse</summary>
+        <div class="ori-section-text" style="margin-top:8px;white-space:pre-wrap;" lang="yo" translate="no">${r.practicalNotes.map(esc).join("<br>")}</div>
+      </details>`
+    : "";
+
   const leadR = vr.lead;
   const _leadVerse = leadVerseBlock(leadR);
   const leadHTML = _leadVerse
@@ -156,11 +167,13 @@ function _verseReadingHTML(vr, solutionInfo) {
     <div>
       ${_leadVerse}
       ${interpDisc(leadR)}
+      ${practicalDisc(leadR)}
       ${credit(leadR)}
     </div>`
     : `
     <div>
       <p class="ori-section-text" data-translate>${esc(leadR.interpretation)}</p>
+      ${practicalDisc(leadR)}
       ${credit(leadR)}
     </div>`;
 
@@ -209,6 +222,7 @@ function _verseReadingHTML(vr, solutionInfo) {
       <div style="padding:0 12px 12px;">
         ${leadVerseBlock(r) || `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`}
         ${leadVerseBlock(r) ? interpDisc(r) : ""}
+        ${practicalDisc(r)}
         ${credit(r)}
       </div>
     </details>`;
@@ -479,11 +493,15 @@ function _verseCardHTML(r) {
     ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
       <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
     : "";
+  const practical = (r.practicalNotes && r.practicalNotes.length)
+    ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2b6b3a;" data-translate>Medicine · ẹbọ · àkóse</summary>
+      <div class="ori-section-text" style="margin-top:8px;white-space:pre-wrap;" lang="yo" translate="no">${r.practicalNotes.map(esc).join("<br>")}</div></details>`
+    : "";
   return `<details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
         <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser}</span>${contributor}
       </summary>
-      <div style="padding:0 12px 12px;">${verseBlock}${interp}${cred}</div>
+      <div style="padding:0 12px 12px;">${verseBlock}${interp}${practical}${cred}</div>
     </details>`;
 }
 
