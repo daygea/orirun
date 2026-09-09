@@ -854,12 +854,20 @@ function openLangPicker() {
       (LANGUAGES[code] || code) + (code === currentLang ? ' <span style="color:#2b6b3a;font-size:12px">· current</span>' : "") +
     '</button>';
 
+  const baselineRowHtml = () =>
+    '<button type="button" data-code="baseline" ' +
+      'style="display:block;width:100%;text-align:left;background:' + (currentLang === "baseline" ? "#eef7f0" : "none") + ';border:none;cursor:pointer;font:inherit;padding:10px 12px;border-radius:8px;color:#123">' +
+      'Original (English)' + (currentLang === "baseline" ? ' <span style="color:#2b6b3a;font-size:12px">· current</span>' : "") +
+    '</button>';
+
   function render(filter) {
     const q = (filter || "").trim().toLowerCase();
     let html = "";
-    // "Language" reset (baseline) + English pinned at top when not filtering.
-    if (!q) {
-      html += rowHtml("en");
+    // The untranslated original — always offered first when not filtering, or when
+    // the search matches "original"/"english". This is the way back to baseline.
+    const matchesBaseline = !q || "original english".includes(q) || "original (english)".includes(q);
+    if (matchesBaseline) {
+      html += baselineRowHtml();
     }
     for (const group of LANGUAGE_GROUPS) {
       const codes = group.codes.filter((c) => {
