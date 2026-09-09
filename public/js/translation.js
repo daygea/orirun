@@ -18,27 +18,49 @@
 const LANGUAGES = {
     baseline: "Language",
     en:  "English",
+    // — African —
     yo:  "Yoruba",
     ig:  "Igbo",
     ha:  "Hausa",
     sw:  "Swahili",
-    fr:  "French",
-    es:  "Spanish",
-    pt:  "Portuguese",
-    ht:  "Haitian Creole",
-    fon: "Fon",
-    ee:  "Eʋegbe",
     zu:  "Zulu",
+    xh:  "Xhosa",
     st:  "Sotho",
     sn:  "Shona",
     ny:  "Chichewa",
     rw:  "Kinyarwanda",
     am:  "Amharic",
-    ar:  "Arabic",
+    so:  "Somali",
     ln:  "Lingala",
     wo:  "Wolof",
     bm:  "Bambara",
+    fon: "Fon",
+    ee:  "Eʋegbe",
+    tw:  "Twi",
+    ff:  "Fula",
+    // — Diaspora / Caribbean —
+    ht:  "Haitian Creole",
+    // — World —
+    fr:  "French",
+    es:  "Spanish",
+    pt:  "Portuguese",
+    ar:  "Arabic",
+    de:  "German",
+    it:  "Italian",
+    nl:  "Dutch",
+    ru:  "Russian",
+    zh:  "Chinese",
+    hi:  "Hindi",
+    ja:  "Japanese",
 };
+
+// Grouping for the searchable picker. Codes not listed here still work (they
+// fall under "Other"); "baseline" and "en" are handled specially in the UI.
+const LANGUAGE_GROUPS = [
+  { label: "African", codes: ["yo","ig","ha","sw","zu","xh","st","sn","ny","rw","am","so","ln","wo","bm","fon","ee","tw","ff"] },
+  { label: "Diaspora & Caribbean", codes: ["ht"] },
+  { label: "World", codes: ["fr","es","pt","ar","de","it","nl","ru","zh","hi","ja"] },
+];
 
 const translations = {
   en: {
@@ -783,6 +805,123 @@ function populateLanguageDropdown() {
 }
 populateLanguageDropdown();   // initial (defaults; policy refresh re-runs it)
 
+/* ─────────────────────────────────────────────────────────────
+ *  SEARCHABLE, GROUPED LANGUAGE PICKER
+ *  A UI layer over the (now hidden) <select>. Picking a language sets the
+ *  select's value and fires its change event, so ALL existing translation
+ *  logic (the change handler, policy filtering, persistence) is untouched.
+ * ───────────────────────────────────────────────────────────── */
+function _syncLangPickerLabel() {
+  const lbl = document.getElementById("lang-picker-label");
+  if (!lbl) return;
+  const code = (typeof currentLang !== "undefined") ? currentLang : "baseline";
+  lbl.textContent = (code && code !== "baseline" && LANGUAGES[code]) ? LANGUAGES[code] : "Language";
+}
+
+function _availableLangCodes() {
+  // Respect the language policy (hide "off" languages, except the current one).
+  return Object.keys(LANGUAGES).filter(
+    (c) => c !== "baseline" && (!(_policyIsOff(c)) || c === currentLang)
+  );
+}
+
+function openLangPicker() {
+  if (document.getElementById("lang-picker-overlay")) return;
+  const available = new Set(_availableLangCodes());
+
+  const overlay = document.createElement("div");
+  overlay.id = "lang-picker-overlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:10000;background:rgba(10,40,25,.35);display:flex;align-items:flex-start;justify-content:center;padding:8vh 16px 16px";
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeLangPicker(); });
+
+  overlay.innerHTML =
+    '<div role="dialog" aria-label="Choose language" style="background:#fff;width:100%;max-width:440px;max-height:80vh;border-radius:14px;box-shadow:0 20px 60px rgba(10,40,25,.3);display:flex;flex-direction:column;overflow:hidden">' +
+      '<div style="padding:14px 16px 10px;border-bottom:1px solid #eef2ee">' +
+        '<input id="lang-picker-search" type="text" placeholder="Search language…" autocomplete="off" ' +
+          'style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d9e4dc;border-radius:9px;font-size:16px" />' +
+      '</div>' +
+      '<div id="lang-picker-list" style="overflow-y:auto;padding:6px 8px 12px"></div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  const search = document.getElementById("lang-picker-search");
+  const listEl = document.getElementById("lang-picker-list");
+
+  const rowHtml = (code) =>
+    '<button type="button" data-code="' + code + '" ' +
+      'style="display:block;width:100%;text-align:left;background:' + (code === currentLang ? "#eef7f0" : "none") + ';border:none;cursor:pointer;font:inherit;padding:10px 12px;border-radius:8px;color:#123">' +
+      (LANGUAGES[code] || code) + (code === currentLang ? ' <span style="color:#2b6b3a;font-size:12px">· current</span>' : "") +
+    '</button>';
+
+  function render(filter) {
+    const q = (filter || "").trim().toLowerCase();
+    let html = "";
+    // "Language" reset (baseline) + English pinned at top when not filtering.
+    if (!q) {
+      html += rowHtml("en");
+    }
+    for (const group of LANGUAGE_GROUPS) {
+      const codes = group.codes.filter((c) => {
+        if (!available.has(c)) return false;
+        if (!q) return true;
+        return (LANGUAGES[c] || "").toLowerCase().includes(q) || c.toLowerCase().includes(q);
+      });
+      if (!codes.length) continue;
+      html += '<div style="font-size:11px;font-weight:700;color:#8a9a8f;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px 4px">' + group.label + '</div>';
+      html += codes.map(rowHtml).join("");
+    }
+    // Any available language not in a group (safety net).
+    const grouped = new Set(LANGUAGE_GROUPS.flatMap((g) => g.codes).concat(["en"]));
+    const others = [...available].filter((c) => !grouped.has(c) && (!q || (LANGUAGES[c] || "").toLowerCase().includes(q)));
+    if (others.length) {
+      html += '<div style="font-size:11px;font-weight:700;color:#8a9a8f;text-transform:uppercase;letter-spacing:.04em;padding:10px 12px 4px">Other</div>';
+      html += others.map(rowHtml).join("");
+    }
+    listEl.innerHTML = html || '<div style="padding:16px;color:#8a9a8f;text-align:center">No language matches.</div>';
+  }
+  render("");
+
+  search.addEventListener("input", () => render(search.value));
+  listEl.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-code]");
+    if (!btn) return;
+    _selectLanguage(btn.getAttribute("data-code"));
+    closeLangPicker();
+  });
+  document.addEventListener("keydown", _langPickerEsc);
+  setTimeout(() => search.focus(), 30);
+}
+
+function _langPickerEsc(e) { if (e.key === "Escape") closeLangPicker(); }
+function closeLangPicker() {
+  const o = document.getElementById("lang-picker-overlay");
+  if (o) o.remove();
+  document.removeEventListener("keydown", _langPickerEsc);
+}
+
+// Drive the hidden <select> so the existing change handler does all the work.
+function _selectLanguage(code) {
+  const sel = document.getElementById("language-select");
+  if (!sel) return;
+  // Ensure the option exists (policy may have hidden it; add it so value sticks).
+  if (!Array.from(sel.options).some((o) => o.value === code)) {
+    const opt = document.createElement("option");
+    opt.value = code; opt.textContent = LANGUAGES[code] || code;
+    sel.appendChild(opt);
+  }
+  sel.value = code;
+  sel.dispatchEvent(new Event("change", { bubbles: true }));
+  _syncLangPickerLabel();
+}
+
+// Keep the picker label in sync after any programmatic language change.
+_syncLangPickerLabel();
+if (typeof window !== "undefined") {
+  window.openLangPicker = openLangPicker;
+  window.closeLangPicker = closeLangPicker;
+}
+
 /* (single change handler lives in the bootstrap block below) */
 
 /* ─────────────────────────────────────────────────────────────
@@ -1172,6 +1311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   languageSelect.addEventListener("change", async (e) => {
     currentLang = e.target.value;
     _applyDirection(currentLang);
+    if (typeof _syncLangPickerLabel === "function") _syncLangPickerLabel();
     try { localStorage.setItem("appLanguage", currentLang); } catch {}
     if (currentLang === "baseline") {
       restoreOriginalHTML();             // instant — no overlay
@@ -1189,6 +1329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       await withTranslationLoader(translatePage(currentLang).catch((err) => console.error(err)));
     }
     languageSelect.value = currentLang;
+    if (typeof _syncLangPickerLabel === "function") _syncLangPickerLabel();
   }
 
   // Watch for dynamically added content

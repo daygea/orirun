@@ -349,7 +349,11 @@ if (location.protocol !== 'file:') {
             <div class="col-md-2">
                 <div class="languageBtn">
                     🌐
-                    <select id="language-select"></select>
+                    <select id="language-select" style="display:none"></select>
+                    <button type="button" id="lang-picker-btn" onclick="openLangPicker()"
+                        style="background:none;border:none;cursor:pointer;font:inherit;color:inherit;padding:2px 6px;display:inline-flex;align-items:center;gap:4px">
+                        <span id="lang-picker-label" data-translate>Language</span> <span style="font-size:10px;opacity:.6">▾</span>
+                    </button>
                 </div>
             </div>
             <div class="col-md-8 text-center">
