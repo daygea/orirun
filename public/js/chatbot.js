@@ -238,23 +238,26 @@ async function sendMessage(userInput, options = {}) {
   }
 
   const normalized = message.toLowerCase();
+  const trimmed = normalized.trim().replace(/[?!.]+$/, "").trim(); // drop trailing punctuation
 
-  // Match help commands on WHOLE words/phrases, not substrings — otherwise a
-  // natural sentence like "this app helps with divination" trips "help" (it's a
-  // substring of "helps") and dumps the topic index instead of answering.
-  const helpTriggers    = ["help", "help me", "show help", "show topics", "list topics", "what can you teach", "topics"];
+  // The topic-index command must be the WHOLE message, not a word inside a
+  // sentence. "help" / "topics" typed alone → show the index. But "how can you
+  // help me?" or "can ifa help solve life problems?" are genuine QUESTIONS that
+  // happen to contain "help" — they must go to the AI for a real answer, never
+  // dump the index. (Earlier substring/word-boundary matching still misfired on
+  // these because they contain "help" as a real word.)
+  const indexCommands = [
+    "help", "help me", "show help", "menu", "topics", "show topics",
+    "list topics", "list", "index", "what can you teach", "what can you teach me",
+    "what topics", "what topics do you have", "show me topics",
+  ];
   const knowledgeCommands = ["araba", "akoda", "aseda", "ojubona"];
-  const _hasWholePhrase = (text, phrase) => {
-    // word-boundary match: the phrase must be bounded by non-letter chars
-    const esc = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp("(^|[^a-z])" + esc + "([^a-z]|$)", "i").test(text);
-  };
-  const isHelpRequest   =
-    helpTriggers.some(t => _hasWholePhrase(normalized, t)) ||
-    knowledgeCommands.includes(normalized.trim());
+  const isHelpRequest =
+    indexCommands.includes(trimmed) ||
+    knowledgeCommands.includes(trimmed);
 
   const nonLogCommands  = ["help", "araba", "akoda", "aseda", "ojubona"];
-  const shouldLog       = !nonLogCommands.includes(normalized);
+  const shouldLog       = !nonLogCommands.includes(trimmed);
 
   chatHistory.push({ role: "user", content: message });
 
