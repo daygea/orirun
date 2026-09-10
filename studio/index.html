@@ -88,6 +88,8 @@ nav h2{font-family:var(--serif);font-size:12px;text-transform:uppercase;letter-s
 .btn-osun{background:var(--white);border:1px solid #E4C4BB;color:var(--osun)}
 .btn-osun:hover{background:#FBF1EE}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn[disabled] .btn-spinner{opacity:1}
+.btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:or-spin .6s linear infinite;vertical-align:-2px}
 .item-scroll{overflow-y:auto;flex:1;padding:8px}
 .item-row{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:8px;
   font-family:var(--mono);font-size:12.5px;color:var(--ink);white-space:nowrap;
@@ -935,14 +937,14 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           You can offer to serve as a verifier. You'll keep contributing as now; an administrator will
           review and confirm elder standing.
         </div>
-        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="requestVerifierRole()">Offer to serve as a verifier</button>
+        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="lockBtn(event, () => requestVerifierRole())">Offer to serve as a verifier</button>
       </div>
       <div id="verifierOfferPending" style="display:none">
         <div style="font-size:13px;line-height:1.55;color:#8a6d1b">
           <strong>Your offer to verify has been recorded.</strong> An administrator will review it and
           confirm elder standing. Thank you for offering your discernment to the tradition.
         </div>
-        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="withdrawVerifierRequest()">Withdraw the offer</button>
+        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:10px" onclick="lockBtn(event, () => withdrawVerifierRequest())">Withdraw the offer</button>
       </div>
     </div>
 
@@ -1372,6 +1374,43 @@ let isAuthed = false;      // true only after a confirmed superadmin session
 
 /* ── Helpers ───────────────────────────────────────────────── */
 const $ = (id) => document.getElementById(id);
+
+/* ── Button lock: prevents double-clicks and shows a loader ──────────
+ *  Wrap any button-triggered async action. It disables the button, shows a
+ *  spinner in place of its label, runs the action, and ALWAYS restores the
+ *  button afterward (even on error). The button is found from the current DOM
+ *  event (inline onclick) or can be passed explicitly.
+ *
+ *  Usage in an inline handler:   onclick="lockBtn(event, () => doThing())"
+ *  Or wrap an existing handler:  btn.onclick = () => lockBtn(btn, () => doThing());
+ */
+function _btnFrom(ref) {
+  if (ref && ref.nodeType === 1 && ref.tagName === "BUTTON") return ref;      // a button element
+  if (ref && ref.target) return ref.target.closest("button");                // an event
+  if (ref && ref.currentTarget) return ref.currentTarget.closest?.("button");
+  return null;
+}
+async function lockBtn(ref, action) {
+  const btn = _btnFrom(ref);
+  if (!btn) { return action(); }             // no button to lock — just run it
+  if (btn.dataset.locked === "1") return;    // already running → ignore double-click
+  btn.dataset.locked = "1";
+  const prevHtml = btn.innerHTML;
+  const prevWidth = btn.offsetWidth;
+  btn.disabled = true;
+  // Keep width stable so the layout doesn't jump when the label becomes a spinner.
+  btn.style.minWidth = prevWidth + "px";
+  btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>';
+  try {
+    return await action();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = prevHtml;
+    btn.style.minWidth = "";
+    delete btn.dataset.locked;
+  }
+}
+
 function toast(msg, isErr) {
   const t = $("toast");
   t.textContent = msg; t.className = "show" + (isErr ? " err" : "");
@@ -2436,7 +2475,7 @@ async function loadUsers() {
       const emailBtn = document.createElement("button");
       emailBtn.className = "btn btn-ghost btn-sm";
       emailBtn.textContent = "Save email";
-      emailBtn.onclick = () => setUserEmail(u.id, emailInput.value.trim(), u.username);
+      emailBtn.onclick = () => lockBtn(emailBtn, () => setUserEmail(u.id, emailInput.value.trim(), u.username));
       emailRow.appendChild(document.createTextNode("✉"));
       emailRow.appendChild(emailInput);
       emailRow.appendChild(emailBtn);
@@ -2459,13 +2498,13 @@ async function loadUsers() {
       const resetBtn = document.createElement("button");
       resetBtn.className = "btn btn-ghost btn-sm";
       resetBtn.textContent = "Reset password";
-      resetBtn.onclick = () => resetUserPassword(u.id, u.username);
+      resetBtn.onclick = () => lockBtn(resetBtn, () => resetUserPassword(u.id, u.username));
       actions.appendChild(resetBtn);
 
       const toggleBtn = document.createElement("button");
       toggleBtn.className = "btn btn-ghost btn-sm";
       toggleBtn.textContent = u.disabled ? "Enable" : "Disable";
-      toggleBtn.onclick = () => setUserDisabled(u.id, !u.disabled, u.username);
+      toggleBtn.onclick = () => lockBtn(toggleBtn, () => setUserDisabled(u.id, !u.disabled, u.username));
       if (isSelf) toggleBtn.disabled = true;
       actions.appendChild(toggleBtn);
 
@@ -2473,7 +2512,7 @@ async function loadUsers() {
       delBtn.className = "btn btn-sm";
       delBtn.style.cssText = "background:#fbeaea;color:#c0392b";
       delBtn.textContent = "Delete";
-      delBtn.onclick = () => deleteUser(u.id, u.username);
+      delBtn.onclick = () => lockBtn(delBtn, () => deleteUser(u.id, u.username));
       if (isSelf) delBtn.disabled = true;
       actions.appendChild(delBtn);
 
@@ -2688,7 +2727,7 @@ async function loadAllVerses(page) {
         reopenBtn.className = "btn btn-sm";
         reopenBtn.style.cssText = "background:#fff4e6;color:#b8860b";
         reopenBtn.textContent = "Re-open to correct";
-        reopenBtn.onclick = () => reopenVerse(v.id, v.odu);
+        reopenBtn.onclick = () => lockBtn(reopenBtn, () => reopenVerse(v.id, v.odu));
         actions.appendChild(reopenBtn);
       }
       card.appendChild(actions);
@@ -2907,7 +2946,7 @@ async function openVerifyDetail(verseId) {
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
         '<span style="font-weight:600;font-size:13px">Verse text:</span>' + statusChip(v.verseStatus) +
         (verseVerified ? '' :
-          '<button class="btn btn-green btn-sm" onclick="verifyPart(\'verse\',null)">Verify verse</button>' +
+          '<button class="btn btn-green btn-sm" onclick="lockBtn(event, () => verifyPart(\'verse\',null))">Verify verse</button>' +
           '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'verse\')">Send back</button>') +
       '</div>' +
       '<div id="sb-verse" style="display:none;margin-top:8px"></div>' +
@@ -2927,7 +2966,7 @@ async function openVerifyDetail(verseId) {
         '<div style="font-size:13px;line-height:1.6;white-space:pre-wrap">' + escapeHtml(it.text || "") + '</div>' +
         (done ? '' :
           '<div style="margin-top:8px;display:flex;gap:8px">' +
-            '<button class="btn btn-green btn-sm" onclick="verifyPart(\'interp\',\'' + oriEnc + '\')">Verify this</button>' +
+            '<button class="btn btn-green btn-sm" onclick="lockBtn(event, () => verifyPart(\'interp\',\'' + oriEnc + '\'))">Verify this</button>' +
             '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'' + oriEnc + '\')">Send back</button>' +
           '</div>' +
           '<div id="sb-' + oriEnc + '" style="display:none;margin-top:8px"></div>') +
@@ -2972,7 +3011,7 @@ function toggleSendBack(target) {
     '<textarea id="sbtext-' + target + '" rows="2" placeholder="What should the contributor revise about ' + escapeHtml(label) + '?" ' +
       'style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--line,#d9e4dc);border-radius:6px;font-size:13px;font-family:inherit"></textarea>' +
     '<div style="display:flex;gap:8px;margin-top:6px">' +
-      '<button class="btn btn-green btn-sm" onclick="submitSendBack(\'' + target + '\')">Send back with note</button>' +
+      '<button class="btn btn-green btn-sm" onclick="lockBtn(event, () => submitSendBack(\'' + target + '\'))">Send back with note</button>' +
       '<button class="btn btn-ghost btn-sm" onclick="toggleSendBack(\'' + target + '\')">Cancel</button>' +
     '</div>';
   box.style.display = "block";
@@ -3666,10 +3705,10 @@ async function refreshInterpList() {
         acts.style.cssText = "display:flex;gap:8px;margin-top:8px";
         const save = document.createElement("button");
         save.className = "btn btn-green btn-sm"; save.textContent = "Save";
-        save.onclick = () => saveInterpretation(it.orientation, row.querySelector("textarea").value, it.text || "");
+        save.onclick = () => lockBtn(save, () => saveInterpretation(it.orientation, row.querySelector("textarea").value, it.text || ""));
         const del = document.createElement("button");
         del.className = "btn btn-ghost btn-sm"; del.textContent = "Remove";
-        del.onclick = () => removeInterpretation(it.orientation);
+        del.onclick = () => lockBtn(del, () => removeInterpretation(it.orientation));
         acts.appendChild(save); acts.appendChild(del);
         row.appendChild(acts);
       } else {
