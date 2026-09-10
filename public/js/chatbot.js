@@ -240,23 +240,11 @@ async function sendMessage(userInput, options = {}) {
   const normalized = message.toLowerCase();
   const trimmed = normalized.trim().replace(/[?!.]+$/, "").trim(); // drop trailing punctuation
 
-  // The topic-index command must be the WHOLE message, not a word inside a
-  // sentence. "help" / "topics" typed alone → show the index. But "how can you
-  // help me?" or "can ifa help solve life problems?" are genuine QUESTIONS that
-  // happen to contain "help" — they must go to the AI for a real answer, never
-  // dump the index. (Earlier substring/word-boundary matching still misfired on
-  // these because they contain "help" as a real word.)
-  const indexCommands = [
-    "help", "help me", "show help", "menu", "topics", "show topics",
-    "list topics", "list", "index", "what can you teach", "what can you teach me",
-    "what topics", "what topics do you have", "show me topics",
-  ];
-  const knowledgeCommands = ["araba", "akoda", "aseda", "ojubona"];
-  const isHelpRequest =
-    indexCommands.includes(trimmed) ||
-    knowledgeCommands.includes(trimmed);
+  // The topic index is now a visible "Browse topics" button, not a typed
+  // command — so the text box is ONLY for questions. This removes the whole
+  // class of "a sentence containing 'help'/'topics' dumped the index" bugs.
 
-  const nonLogCommands  = ["help", "araba", "akoda", "aseda", "ojubona"];
+  const nonLogCommands  = ["araba", "akoda", "aseda", "ojubona"];
   const shouldLog       = !nonLogCommands.includes(trimmed);
 
   chatHistory.push({ role: "user", content: message });
@@ -272,11 +260,7 @@ async function sendMessage(userInput, options = {}) {
 
   try {
 
-    if (isHelpRequest) {
-      aiText = getKnowledgeBaseIndex(1, 5, "");
-      source = "Internal";
-
-    } else {
+    {
       const kbResult = checkIfaKnowledgeBase(normalized);
 
       if (kbResult) {
@@ -513,7 +497,23 @@ function updateKnowledgeBase() {
 
 const debouncedUpdateKnowledgeBase = debounce(updateKnowledgeBase, 300);
 
-document.body.innerHTML += getKnowledgeBaseIndex(currentPage);
+// Render the browsable topic index as a bot message in the chat. This is the
+// ONLY way the index appears now — it's a deliberate button action, never a
+// guess from what the user typed. The text box is purely for questions.
+function showTopicsIndex() {
+  const messagesDiv = document.getElementById("chatbot-messages");
+  if (!messagesDiv) return;
+  currentPage = 1; currentSearch = "";
+  const wrapper = document.createElement("div");
+  wrapper.className = "chat-message-wrapper align-left";
+  wrapper.innerHTML =
+    '<div class="chat-message bot-message"><span data-translate>Here are the topics — search or tap one:</span></div>' +
+    '<div class="chat-message bot-message">' + getKnowledgeBaseIndex(1, pageSize, "") + '</div>';
+  messagesDiv.appendChild(wrapper);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  if (window.translateDynamicContent) { try { window.translateDynamicContent(wrapper); } catch {} }
+}
+if (typeof window !== "undefined") window.showTopicsIndex = showTopicsIndex;
 
 document.addEventListener("input", (e) => {
     if (e.target.id === "kb-search") {

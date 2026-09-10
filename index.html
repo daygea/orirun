@@ -898,15 +898,19 @@ if (location.protocol !== 'file:') {
     <div id="chatbot-container" class="hidden">
       <div id="chatbot-header">
         <span class="chatbot-title">💬 Orírùn <span data-translate>Learning Corner</span></span>
-        <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
+        <span style="display:flex;gap:6px;align-items:center">
+          <button class="app-btn" id="browse-topics-btn" onclick="showTopicsIndex()" title="Browse all topics"
+            style="font-size:12px;padding:4px 9px"><span data-translate>Browse topics</span></button>
+          <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
+        </span>
       </div>
       <div id="chatbot-messages">
         <div class="chat-message-wrapper align-left">
-          <div class="chat-message bot-message"><span data-translate>Hello.</span></div>
+          <div class="chat-message bot-message"><span data-translate>Hello. Ask me anything about Ifá — or tap “Browse topics” to explore.</span></div>
         </div>
       </div>
       <div id="chatbot-input-container">
-        <textarea id="chatbot-input" data-translate-attr="placeholder" placeholder="Ask a question, or type 'help' to browse topics..."></textarea>
+        <textarea id="chatbot-input" data-translate-attr="placeholder" placeholder="Ask a question about Ifá…"></textarea>
         <button class="queryBtn" id="send-btn" onclick="sendMessage()">➜</button>
       </div>
     </div>
