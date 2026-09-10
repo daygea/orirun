@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
         body: "Choose any number from 1–9 to instantly explore its Àṣẹ (divine energy) — its essence, personality traits, and spiritual associations within Yorùbá wisdom.",
         tabForMobile: "numerology", methodForMobile: "picknum" },
       { target: "#chatbot-toggle", title: "Learning Corner",
-        body: "Have questions about Ifá, Orishas, or Yorùbá spirituality? Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. You can also type <b>Help</b> in the chat to see the resources available." },
+        body: "Have questions about Ifá, Orishas, or Yorùbá spirituality? Open the Learning Corner chatbot — your interactive guide to ancestral wisdom. Ask anything in your own words, or tap <b>Browse topics</b> to explore the resources available." },
       { target: "#tour-guidance-link", title: "Today's Guidance",
         body: "Tap here any time to receive your personalised daily guidance — rooted in your numerology, your Orisha alignment, and the energy of the current hour." },
       { target: "#or-cast-link", title: "Today's Ifa Wisdom",
