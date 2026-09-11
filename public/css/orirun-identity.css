@@ -573,6 +573,14 @@ body.bg-ready::before { opacity: 1; }
   box-shadow: 0 18px 44px rgba(15,45,30,.26) !important;
   background: #fffef9 !important;
 }
+/* Roomier than the old 360×420 so guidance is read comfortably — desktop only;
+   the mobile query (full-width, 50vh) keeps its own treatment. */
+@media (min-width: 769px) {
+  #chatbot-container {
+    width: 420px !important;
+    height: min(560px, calc(100vh - 120px)) !important;
+  }
+}
 
 /* Header: solid green band, serif title, matching the app identity */
 #chatbot-header {
@@ -620,6 +628,67 @@ body.bg-ready::before { opacity: 1; }
   color: #1b2a1f !important;
   border: 1px solid rgba(20,40,30,.12) !important;
 }
+
+/* ── Provenance: distinguish the tradition's recorded words from the guide's
+   synthesis, so a seeker knows what they're reading. ─────────────────── */
+.msg-source {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  margin: -2px 0 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(20,40,30,.08);
+  display: flex; align-items: center; gap: 5px;
+}
+.msg-source-curated { color: #0f7b3d; }
+.msg-source-curated::before { content: "🧿"; font-size: 12px; }
+.msg-source-ai { color: #8a7320; }
+.msg-source-ai::before { content: "✦"; font-size: 12px; }
+/* A curated answer carries a subtle gold edge — it is the recorded tradition. */
+.chat-message.msg-curated { border-left: 3px solid #b8860b !important; }
+
+/* ── Rich answers: give guidance room to breathe and clear hierarchy.
+   The bot bubble can go wider than a plain chat line for readable prose. ── */
+.chat-message.bot-message { max-width: 88% !important; }
+.chat-message.bot-message p { margin: 0 0 9px; line-height: 1.62; }
+.chat-message.bot-message p:last-child { margin-bottom: 0; }
+.chat-message.bot-message h1,
+.chat-message.bot-message h2,
+.chat-message.bot-message h3 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  color: #0b3d22; margin: 12px 0 5px; line-height: 1.25;
+}
+.chat-message.bot-message h1 { font-size: 16px; }
+.chat-message.bot-message h2 { font-size: 15px; }
+.chat-message.bot-message h3 { font-size: 13.5px; }
+.chat-message.bot-message ul { margin: 6px 0 9px; padding-left: 20px; }
+.chat-message.bot-message li { margin-bottom: 4px; line-height: 1.55; }
+.chat-message.bot-message strong { color: #0b3d22; }
+.chat-message.bot-message blockquote {
+  margin: 8px 0; padding: 6px 12px;
+  border-left: 3px solid #cfe0d4; background: #f4f8f4;
+  border-radius: 0 8px 8px 0; font-style: italic; color: #3a5443;
+}
+.chat-message.bot-message code {
+  background: #eef3ee; padding: 1px 5px; border-radius: 4px; font-size: 12.5px;
+}
+
+/* ── Topics index: keep it compact so it doesn't dominate the chat. ────── */
+.topics-bubble { max-width: 95% !important; padding: 10px 12px !important; }
+.topics-heading {
+  font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+  color: #0f7b3d; margin-bottom: 6px;
+}
+.topics-bubble .kb-search { margin: 0 0 8px !important; padding: 7px 9px !important; font-size: 13px !important; }
+.topics-bubble .kb-item {
+  padding: 6px 9px !important; margin-bottom: 4px !important; font-size: 13px !important;
+  background: #f6f8f5 !important; border: 1px solid #e4ece0 !important; border-radius: 7px !important;
+}
+.topics-bubble .kb-item:hover { background: #eaf4ec !important; }
+.topics-bubble .kb-pagination { margin: 8px 0 0 !important; gap: 4px !important; }
+.topics-bubble .kb-page-info { font-size: 11px !important; opacity: .7; }
+.topics-bubble .kb-page-btn { min-width: 26px !important; height: 26px !important; font-size: 12px !important; }
 
 /* Input area + textarea */
 #chatbot-input-container {

@@ -291,8 +291,14 @@ async function sendMessage(userInput, options = {}) {
 
     // botWrapper.innerHTML = `<div class="chat-message bot-message">${aiText}</div>`;
     const _msgId = 'botmsg_' + Date.now();
+    // Mark provenance so a seeker can tell the tradition's own recorded words
+    // (curated / verified) from the AI's synthesis. Styled distinctly in CSS.
+    const _srcClass = source === "Internal" ? "msg-curated" : "msg-ai";
+    const _srcLabel = source === "Internal"
+      ? '<div class="msg-source msg-source-curated"><span data-translate>From Orírùn\'s recorded knowledge</span></div>'
+      : '<div class="msg-source msg-source-ai"><span data-translate>Interpreted by Orírùn\'s guide</span></div>';
     botWrapper.innerHTML =
-      `<div class="chat-message bot-message" id="${_msgId}">${aiText}</div>` +
+      `<div class="chat-message bot-message ${_srcClass}" id="${_msgId}">${_srcLabel}${aiText}</div>` +
       `<button class="report-btn" onclick="reportChatMessage('${_msgId}')" ` +
       `style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;margin:2px 0 8px 4px;">⚐ <span data-translate>Report</span></button>`;
 
@@ -402,7 +408,6 @@ function checkIfaKnowledgeBase(userMessage) {
 }
 
 const pageSize = 5;
-let currentSearch = "";
 
 function highlightMatch(text, searchTerm) {
     if (!searchTerm) return text;
@@ -458,8 +463,8 @@ function getKnowledgeBaseIndex(page = 1, pageSizeLocal = pageSize, searchTerm = 
       </div>` : "";
 
     return `
-        <div class="kb-index">
-            <input type="text" id="kb-search" placeholder="🔍 Search topics..." data-translate-attr="placeholder" value="${searchTerm}" />
+        <div class="kb-index" data-page="${page}" data-search="${searchTerm.replace(/"/g, "&quot;")}">
+            <input type="text" class="kb-search" placeholder="🔍 Search topics..." data-translate-attr="placeholder" value="${searchTerm.replace(/"/g, "&quot;")}" />
             <div class="kb-list">${listHtml || "<p data-translate>No topics match your search.</p>"}</div>
             ${paginationHtml}
         </div>`;
@@ -474,69 +479,81 @@ function debounce(func, wait) {
     };
 }
 
-function updateKnowledgeBase() {
-    const kbIndexContainer = document.querySelector(".kb-index");
-    if (!kbIndexContainer) return;
-    const searchInput = document.querySelector("#kb-search");
-    if (searchInput) {
-        currentSearch = searchInput.value;
-        const cursorPosition = searchInput.selectionStart;
-        const hasFocus = document.activeElement === searchInput;
-        kbIndexContainer.outerHTML = getKnowledgeBaseIndex(currentPage, pageSize, currentSearch);
-        if (hasFocus) {
-            const newSearchInput = document.querySelector("#kb-search");
-            if (newSearchInput) {
-                newSearchInput.focus();
-                newSearchInput.setSelectionRange(cursorPosition, cursorPosition);
-            }
-        }
-    } else {
-        kbIndexContainer.outerHTML = getKnowledgeBaseIndex(currentPage, pageSize, currentSearch);
+// Re-render ONE specific index block in place, from its own page/search state
+// (stored on the element). This makes every index self-contained — multiple
+// index blocks in the chat each paginate and search independently, instead of
+// a global querySelector always driving only the first one.
+function _renderIndexInto(kbEl, page, search) {
+    if (!kbEl) return;
+    const wasFocused = kbEl.querySelector(".kb-search") === document.activeElement;
+    const caret = wasFocused ? kbEl.querySelector(".kb-search").selectionStart : null;
+    // Replace just this block's HTML with a freshly rendered one.
+    const holder = document.createElement("div");
+    holder.innerHTML = getKnowledgeBaseIndex(page, pageSize, search);
+    const fresh = holder.firstElementChild;
+    kbEl.replaceWith(fresh);
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(fresh); } catch {} }
+    if (wasFocused) {
+        const inp = fresh.querySelector(".kb-search");
+        if (inp) { inp.focus(); try { inp.setSelectionRange(caret, caret); } catch {} }
     }
+    return fresh;
 }
 
-const debouncedUpdateKnowledgeBase = debounce(updateKnowledgeBase, 300);
+// Debounced per-element search (keyed by element so concurrent indexes don't
+// clobber each other's timers).
+const _kbSearchTimers = new WeakMap();
+function _debouncedSearch(kbEl, search) {
+    clearTimeout(_kbSearchTimers.get(kbEl));
+    _kbSearchTimers.set(kbEl, setTimeout(() => {
+        _renderIndexInto(kbEl, 1, search);
+    }, 300));
+}
 
 // Render the browsable topic index as a bot message in the chat. This is the
-// ONLY way the index appears now — it's a deliberate button action, never a
-// guess from what the user typed. The text box is purely for questions.
+// ONLY way the index appears now — a deliberate button action.
 function showTopicsIndex() {
   const messagesDiv = document.getElementById("chatbot-messages");
   if (!messagesDiv) return;
-  currentPage = 1; currentSearch = "";
   const wrapper = document.createElement("div");
   wrapper.className = "chat-message-wrapper align-left";
   wrapper.innerHTML =
-    '<div class="chat-message bot-message"><span data-translate>Here are the topics — search or tap one:</span></div>' +
-    '<div class="chat-message bot-message">' + getKnowledgeBaseIndex(1, pageSize, "") + '</div>';
+    '<div class="chat-message bot-message topics-bubble">' +
+      '<div class="topics-heading" data-translate>Topics — search or tap one</div>' +
+      getKnowledgeBaseIndex(1, pageSize, "") +
+    '</div>';
   messagesDiv.appendChild(wrapper);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
   if (window.translateDynamicContent) { try { window.translateDynamicContent(wrapper); } catch {} }
 }
 if (typeof window !== "undefined") window.showTopicsIndex = showTopicsIndex;
 
+// Search input — operate on the index block the input belongs to.
 document.addEventListener("input", (e) => {
-    if (e.target.id === "kb-search") {
-        currentSearch = e.target.value;
-        currentPage = 1;
-        debouncedUpdateKnowledgeBase();
+    if (e.target.classList && e.target.classList.contains("kb-search")) {
+        const kbEl = e.target.closest(".kb-index");
+        if (kbEl) _debouncedSearch(kbEl, e.target.value);
     }
 });
 
+// Pagination — operate on the index block the button belongs to.
 document.addEventListener("click", (e) => {
     const btn = e.target.closest(".kb-page-btn");
     if (btn) {
-        currentPage = parseInt(btn.dataset.page, 10);
-        updateKnowledgeBase();
+        const kbEl = btn.closest(".kb-index");
+        if (kbEl) {
+            const search = kbEl.getAttribute("data-search") || "";
+            _renderIndexInto(kbEl, parseInt(btn.dataset.page, 10) || 1, search);
+        }
     }
 });
 
+// Enter in a search box — search that block immediately.
 document.addEventListener("keydown", (e) => {
-    if (e.target.id === "kb-search" && e.key === "Enter") {
+    if (e.target.classList && e.target.classList.contains("kb-search") && e.key === "Enter") {
         e.preventDefault();
-        currentSearch = e.target.value;
-        currentPage = 1;
-        updateKnowledgeBase();
+        const kbEl = e.target.closest(".kb-index");
+        if (kbEl) _renderIndexInto(kbEl, 1, e.target.value);
     }
 });
 
