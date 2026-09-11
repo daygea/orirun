@@ -898,11 +898,7 @@ if (location.protocol !== 'file:') {
     <div id="chatbot-container" class="hidden">
       <div id="chatbot-header">
         <span class="chatbot-title">💬 Orírùn <span data-translate>Learning Corner</span></span>
-        <span style="display:flex;gap:6px;align-items:center">
-          <button class="app-btn" id="browse-topics-btn" onclick="showTopicsIndex()" title="Browse all topics"
-            style="font-size:12px;padding:4px 9px"><span data-translate>Browse topics</span></button>
-          <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
-        </span>
+        <button class="app-btn chatbot-close" onclick="toggleChatbot()"><span data-translate>Close</span>✕</button>
       </div>
       <div id="chatbot-messages">
         <div class="chat-message-wrapper align-left">
@@ -910,6 +906,8 @@ if (location.protocol !== 'file:') {
         </div>
       </div>
       <div id="chatbot-input-container">
+        <button type="button" id="browse-topics-btn" onclick="showTopicsIndex()" title="Browse all topics"
+          style="flex:0 0 auto;align-self:center;background:#eef7f0;color:#0f7b3d;border:1px solid #cfe6d6;border-radius:14px;font-size:11px;font-weight:600;padding:6px 9px;cursor:pointer;white-space:nowrap;line-height:1">📖 <span data-translate>Topics</span></button>
         <textarea id="chatbot-input" data-translate-attr="placeholder" placeholder="Ask a question about Ifá…"></textarea>
         <button class="queryBtn" id="send-btn" onclick="sendMessage()">➜</button>
       </div>
