@@ -835,6 +835,14 @@ function offerNotificationAfterDivination() {
   const resultEl = document.getElementById("divinationResult");
   if (!resultEl) return;
 
+  // Don't show this banner if the footer already presents the daily-guidance
+  // control in ANY form — a toggle switch, or (on iOS/blocked browsers) an
+  // explanatory message. Checking only for a [role=switch] missed those cases,
+  // so on iOS or when notifications are blocked the seeker saw TWO prompts. If
+  // the footer slot has rendered anything, it is the canonical control.
+  const footerToggle = document.getElementById("notif-toggle-slot");
+  if (footerToggle && footerToggle.children.length > 0) return;
+
   /* Small delay so the reading result renders first */
   setTimeout(() => {
     /* Don't stack if banner already exists */
