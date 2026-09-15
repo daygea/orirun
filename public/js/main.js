@@ -575,6 +575,9 @@ async function fetchFreeOdus() {
     } else {
       throw new Error("Invalid response format");
     }
+    // The dashboard-controlled global paywall switch. Default false (open /
+    // donation model) so nothing changes unless a superadmin turns it on.
+    window.__PAYWALL_ENABLED__ = data.paywallEnabled === true;
   } catch (error) {
     console.error("Failed to fetch freeOdus:", error);
     freeOdus = ["Ejiogbe", "Osa Owonrin"];
@@ -1335,10 +1338,10 @@ const performUserDivination = async (
       freeOdus.includes(mainCast) ||
       isOduPaid(mainCast, orientation, specificOrientation, solution, solutionDetails);
 
-    // Donation model: the full reading is open to everyone and payment is a
-    // voluntary donation ("Donate Now"). Set OPEN_ACCESS to false to restore
-    // the original paywall — the teaser branch below is intact and current.
-    const OPEN_ACCESS = true;
+    // Open access when the dashboard paywall switch is OFF (the default). When a
+    // superadmin turns the paywall ON, only free Odù (freeOdus) and already-paid
+    // readings pass — everything else hits the teaser/lock below.
+    const OPEN_ACCESS = (window.__PAYWALL_ENABLED__ !== true);
 
     if (OPEN_ACCESS || hasAccess) {
       const tip = (text) =>

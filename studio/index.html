@@ -914,6 +914,28 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
       <div id="setPracticalNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
     </div>
+
+    <!-- Payments & access -->
+    <div class="panel">
+      <h3>Payments &amp; access</h3>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">
+        <input type="checkbox" id="setPaywall" onchange="savePaywall()" style="width:18px;height:18px;cursor:pointer">
+        <span>Require payment for readings (paywall)</span>
+      </label>
+      <div style="font-size:12px;opacity:.7;margin-top:3px;max-width:80ch">
+        <strong>Off</strong> (default): every reading is open, with a voluntary “Donate” option. <strong>On</strong>: readings are locked until paid — except the free Odù listed below, which stay open. You remain in full control of where the line sits.
+      </div>
+      <div id="setPaywallNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+
+      <div id="freeOduWrap" style="margin-top:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Free Odù <span style="font-weight:400;opacity:.6">— always open, even when the paywall is on</span></div>
+        <div style="font-size:12px;opacity:.7;margin-bottom:6px;max-width:80ch">One Odù name per line (exactly as they appear in the corpus). Any Odù not listed here is paid when the paywall is on.</div>
+        <textarea id="setFreeOdus" rows="5" placeholder="Ejiogbe&#10;Osa Owonrin"
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;line-height:1.6;font-family:inherit"></textarea>
+        <button class="btn btn-green btn-sm" type="button" style="margin-top:8px" onclick="lockBtn(event, () => saveFreeOdus())">Save free Odù list</button>
+        <div id="setFreeOdusNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+      </div>
+    </div>
   </section>
 
   <section class="ops" id="area-authoring" aria-label="My verses" style="display:none">
@@ -4578,6 +4600,15 @@ async function loadSettings() {
       $("setShowPractical").checked = !!settings.showPracticalToSeekers.value;
       $("setPracticalNote").textContent = settings.showPracticalToSeekers.value ? "Seekers currently see practical notes." : "Hidden from seekers (practitioners still see them).";
     }
+    if ($("setPaywall") && settings.paywallEnabled) {
+      $("setPaywall").checked = !!settings.paywallEnabled.value;
+      $("setPaywallNote").textContent = settings.paywallEnabled.value
+        ? "Paywall ON — readings are paid except the free Odù below."
+        : "Paywall OFF — all readings open (donation model).";
+      const fw = $("freeOduWrap");
+      if (fw) fw.style.opacity = settings.paywallEnabled.value ? "1" : ".6";
+    }
+    loadFreeOdus();
   } catch { /* leave as-is */ }
 }
 async function _saveSettings(patch, okMsg) {
@@ -4610,6 +4641,38 @@ function saveLegacyLogin() {
 function saveShowPractical() {
   _saveSettings({ showPracticalToSeekers: $("setShowPractical").checked },
     $("setShowPractical").checked ? "Seekers will now see practical notes" : "Practical notes hidden from seekers");
+}
+function savePaywall() {
+  const on = $("setPaywall").checked;
+  _saveSettings({ paywallEnabled: on }, on ? "Paywall ON — readings now require payment (except free Odù)" : "Paywall OFF — all readings open");
+  if ($("setPaywallNote")) $("setPaywallNote").textContent = on
+    ? "Paywall ON — readings are paid except the free Odù below."
+    : "Paywall OFF — all readings open (donation model).";
+  const fw = $("freeOduWrap"); if (fw) fw.style.opacity = on ? "1" : ".6";
+}
+async function loadFreeOdus() {
+  try {
+    const res = await fetch(API_BASE + "/api/free-odus", { credentials: "include", cache: "no-store" });
+    if (!res.ok) return;
+    const d = await res.json();
+    if ($("setFreeOdus") && Array.isArray(d.freeOdus)) $("setFreeOdus").value = d.freeOdus.join("\n");
+  } catch { /* non-blocking */ }
+}
+async function saveFreeOdus() {
+  const list = ($("setFreeOdus").value || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  try {
+    const res = await fetch(API_BASE + "/api/admin/free-odus", {
+      method: "PUT", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ freeOdus: list }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Save failed");
+    if ($("setFreeOdusNote")) $("setFreeOdusNote").textContent = list.length + " free Odù saved.";
+    toast("Free Odù list saved");
+  } catch (err) {
+    toast("Couldn't save free Odù: " + err.message, true);
+  }
 }
 async function loadDigestState() {
   try {
