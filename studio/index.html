@@ -35,7 +35,6 @@ html,body{height:100%}
 body{
   font-family:var(--sans);font-size:14px;color:var(--ink);
   background:var(--efun);line-height:1.55;
-  overflow-x:hidden;  /* never allow sideways drag — content fits the width */
 }
 ::selection{background:var(--leaf-soft)}
 button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
@@ -279,10 +278,25 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
    paddings, stacked stat cards, full-width actions, 44px targets. */
 @media (max-width:900px){
   .shell{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr;height:auto;min-height:100vh}
+  /* Hard width discipline on mobile: the shell fills the screen exactly and
+     nothing inside may exceed it. Long unbreakable strings wrap instead of
+     stretching the page; wide blocks (tables) scroll inside themselves. */
+  html,body{overflow-x:hidden;max-width:100%;}
+  .shell{max-width:100vw;overflow-x:hidden;}
+  .ops, .ops > *{max-width:100%;}
+  .ops *{overflow-wrap:anywhere;}
+  .ops pre, .ops table{overflow-x:auto;max-width:100%;display:block;}
   /* The desktop layout pins nav/items/main and the .ops areas to explicit
      grid cells (col/row) to prevent overlap. The mobile layout stacks them,
-     so clear those pins and let them auto-flow into the stacked rows. */
-  .shell > nav, .shell > .items, .shell > main, .ops{grid-column:auto;grid-row:auto}
+     so clear those pins and let them auto-flow into the stacked rows.
+     min-width:0 is ESSENTIAL: a grid child defaults to min-width:auto, which
+     refuses to shrink below its content's intrinsic width — so any wide content
+     (a table, a long string) stretches the cell past the viewport and forces a
+     horizontal drag. min-width:0 lets the cell shrink to the screen; wide
+     content then scrolls inside its own container (see overflow rules below). */
+  .shell > nav, .shell > .items, .shell > main, .ops{
+    grid-column:auto; grid-row:auto; min-width:0; max-width:100%;
+  }
   header{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 12px;gap:6px;position:sticky;top:0;z-index:60}
   nav.area-nav{order:3;width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.area-nav::-webkit-scrollbar{display:none}
@@ -492,12 +506,6 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 
   /* Form labels that were side-by-side stack full width. */
   .ops label[style*="flex-direction:column"]{width:100%}
-
-  /* Toolbar controls with an inline min-width (search/filter rows, combos) can
-     sum wider than a narrow phone and force a horizontal drag. Let them shrink
-     and wrap to the available width instead. */
-  .ops [style*="min-width"]{min-width:0 !important;}
-  .ops .log-tools input[type=search]{min-width:0;}
 
   /* Verify + all-verses + user cards: header/actions stack instead of
      being pushed apart on a narrow screen. */
@@ -920,67 +928,6 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         A verse's practical/ritual notes are always visible to logged-in practitioners. Keep this <strong>off</strong> to hide them from ordinary seekers in a reading; turn it <strong>on</strong> to reveal them to everyone.
       </div>
       <div id="setPracticalNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
-    </div>
-
-    <!-- Payments & access -->
-    <div class="panel">
-      <h3>Payments &amp; access</h3>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">
-        <input type="checkbox" id="setPaywall" onchange="savePaywall()" style="width:18px;height:18px;cursor:pointer">
-        <span>Require payment for readings (paywall)</span>
-      </label>
-      <div style="font-size:12px;opacity:.7;margin-top:3px;max-width:80ch">
-        <strong>Off</strong> (default): every reading is open, with a voluntary “Donate” option. <strong>On</strong>: readings are locked until paid — except the free Odù listed below, which stay open. You remain in full control of where the line sits.
-      </div>
-      <div id="setPaywallNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
-
-      <div style="margin-top:16px">
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;max-width:280px">
-          Price per reading (₦)
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="number" id="setPrice" min="100" step="50"
-              style="flex:1;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
-            <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => savePrice())">Save</button>
-          </div>
-        </label>
-        <div style="font-size:12px;opacity:.7;margin-top:4px;max-width:80ch">
-          What a seeker pays for 24-hour access when a reading is paid. Minimum ₦100. The amount is enforced on the server, so it can't be bypassed.
-        </div>
-        <div id="setPriceNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
-      </div>
-
-      <div style="margin-top:16px;border-top:1px solid var(--line,#eef2ee);padding-top:14px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:6px">International price <span style="font-weight:400;opacity:.6">— for non-Nigerian seekers</span></div>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;max-width:280px">
-          Currency
-          <select id="setIntlCurrency" onchange="_refreshIntlPriceLabel()"
-            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-            <option value="NGN">Naira (₦) — works with any Paystack account</option>
-            <option value="USD">US Dollar ($) — only when your account supports USD</option>
-          </select>
-        </label>
-        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;max-width:280px;margin-top:10px">
-          <span id="setIntlPriceLabel">International price (₦)</span>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="number" id="setPriceIntl" min="1" step="1"
-              style="flex:1;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
-            <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => saveIntlPrice())">Save</button>
-          </div>
-        </label>
-        <div style="font-size:12px;opacity:.7;margin-top:4px;max-width:80ch">
-          What a non-Nigerian seeker pays. Keep currency on <strong>Naira</strong> until your Paystack account is approved for USD charges — switching to USD before then will cause payments to fail.
-        </div>
-        <div id="setPriceIntlNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
-      </div>
-
-      <div id="freeOduWrap" style="margin-top:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Free Odù <span style="font-weight:400;opacity:.6">— always open, even when the paywall is on</span></div>
-        <div style="font-size:12px;opacity:.7;margin-bottom:6px;max-width:80ch">One Odù name per line (exactly as they appear in the corpus). Any Odù not listed here is paid when the paywall is on.</div>
-        <textarea id="setFreeOdus" rows="5" placeholder="Ejiogbe&#10;Osa Owonrin"
-          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;line-height:1.6;font-family:inherit"></textarea>
-        <button class="btn btn-green btn-sm" type="button" style="margin-top:8px" onclick="lockBtn(event, () => saveFreeOdus())">Save free Odù list</button>
-        <div id="setFreeOdusNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
-      </div>
     </div>
   </section>
 
@@ -4646,29 +4593,6 @@ async function loadSettings() {
       $("setShowPractical").checked = !!settings.showPracticalToSeekers.value;
       $("setPracticalNote").textContent = settings.showPracticalToSeekers.value ? "Seekers currently see practical notes." : "Hidden from seekers (practitioners still see them).";
     }
-    if ($("setPaywall") && settings.paywallEnabled) {
-      $("setPaywall").checked = !!settings.paywallEnabled.value;
-      $("setPaywallNote").textContent = settings.paywallEnabled.value
-        ? "Paywall ON — readings are paid except the free Odù below."
-        : "Paywall OFF — all readings open (donation model).";
-      const fw = $("freeOduWrap");
-      if (fw) fw.style.opacity = settings.paywallEnabled.value ? "1" : ".6";
-    }
-    if ($("setPrice") && settings.readingPrice) {
-      $("setPrice").value = Math.round((settings.readingPrice.value || 100000) / 100); // kobo → naira
-    }
-    if ($("setIntlCurrency") && settings.intlCurrency) {
-      $("setIntlCurrency").value = settings.intlCurrency.value || "NGN";
-    }
-    if ($("setPriceIntl") && settings.readingPriceIntl) {
-      const cur = (settings.intlCurrency && settings.intlCurrency.value) || "NGN";
-      // stored in minor units; show major (naira or dollars)
-      $("setPriceIntl").value = (cur === "USD")
-        ? ((settings.readingPriceIntl.value || 0) / 100).toFixed(2)
-        : Math.round((settings.readingPriceIntl.value || 0) / 100);
-    }
-    if (typeof _refreshIntlPriceLabel === "function") _refreshIntlPriceLabel();
-    loadFreeOdus();
   } catch { /* leave as-is */ }
 }
 async function _saveSettings(patch, okMsg) {
@@ -4701,77 +4625,6 @@ function saveLegacyLogin() {
 function saveShowPractical() {
   _saveSettings({ showPracticalToSeekers: $("setShowPractical").checked },
     $("setShowPractical").checked ? "Seekers will now see practical notes" : "Practical notes hidden from seekers");
-}
-function savePaywall() {
-  const on = $("setPaywall").checked;
-  _saveSettings({ paywallEnabled: on }, on ? "Paywall ON — readings now require payment (except free Odù)" : "Paywall OFF — all readings open");
-  if ($("setPaywallNote")) $("setPaywallNote").textContent = on
-    ? "Paywall ON — readings are paid except the free Odù below."
-    : "Paywall OFF — all readings open (donation model).";
-  const fw = $("freeOduWrap"); if (fw) fw.style.opacity = on ? "1" : ".6";
-}
-async function savePrice() {
-  const naira = Math.round(Number($("setPrice").value));
-  if (!Number.isFinite(naira) || naira < 100) {
-    if ($("setPriceNote")) $("setPriceNote").textContent = "Enter at least ₦100.";
-    toast("Price must be at least ₦100", true);
-    return;
-  }
-  const kobo = naira * 100;
-  try {
-    await _saveSettings({ readingPrice: kobo }, "Reading price saved: ₦" + naira.toLocaleString());
-    if ($("setPriceNote")) $("setPriceNote").textContent = "Seekers now pay ₦" + naira.toLocaleString() + " per paid reading.";
-  } catch (err) {
-    toast("Couldn't save price: " + err.message, true);
-  }
-}
-function _refreshIntlPriceLabel() {
-  const cur = $("setIntlCurrency") ? $("setIntlCurrency").value : "NGN";
-  const lbl = $("setIntlPriceLabel");
-  if (lbl) lbl.textContent = cur === "USD" ? "International price ($)" : "International price (₦)";
-}
-async function saveIntlPrice() {
-  const cur = $("setIntlCurrency") ? $("setIntlCurrency").value : "NGN";
-  const major = Number($("setPriceIntl").value);
-  if (!Number.isFinite(major) || major <= 0) {
-    toast("Enter a valid international price", true);
-    return;
-  }
-  // minor units: naira→kobo (×100) or dollars→cents (×100)
-  const minor = Math.round(major * 100);
-  if (minor < 100) { toast("International price is too low", true); return; }
-  try {
-    await _saveSettings({ readingPriceIntl: minor, intlCurrency: cur },
-      "International price saved: " + (cur === "USD" ? "$" + major.toFixed(2) : "₦" + Math.round(major).toLocaleString()));
-    if ($("setPriceIntlNote")) $("setPriceIntlNote").textContent =
-      "Non-Nigerian seekers now pay " + (cur === "USD" ? "$" + major.toFixed(2) : "₦" + Math.round(major).toLocaleString()) + ".";
-  } catch (err) {
-    toast("Couldn't save international price: " + err.message, true);
-  }
-}
-async function loadFreeOdus() {
-  try {
-    const res = await fetch(API_BASE + "/api/free-odus", { credentials: "include", cache: "no-store" });
-    if (!res.ok) return;
-    const d = await res.json();
-    if ($("setFreeOdus") && Array.isArray(d.freeOdus)) $("setFreeOdus").value = d.freeOdus.join("\n");
-  } catch { /* non-blocking */ }
-}
-async function saveFreeOdus() {
-  const list = ($("setFreeOdus").value || "").split("\n").map((s) => s.trim()).filter(Boolean);
-  try {
-    const res = await fetch(API_BASE + "/api/admin/free-odus", {
-      method: "PUT", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ freeOdus: list }),
-    });
-    const d = await res.json();
-    if (!res.ok) throw new Error(d.error || "Save failed");
-    if ($("setFreeOdusNote")) $("setFreeOdusNote").textContent = list.length + " free Odù saved.";
-    toast("Free Odù list saved");
-  } catch (err) {
-    toast("Couldn't save free Odù: " + err.message, true);
-  }
 }
 async function loadDigestState() {
   try {
@@ -5418,6 +5271,5 @@ if (location.protocol === "file:") {
   }
 })();
 </script>
-<script src="/public/js/keyboard-focus.js?v=20260913" defer></script>
 </body>
 </html>
