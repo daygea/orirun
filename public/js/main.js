@@ -578,6 +578,9 @@ async function fetchFreeOdus() {
     // The dashboard-controlled global paywall switch. Default false (open /
     // donation model) so nothing changes unless a superadmin turns it on.
     window.__PAYWALL_ENABLED__ = data.paywallEnabled === true;
+    // Dashboard-controlled reading price (kobo). Backend is the source of truth
+    // and re-checks on verify; this is only for display + the Paystack amount.
+    window.__READING_PRICE__ = Number.isFinite(Number(data.readingPrice)) ? Number(data.readingPrice) : 100000;
   } catch (error) {
     console.error("Failed to fetch freeOdus:", error);
     freeOdus = ["Ejiogbe", "Osa Owonrin"];
@@ -1548,7 +1551,9 @@ const performUserDivination = async (
 
     } else {
       const { isNigeria } = window.APP_GEO || {};
-      const displayAmount = isNigeria ? "N1,000" : "$3";
+      const priceKobo = Number(window.__READING_PRICE__) || 100000;
+      const priceNaira = priceKobo / 100;
+      const displayAmount = isNigeria ? `₦${priceNaira.toLocaleString()}` : "$3";
 
       resultElement.innerHTML = `
         <center>
@@ -1558,7 +1563,7 @@ const performUserDivination = async (
           </h4>
           <br/>
           <button id="payButton" class="btn btn-lg btn-warning"
-            onclick="payForOdu('${mainCast}','${orientation}','${specificOrientation}','${solution}','${solutionDetails}',100000)">
+            onclick="payForOdu('${mainCast}','${orientation}','${specificOrientation}','${solution}','${solutionDetails}',${priceKobo})">
             <span data-translate>Donate Now</span>
           </button>
         </center>`;

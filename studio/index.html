@@ -927,6 +927,21 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       </div>
       <div id="setPaywallNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
 
+      <div style="margin-top:16px">
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;max-width:280px">
+          Price per reading (₦)
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="setPrice" min="100" step="50"
+              style="flex:1;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
+            <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => savePrice())">Save</button>
+          </div>
+        </label>
+        <div style="font-size:12px;opacity:.7;margin-top:4px;max-width:80ch">
+          What a seeker pays for 24-hour access when a reading is paid. Minimum ₦100. The amount is enforced on the server, so it can't be bypassed.
+        </div>
+        <div id="setPriceNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+      </div>
+
       <div id="freeOduWrap" style="margin-top:16px">
         <div style="font-size:13px;font-weight:600;margin-bottom:4px">Free Odù <span style="font-weight:400;opacity:.6">— always open, even when the paywall is on</span></div>
         <div style="font-size:12px;opacity:.7;margin-bottom:6px;max-width:80ch">One Odù name per line (exactly as they appear in the corpus). Any Odù not listed here is paid when the paywall is on.</div>
@@ -4608,6 +4623,9 @@ async function loadSettings() {
       const fw = $("freeOduWrap");
       if (fw) fw.style.opacity = settings.paywallEnabled.value ? "1" : ".6";
     }
+    if ($("setPrice") && settings.readingPrice) {
+      $("setPrice").value = Math.round((settings.readingPrice.value || 100000) / 100); // kobo → naira
+    }
     loadFreeOdus();
   } catch { /* leave as-is */ }
 }
@@ -4649,6 +4667,21 @@ function savePaywall() {
     ? "Paywall ON — readings are paid except the free Odù below."
     : "Paywall OFF — all readings open (donation model).";
   const fw = $("freeOduWrap"); if (fw) fw.style.opacity = on ? "1" : ".6";
+}
+async function savePrice() {
+  const naira = Math.round(Number($("setPrice").value));
+  if (!Number.isFinite(naira) || naira < 100) {
+    if ($("setPriceNote")) $("setPriceNote").textContent = "Enter at least ₦100.";
+    toast("Price must be at least ₦100", true);
+    return;
+  }
+  const kobo = naira * 100;
+  try {
+    await _saveSettings({ readingPrice: kobo }, "Reading price saved: ₦" + naira.toLocaleString());
+    if ($("setPriceNote")) $("setPriceNote").textContent = "Seekers now pay ₦" + naira.toLocaleString() + " per paid reading.";
+  } catch (err) {
+    toast("Couldn't save price: " + err.message, true);
+  }
 }
 async function loadFreeOdus() {
   try {
