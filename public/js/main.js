@@ -2105,10 +2105,6 @@ EXPRESSION LAYER
 - Birthday Gift: ${payload.birthdayGift}
 - Reality: ${payload.reality}
 
-TIMING LAYER (CONTEXT ONLY)
-- Challenge: ${payload.challengeNumber}
-- Year: ${payload.year}, Month: ${payload.month}, Week: ${payload.week}, Day: ${payload.day}
-
 PINNACLE ARC — the life-chapters, past to future${pinnacleArc ? `
 ${pinnacleArc}` : `
 - Pinnacle: ${payload.pinnacleNumber}`}
@@ -2116,7 +2112,6 @@ ${pinnacleArc}` : `
 COSMIC LAYER (SUPPORT ONLY)
 - Zodiac: ${payload.zodiac} (${payload.zodiacElement})
 - Orisha: ${payload.zodiacOrisha}
-- Planetary Hour: ${payload.planetaryHour} (${payload.planetaryOrisha})
 
 If there is conflict, always prioritize CORE IDENTITY.
 
@@ -2139,7 +2134,7 @@ NUMBER USAGE:
 - Speak only in meaning, not calculation.
 
 COSMIC LAYER:
-- Use zodiac, Orisha, and planetary hour only lightly, as support. Never lead with them.
+- Use zodiac and Orisha only lightly, as support. Never lead with them.
 
 STYLE:
 - Grounded, observational, certain — the voice of an elder, not a coach.
@@ -2196,11 +2191,21 @@ ${_writeInLanguage}
 `.trim();
 
   try {
+    // Cache key from the PERMANENT inputs only (name+DOB-derived numbers). The
+    // 8-section reading never changes for a person, so it's cached indefinitely
+    // and reused on every future visit — the AI is called once per person. The
+    // time-varying "today's energies" is a SEPARATE, uncached call (below).
+    const _permCacheKey = [
+      payload.fullName || "", payload.lifepath, payload.destiny, payload.soulUrge,
+      payload.personality, payload.birthdayGift, payload.reality, payload.pinnacleNumber,
+      payload.zodiac, payload.zodiacOrisha,
+    ].join("|");
     const response = await fetch("/api/ai/chat", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({
+        cacheKey: _permCacheKey,
         chatHistory: [
           {
             role: "system",
