@@ -5,7 +5,7 @@ importScripts("https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 // instead of the previously cached ones.
 // CI stamps this on every push to main (date-shortsha). Manual deploys
 // can still edit it by hand; the workflow overwrites it either way.
-const BUILD           = "2026-08-24-media-merged-accordion";
+const BUILD           = "2026-09-13-paywall-cache-fix";
 const APP_SHELL_CACHE = "orirun-shell-v2";
 const RUNTIME_CACHE   = "orirun-runtime-v2";
 const OFFLINE_PAGE    = "./offline.html";
@@ -99,7 +99,10 @@ const CACHEABLE_API = [
   "/api/verses",
   "/api/knowledgebase",
   "/api/ifafigures",
-  "/api/free-odus",
+  // NOTE: /api/free-odus is deliberately NOT cached — it carries live paywall
+  // state (on/off, price) that changes from the dashboard. Serving it from cache
+  // caused seekers to see a stale donate button (or none) after a change. It now
+  // always hits the network.
   "/api/planetary",
   "/api/secure-config",
   "/api/paystack-key"

@@ -561,6 +561,13 @@ async function initGeo() {
 }
 
 let freeOdus = [];
+// Resolves once the paywall state has been fetched at least once. A reading
+// awaits this before deciding access, so it can never render with stale or
+// not-yet-loaded paywall state (the cache/race bug: a paywalled reading leaking
+// free, or a donate button showing after payment was disabled).
+let _paywallReady;
+let _markPaywallReady;
+_paywallReady = new Promise((res) => { _markPaywallReady = res; });
 async function fetchFreeOdus() {
   await serverReady; // wait for config.js server selection
   try {
@@ -583,9 +590,14 @@ async function fetchFreeOdus() {
     window.__READING_PRICE__ = Number.isFinite(Number(data.readingPrice)) ? Number(data.readingPrice) : 100000;
     window.__READING_PRICE_INTL__ = Number.isFinite(Number(data.readingPriceIntl)) ? Number(data.readingPriceIntl) : window.__READING_PRICE__;
     window.__INTL_CURRENCY__ = data.intlCurrency === "USD" ? "USD" : "NGN";
+    window.__PAYWALL_STATE_LOADED__ = true;
   } catch (error) {
     console.error("Failed to fetch freeOdus:", error);
     freeOdus = ["Ejiogbe", "Osa Owonrin"];
+    // Do NOT mark state loaded on failure — the reading will fail-closed
+    // (treat as paywalled) rather than leak a paid reading for free.
+  } finally {
+    if (typeof _markPaywallReady === "function") _markPaywallReady();
   }
   return freeOdus;
 }
@@ -1222,6 +1234,14 @@ const performUserDivination = async (
   const orientationText     = orientation === "Positive" ? "Ire" : "Ayewo";
   const resultElement       = document.getElementById("divinationResult");
 
+  // Ensure the paywall state is current BEFORE deciding access. Re-fetch it now
+  // (cache:"no-store") so a page left open while the paywall/price was changed
+  // in the dashboard uses the latest state — not a stale value. This closes the
+  // cache/race bug where a reading rendered before the state loaded (leaking a
+  // paid reading free) or with an old value (showing a stale donate button).
+  try { await fetchFreeOdus(); } catch { /* fetchFreeOdus handles its own errors */ }
+  await _paywallReady;
+
   // No Odù chosen yet — the field starts empty by design. Prompt for a real
   // selection rather than silently reading a phantom default.
   if (!mainCast) {
@@ -1350,10 +1370,15 @@ const performUserDivination = async (
       freeOdus.includes(mainCast) ||
       isOduPaid(mainCast, orientation, specificOrientation, solution, solutionDetails);
 
-    // Open access when the dashboard paywall switch is OFF (the default). When a
-    // superadmin turns the paywall ON, only free Odù (freeOdus) and already-paid
-    // readings pass — everything else hits the teaser/lock below.
-    const OPEN_ACCESS = (window.__PAYWALL_ENABLED__ !== true);
+    // Access decision. If we have EVER loaded paywall state (even from an earlier
+    // fetch), trust the last-known value. Only if state was NEVER loaded (very
+    // first reading + a network failure) do we fail-closed — treat as paywalled
+    // to avoid leaking a paid reading free. This closes the cache/race bug while
+    // not spuriously locking readings when the paywall is simply off.
+    const _everLoaded = window.__PAYWALL_STATE_LOADED__ === true;
+    const OPEN_ACCESS = _everLoaded
+      ? (window.__PAYWALL_ENABLED__ !== true)   // trust the loaded state
+      : false;                                   // never loaded → fail closed
 
     if (OPEN_ACCESS || hasAccess) {
       const tip = (text) =>
