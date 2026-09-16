@@ -2922,10 +2922,52 @@ async function loadMyHistory() {
     paginationEl.style.display = totalPages <= 1 ? "none" : "flex";
     renderHistoryPage();
 
+    // Gentle, once-only nudge: a seeker with several saved readings who hasn't
+    // created a sync key is one browser-wipe away from losing their history.
+    // Offer to protect it — dismissible, never shown again once acted on.
+    maybeOfferSyncKey(fullHistory.length);
+
   } catch (err) {
     console.error("Failed to load history:", err);
     historyListEl.innerHTML = "<p data-translate>Error loading history.</p>";
   }
+}
+
+// A gentle, dismissible one-time offer to protect history with a sync key.
+// Shows only when: the seeker has several readings, has NOT already made a key,
+// and hasn't dismissed this before. Never nags — one appearance, then silent.
+function maybeOfferSyncKey(count) {
+  try {
+    if ((count || 0) < 3) return;                                  // only for engaged seekers
+    if (localStorage.getItem("syncToken")) return;                 // already protected
+    if (localStorage.getItem("orirun_synckey_prompt_done")) return; // already offered/dismissed
+    if (document.getElementById("synckey-offer")) return;
+
+    const listEl = document.getElementById("historyList");
+    if (!listEl) return;
+    const bar = document.createElement("div");
+    bar.id = "synckey-offer";
+    bar.style.cssText =
+      "margin:0 0 12px;padding:12px 14px;background:#fbf7ee;border:1px solid #ecdcb8;border-radius:10px;font-size:13px;line-height:1.5;color:#5b4a1e";
+    bar.innerHTML =
+      '<div data-translate>You have several readings saved. Add a phone number or email so you can always get your history back — even after clearing your browser or switching devices. No account or password needed.</div>' +
+      '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button type="button" id="synckey-offer-go" style="background:#0f7b3d;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer" data-translate>Protect my history</button>' +
+        '<button type="button" id="synckey-offer-later" style="background:none;border:none;color:#8a7a4e;font-size:12px;cursor:pointer" data-translate>Not now</button>' +
+      '</div>';
+    listEl.parentNode.insertBefore(bar, listEl);
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(bar); } catch {} }
+
+    document.getElementById("synckey-offer-go").onclick = () => {
+      localStorage.setItem("orirun_synckey_prompt_done", "1");
+      bar.remove();
+      if (typeof openSyncModal === "function") openSyncModal();
+    };
+    document.getElementById("synckey-offer-later").onclick = () => {
+      localStorage.setItem("orirun_synckey_prompt_done", "1");
+      bar.remove();
+    };
+  } catch { /* non-blocking */ }
 }
 
 function normalizeHistory(logs) {

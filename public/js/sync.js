@@ -122,6 +122,18 @@ function _buildSyncModal() {
       <p id="syncSaveMsg"
         style="font-size:12px;margin-top:10px;text-align:center;min-height:18px;">
       </p>
+
+      <div style="margin-top:14px;border-top:1px solid #eee;padding-top:14px">
+        <p style="font-size:12.5px;margin:0 0 8px;font-weight:bold;">Easier: protect with your phone or email</p>
+        <p style="font-size:12px;opacity:.7;margin:0 0 8px;">Then you can get your history back just by entering it — no key to remember. Optional; nothing else is sent to you.</p>
+        <input id="syncRecoveryContact" type="text" placeholder="Phone number or email"
+          style="width:100%;box-sizing:border-box;padding:9px 10px;border-radius:8px;border:1px solid #ccc;font-size:13px;font-family:inherit">
+        <button onclick="doSaveRecoveryContact()" class="btn btn-md app-btn"
+          style="width:100%;padding:9px;margin-top:8px;background:#0f7b3d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+          Protect my history
+        </button>
+        <p id="syncRecoveryMsg" style="font-size:12px;margin-top:8px;text-align:center;min-height:18px;"></p>
+      </div>
     </div>
 
     <!-- ── RESTORE PANEL ── -->
@@ -149,6 +161,17 @@ function _buildSyncModal() {
       <p id="syncRestoreMsg"
         style="font-size:12px;margin-top:10px;text-align:center;min-height:18px;">
       </p>
+
+      <div style="margin-top:14px;border-top:1px solid #eee;padding-top:14px">
+        <p style="font-size:12.5px;margin:0 0 8px;font-weight:bold;">Or recover with your phone or email</p>
+        <input id="syncRecoverContactInput" type="text" placeholder="Phone number or email you used"
+          style="width:100%;box-sizing:border-box;padding:9px 10px;border-radius:8px;border:1px solid #ccc;font-size:13px;font-family:inherit">
+        <button onclick="doRecoverByContact()" class="btn btn-md app-btn"
+          style="width:100%;padding:9px;margin-top:8px;background:white;">
+          📥 Recover my history
+        </button>
+        <p id="syncRecoverContactMsg" style="font-size:12px;margin-top:8px;text-align:center;min-height:18px;"></p>
+      </div>
     </div>
 
   </div>
@@ -318,3 +341,48 @@ function _setMsg(el, text, color) {
   el.textContent = text;
   el.style.color = color;
 }
+
+/* ── RECOVERY CONTACT (phone/email) ────────────────────────── */
+async function doSaveRecoveryContact() {
+  const contact = (document.getElementById("syncRecoveryContact")?.value || "").trim();
+  const msg = document.getElementById("syncRecoveryMsg");
+  if (!contact) { _setMsg(msg, "Enter a phone number or email.", "red"); return; }
+  _setMsg(msg, "Saving…", "#0f7b3d");
+  try {
+    const res = await fetch("/api/sync/set-recovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId, contact })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not save");
+    if (data.token) { try { localStorage.setItem("syncToken", data.token); } catch {} }
+    _setMsg(msg, "✅ Your history is protected. You can recover it anytime with your " + (data.type || "contact") + ".", "#0f7b3d");
+  } catch (err) {
+    _setMsg(msg, err.message || "Could not save.", "red");
+  }
+}
+window.doSaveRecoveryContact = doSaveRecoveryContact;
+
+async function doRecoverByContact() {
+  const contact = (document.getElementById("syncRecoverContactInput")?.value || "").trim();
+  const msg = document.getElementById("syncRecoverContactMsg");
+  if (!contact) { _setMsg(msg, "Enter the phone number or email you used.", "red"); return; }
+  _setMsg(msg, "Recovering…", "#0f7b3d");
+  try {
+    const res = await fetch("/api/sync/recover-by-contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId, contact })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Recovery failed");
+    if (data.token) { try { localStorage.setItem("syncToken", data.token); } catch {} }
+    _setMsg(msg, `✅ Found ${data.readings || 0} readings. Restoring…`, "#0f7b3d");
+    if (typeof loadMyHistory === "function") { try { loadMyHistory(); } catch {} }
+    setTimeout(() => { if (typeof closeSyncModal === "function") closeSyncModal(); }, 1200);
+  } catch (err) {
+    _setMsg(msg, err.message || "Recovery failed.", "red");
+  }
+}
+window.doRecoverByContact = doRecoverByContact;

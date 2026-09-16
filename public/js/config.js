@@ -29,7 +29,76 @@ function getOrCreateDeviceId() {
   return deviceId;
 }
 
-const deviceId = getOrCreateDeviceId();
+/* ── IndexedDB layer: a THIRD store for the device id ────────────────
+   A "clear cache" often wipes cached files but leaves IndexedDB intact, so
+   keeping the id here too lets it survive clears that erase the cookie and
+   localStorage. IndexedDB is async, so the id is generated synchronously above
+   (fast path) and reconciled with IndexedDB just after: if the cookie+LS were
+   wiped but IndexedDB still holds the ORIGINAL id, we recover it, re-heal the
+   cookie/LS, and reload history under the recovered id. */
+const _IDB = { name: "orirun_id", store: "kv", key: "deviceId" };
+function _idbGet() {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(_IDB.name, 1);
+      req.onupgradeneeded = () => { try { req.result.createObjectStore(_IDB.store); } catch {} };
+      req.onerror = () => resolve(null);
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(_IDB.store)) return resolve(null);
+          const tx = db.transaction(_IDB.store, "readonly");
+          const g = tx.objectStore(_IDB.store).get(_IDB.key);
+          g.onsuccess = () => resolve(g.result || null);
+          g.onerror = () => resolve(null);
+        } catch { resolve(null); }
+      };
+    } catch { resolve(null); }
+  });
+}
+function _idbSet(value) {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(_IDB.name, 1);
+      req.onupgradeneeded = () => { try { req.result.createObjectStore(_IDB.store); } catch {} };
+      req.onerror = () => resolve(false);
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          const tx = db.transaction(_IDB.store, "readwrite");
+          tx.objectStore(_IDB.store).put(value, _IDB.key);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch { resolve(false); }
+      };
+    } catch { resolve(false); }
+  });
+}
+
+let deviceId = getOrCreateDeviceId();
+
+// Async reconcile with IndexedDB. Runs once at startup; recovers the original
+// id if the faster stores were cleared but IndexedDB survived.
+(async function _reconcileDeviceId() {
+  try {
+    const stored = await _idbGet();
+    if (!stored) {
+      // First time (or IDB was also cleared) → persist the current id for future.
+      await _idbSet(deviceId);
+      return;
+    }
+    if (stored === deviceId) return; // all in sync
+    // IndexedDB has a DIFFERENT (original) id → cookie+LS had been wiped and we
+    // generated a new one. Prefer the recovered original so history is retained.
+    deviceId = stored;
+    try { localStorage.setItem("orirun_device_backup", stored); } catch {}
+    document.cookie = `orirun_device_id=${stored}; path=/; max-age=${60*60*24*365*20}; SameSite=Lax`;
+    window.deviceId = stored;
+    // Reload history under the recovered id, if the app is ready for it.
+    if (typeof window.loadMyHistory === "function") { try { window.loadMyHistory(); } catch {} }
+    window.dispatchEvent(new CustomEvent("orirun:deviceIdRecovered", { detail: { deviceId: stored } }));
+  } catch { /* best-effort — never block startup */ }
+})();
 
 /* ─────────────────────────────────────────────────────────────
  *  ENVIRONMENT FLAGS
