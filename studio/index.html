@@ -278,11 +278,11 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
    paddings, stacked stat cards, full-width actions, 44px targets. */
 @media (max-width:900px){
   .shell{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr;height:auto;min-height:100vh}
-  /* Hard width discipline on mobile: the shell fills the screen exactly and
-     nothing inside may exceed it. Long unbreakable strings wrap instead of
-     stretching the page; wide blocks (tables) scroll inside themselves. */
-  html,body{overflow-x:hidden;max-width:100%;}
-  .shell{max-width:100vw;overflow-x:hidden;}
+  /* Width discipline on mobile: children shrink to fit (min-width:0 below) and
+     wide blocks scroll inside themselves — so nothing overflows the screen in
+     the first place. We deliberately do NOT set overflow-x:hidden on html/body,
+     because that also disables pinch-zoom (the manual fit-to-screen gesture) and
+     can clip the horizontally-scrolling tab strip. */
   .ops, .ops > *{max-width:100%;}
   .ops *{overflow-wrap:anywhere;}
   .ops pre, .ops table{overflow-x:auto;max-width:100%;display:block;}
@@ -298,7 +298,15 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     grid-column:auto; grid-row:auto; min-width:0; max-width:100%;
   }
   header{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 12px;gap:6px;position:sticky;top:0;z-index:60}
-  nav.area-nav{order:3;width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  /* The right group (db badge, who-am-i, Refresh, Sign out) must WRAP, not run
+     off the right edge — Refresh was being cut off. Let it flow full-width and
+     wrap under the logo on a narrow screen. */
+  header .right{margin-left:0;width:100%;flex-wrap:wrap;justify-content:flex-start;gap:8px;order:2}
+  header .right .btn{flex:0 0 auto;min-height:38px}
+  /* The area tabs scroll horizontally in their own strip. Force this to be an
+     independent scroll container so an ancestor's overflow-x:hidden can't clip
+     it — this is why Settings (a later tab) became unreachable. */
+  nav.area-nav{order:3;width:100%;max-width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto !important;flex-wrap:nowrap;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   nav.area-nav::-webkit-scrollbar{display:none}
   nav.area-nav button{flex:0 0 auto;min-height:40px}
   .shell > nav{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px;-webkit-overflow-scrolling:touch}
