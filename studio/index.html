@@ -942,6 +942,30 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <div id="setPriceNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
       </div>
 
+      <div style="margin-top:16px;border-top:1px solid var(--line,#eef2ee);padding-top:14px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">International price <span style="font-weight:400;opacity:.6">— for non-Nigerian seekers</span></div>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;max-width:280px">
+          Currency
+          <select id="setIntlCurrency" onchange="_refreshIntlPriceLabel()"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+            <option value="NGN">Naira (₦) — works with any Paystack account</option>
+            <option value="USD">US Dollar ($) — only when your account supports USD</option>
+          </select>
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;max-width:280px;margin-top:10px">
+          <span id="setIntlPriceLabel">International price (₦)</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="setPriceIntl" min="1" step="1"
+              style="flex:1;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
+            <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => saveIntlPrice())">Save</button>
+          </div>
+        </label>
+        <div style="font-size:12px;opacity:.7;margin-top:4px;max-width:80ch">
+          What a non-Nigerian seeker pays. Keep currency on <strong>Naira</strong> until your Paystack account is approved for USD charges — switching to USD before then will cause payments to fail.
+        </div>
+        <div id="setPriceIntlNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+      </div>
+
       <div id="freeOduWrap" style="margin-top:16px">
         <div style="font-size:13px;font-weight:600;margin-bottom:4px">Free Odù <span style="font-weight:400;opacity:.6">— always open, even when the paywall is on</span></div>
         <div style="font-size:12px;opacity:.7;margin-bottom:6px;max-width:80ch">One Odù name per line (exactly as they appear in the corpus). Any Odù not listed here is paid when the paywall is on.</div>
@@ -4626,6 +4650,17 @@ async function loadSettings() {
     if ($("setPrice") && settings.readingPrice) {
       $("setPrice").value = Math.round((settings.readingPrice.value || 100000) / 100); // kobo → naira
     }
+    if ($("setIntlCurrency") && settings.intlCurrency) {
+      $("setIntlCurrency").value = settings.intlCurrency.value || "NGN";
+    }
+    if ($("setPriceIntl") && settings.readingPriceIntl) {
+      const cur = (settings.intlCurrency && settings.intlCurrency.value) || "NGN";
+      // stored in minor units; show major (naira or dollars)
+      $("setPriceIntl").value = (cur === "USD")
+        ? ((settings.readingPriceIntl.value || 0) / 100).toFixed(2)
+        : Math.round((settings.readingPriceIntl.value || 0) / 100);
+    }
+    if (typeof _refreshIntlPriceLabel === "function") _refreshIntlPriceLabel();
     loadFreeOdus();
   } catch { /* leave as-is */ }
 }
@@ -4681,6 +4716,30 @@ async function savePrice() {
     if ($("setPriceNote")) $("setPriceNote").textContent = "Seekers now pay ₦" + naira.toLocaleString() + " per paid reading.";
   } catch (err) {
     toast("Couldn't save price: " + err.message, true);
+  }
+}
+function _refreshIntlPriceLabel() {
+  const cur = $("setIntlCurrency") ? $("setIntlCurrency").value : "NGN";
+  const lbl = $("setIntlPriceLabel");
+  if (lbl) lbl.textContent = cur === "USD" ? "International price ($)" : "International price (₦)";
+}
+async function saveIntlPrice() {
+  const cur = $("setIntlCurrency") ? $("setIntlCurrency").value : "NGN";
+  const major = Number($("setPriceIntl").value);
+  if (!Number.isFinite(major) || major <= 0) {
+    toast("Enter a valid international price", true);
+    return;
+  }
+  // minor units: naira→kobo (×100) or dollars→cents (×100)
+  const minor = Math.round(major * 100);
+  if (minor < 100) { toast("International price is too low", true); return; }
+  try {
+    await _saveSettings({ readingPriceIntl: minor, intlCurrency: cur },
+      "International price saved: " + (cur === "USD" ? "$" + major.toFixed(2) : "₦" + Math.round(major).toLocaleString()));
+    if ($("setPriceIntlNote")) $("setPriceIntlNote").textContent =
+      "Non-Nigerian seekers now pay " + (cur === "USD" ? "$" + major.toFixed(2) : "₦" + Math.round(major).toLocaleString()) + ".";
+  } catch (err) {
+    toast("Couldn't save international price: " + err.message, true);
   }
 }
 async function loadFreeOdus() {

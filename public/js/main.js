@@ -581,6 +581,8 @@ async function fetchFreeOdus() {
     // Dashboard-controlled reading price (kobo). Backend is the source of truth
     // and re-checks on verify; this is only for display + the Paystack amount.
     window.__READING_PRICE__ = Number.isFinite(Number(data.readingPrice)) ? Number(data.readingPrice) : 100000;
+    window.__READING_PRICE_INTL__ = Number.isFinite(Number(data.readingPriceIntl)) ? Number(data.readingPriceIntl) : window.__READING_PRICE__;
+    window.__INTL_CURRENCY__ = data.intlCurrency === "USD" ? "USD" : "NGN";
   } catch (error) {
     console.error("Failed to fetch freeOdus:", error);
     freeOdus = ["Ejiogbe", "Osa Owonrin"];
@@ -664,9 +666,16 @@ async function payForOdu(oduName, orientation, specificOrientation, solution, so
     if (!window.APP_GEO?.ready) { alert("Please wait, initializing payment..."); return; }
 
     const { isNigeria, country } = window.APP_GEO;
-    const currency       = "NGN";
-    const paymentAmount  = isNigeria ? amount : 300;
-    const displayAmount  = isNigeria ? `₦${(amount / 100).toLocaleString()}` : "$3";
+    // Domestic (Nigeria) vs. international pricing, both dashboard-editable and
+    // re-checked on the server. International currency is NGN by default (works
+    // with any Paystack account) or USD once the account supports it.
+    const intlCurrency   = window.__INTL_CURRENCY__ === "USD" ? "USD" : "NGN";
+    const currency       = isNigeria ? "NGN" : intlCurrency;
+    const paymentAmount  = isNigeria ? amount : (Number(window.__READING_PRICE_INTL__) || amount);
+    const _fmt = (minor, cur) => cur === "USD"
+      ? `$${(minor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+      : `₦${(minor / 100).toLocaleString()}`;
+    const displayAmount  = isNigeria ? `₦${(amount / 100).toLocaleString()}` : _fmt(paymentAmount, currency);
 
     const keyResponse = await fetch("/api/paystack-key");
     if (!keyResponse.ok) throw new Error("Failed to get Paystack key");
@@ -1553,7 +1562,12 @@ const performUserDivination = async (
       const { isNigeria } = window.APP_GEO || {};
       const priceKobo = Number(window.__READING_PRICE__) || 100000;
       const priceNaira = priceKobo / 100;
-      const displayAmount = isNigeria ? `₦${priceNaira.toLocaleString()}` : "$3";
+      const intlCur = window.__INTL_CURRENCY__ === "USD" ? "USD" : "NGN";
+      const intlMinor = Number(window.__READING_PRICE_INTL__) || priceKobo;
+      const intlDisplay = intlCur === "USD"
+        ? `$${(intlMinor / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        : `₦${(intlMinor / 100).toLocaleString()}`;
+      const displayAmount = isNigeria ? `₦${priceNaira.toLocaleString()}` : intlDisplay;
 
       resultElement.innerHTML = `
         <center>
