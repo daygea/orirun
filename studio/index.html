@@ -1210,6 +1210,18 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         <div id="treeView" class="tree-view" aria-label="Content preview"></div>
         <textarea id="editor" spellcheck="false" aria-label="Item JSON editor" style="display:none"></textarea>
 
+        <!-- Friendly edit panel for simple collections (FRIENDLY_FORMS). Shown
+             in place of the raw JSON editor so a non-technical editor never
+             touches braces/quotes. -->
+        <div id="friendlyEdit" style="display:none;flex-direction:column;gap:8px">
+          <label for="feText" id="feTextLabel" style="font-size:12px;font-weight:600">Text</label>
+          <textarea id="feText" spellcheck="false" style="min-height:180px;padding:10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.6;font-family:inherit"></textarea>
+          <div id="feVideoWrap">
+            <label for="feVideos" style="font-size:12px;font-weight:600">Video links <span style="font-weight:400;opacity:.6">(optional — one URL per line)</span></label>
+            <textarea id="feVideos" spellcheck="false" style="min-height:70px;padding:10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px;line-height:1.6;font-family:inherit"></textarea>
+          </div>
+        </div>
+
         <!-- Interpretation panel (step 3): structured per-orientation editing for
              eseIfa verses, so a babaláwo writes interpretations without touching
              raw JSON. Shown only for the eseIfa collection, in Edit mode. Writes
@@ -1403,12 +1415,14 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <label for="newKey" id="newKeyLabel">Key</label>
     <input id="newKey" placeholder="e.g. Ogbe Otura">
 
-    <!-- Friendly fields for the chatbot knowledge base (shown only for it). -->
+    <!-- Friendly fields for simple collections (shown per FRIENDLY_FORMS). -->
     <div id="newKbFields" style="display:none">
-      <label for="newKbText">Answer text</label>
-      <textarea id="newKbText" placeholder="What the chatbot should say about this topic…" style="min-height:120px"></textarea>
-      <label for="newKbVideos" style="margin-top:8px">Video links <span style="font-weight:400;opacity:.6">(optional — one URL per line)</span></label>
-      <textarea id="newKbVideos" placeholder="https://www.youtube.com/watch?v=…" style="min-height:64px"></textarea>
+      <label for="newKbText" id="newKbTextLabel">Text</label>
+      <textarea id="newKbText" placeholder="…" style="min-height:120px"></textarea>
+      <div id="newKbVideoWrap">
+        <label for="newKbVideos" style="margin-top:8px">Video links <span style="font-weight:400;opacity:.6">(optional — one URL per line)</span></label>
+        <textarea id="newKbVideos" placeholder="https://www.youtube.com/watch?v=…" style="min-height:64px"></textarea>
+      </div>
     </div>
 
     <!-- Raw JSON for every other collection. -->
@@ -1447,6 +1461,43 @@ const api = (p, opts = {}) =>
 /* ── State ─────────────────────────────────────────────────── */
 let collections = [];
 let activeCol = null;      // registry entry
+
+/* ── Friendly forms for simple collections ───────────────────────────────
+   Some collections are just a key → a bit of text (or text + optional media),
+   so we render labelled fields instead of raw JSON — no braces or quoting for
+   the editor to get wrong. This ONE schema drives BOTH create and edit.
+
+   Each entry describes how to turn a value ↔ friendly fields:
+     kind:"string"        → the whole value is a single text string.
+     kind:"text+media"    → { text:<string>, media:[{type:"video",title,url}] }.
+   Collections not listed here keep the raw-JSON editor untouched. */
+const FRIENDLY_FORMS = {
+  ifaKnowledgeBase:         { kind: "text+media", keyLabel: "Topic name", textLabel: "Answer text" },
+  summaryNumerologyMeanings:{ kind: "string", keyLabel: "Number", textLabel: "Summary meaning" },
+  birthdayGiftMeanings:     { kind: "string", keyLabel: "Number", textLabel: "Gift meaning" },
+  birthdayChallengeMeanings:{ kind: "string", keyLabel: "Number", textLabel: "Challenge meaning" },
+  karmicDebtMeanings:       { kind: "string", keyLabel: "Number", textLabel: "Karmic debt meaning" },
+};
+function friendlyFormFor(colKey) { return FRIENDLY_FORMS[colKey] || null; }
+// value → { text, videos } for populating the fields.
+function valueToFriendly(schema, value) {
+  if (!schema) return { text: "", videos: "" };
+  if (schema.kind === "string") {
+    return { text: typeof value === "string" ? value : (Array.isArray(value) ? value.join("\n") : ""), videos: "" };
+  }
+  // text+media
+  const v = value && typeof value === "object" ? value : {};
+  const text = Array.isArray(v.text) ? v.text.filter(Boolean).join("\n") : (v.text || "");
+  const videos = Array.isArray(v.media) ? v.media.map((m) => m && m.url).filter(Boolean).join("\n") : "";
+  return { text, videos };
+}
+// friendly fields → the value to store.
+function friendlyToValue(schema, text, videosRaw) {
+  if (schema.kind === "string") return text;
+  const media = (videosRaw || "").split("\n").map((l) => l.trim()).filter(Boolean)
+    .map((url) => ({ type: "video", title: "", url }));
+  return { text, media };
+}
 let colPayload = null;     // { keys, data?, truncated }
 let contentPage = 1;       // current page for paginated collections (eseIfa)
 let activeKey = null;
@@ -1693,6 +1744,20 @@ async function selectItem(key) {
     $("editor").value = JSON.stringify(body.data, null, 2);
     $("editor").classList.remove("invalid");
     $("jsonState").textContent = "Valid JSON"; $("jsonState").className = "json-state ok";
+    // Friendly edit panel for simple collections (else the raw JSON editor).
+    const _schema = friendlyFormFor(activeCol.key);
+    // The read/edit JSON toggle is meaningless for friendly collections.
+    const _modes = document.querySelector(".editor-modes");
+    if (_modes) _modes.style.display = _schema ? "none" : "";
+    if (_schema) {
+      const f = valueToFriendly(_schema, body.data);
+      if ($("feText")) $("feText").value = f.text;
+      if ($("feVideos")) $("feVideos").value = f.videos;
+      if ($("feTextLabel")) $("feTextLabel").textContent = _schema.textLabel;
+      if ($("feVideoWrap")) $("feVideoWrap").style.display = _schema.kind === "text+media" ? "" : "none";
+      if ($("feText")) $("feText").oninput = () => { itemDirty = true; };
+      if ($("feVideos")) $("feVideos").oninput = () => { itemDirty = true; };
+    }
     interpPanelPopulate(body.data);
     setEditorMode("read");
     paintProvenance();
@@ -1744,6 +1809,18 @@ function refreshTree() {
 }
 function setEditorMode(mode) {
   const read = mode === "read";
+  const friendly = friendlyFormFor(activeCol && activeCol.key);
+  if (friendly) {
+    // Friendly collections show ONE always-editable panel — no JSON view or
+    // read/edit split. The mode toggle is hidden for them (see below).
+    if ($("friendlyEdit")) $("friendlyEdit").style.display = "flex";
+    $("treeView").style.display = "none";
+    $("editor").style.display = "none";
+    $("diacriticBar").style.display = "none";
+    const ip = $("interpPanel"); if (ip) ip.style.display = "none";
+    return;
+  }
+  if ($("friendlyEdit")) $("friendlyEdit").style.display = "none";
   $("treeView").style.display = read ? "" : "none";
   $("editor").style.display = read ? "none" : "";
   $("diacriticBar").style.display = read ? "none" : "flex";
@@ -2154,8 +2231,15 @@ $("prettifyBtn").onclick = () => {
 /* ── Actions ───────────────────────────────────────────────── */
 $("saveBtn").onclick = async () => {
   let value;
-  try { value = JSON.parse($("editor").value); }
-  catch (e) { return toast(jsonErrorDetail($("editor").value, e), true); }
+  const schema = friendlyFormFor(activeCol && activeCol.key);
+  if (schema) {
+    const text = ($("feText") ? $("feText").value : "").trim();
+    if (!text) return toast("Enter the " + schema.textLabel.toLowerCase(), true);
+    value = friendlyToValue(schema, text, $("feVideos") ? $("feVideos").value : "");
+  } else {
+    try { value = JSON.parse($("editor").value); }
+    catch (e) { return toast(jsonErrorDetail($("editor").value, e), true); }
+  }
   try {
     const res = await api(`/content/${activeCol.key}/items/${encodeURIComponent(activeKey)}`, {
       method: "PUT", body: JSON.stringify({ value }),
@@ -2237,17 +2321,19 @@ $("exportBtn").onclick = async () => {
 /* New item */
 $("newBtn").onclick = () => {
   if (!activeCol) return toast("Choose a collection first", true);
-  const isKb = activeCol.key === "ifaKnowledgeBase";
-  $("newKeyLabel").textContent = isKb ? "Topic name"
+  const schema = friendlyFormFor(activeCol.key);
+  $("newKeyLabel").textContent = schema ? schema.keyLabel
     : (activeCol.kind === "array" ? `Identifier (goes into "${activeCol.idField}")` : "Key");
   $("newKey").value = "";
-  // Toggle friendly KB fields vs raw JSON.
-  if ($("newKbFields")) $("newKbFields").style.display = isKb ? "" : "none";
-  if ($("newJsonFields")) $("newJsonFields").style.display = isKb ? "none" : "";
-  if (isKb) {
+  if ($("newKbFields")) $("newKbFields").style.display = schema ? "" : "none";
+  if ($("newJsonFields")) $("newJsonFields").style.display = schema ? "none" : "";
+  if (schema) {
+    if ($("newKbTextLabel")) $("newKbTextLabel").textContent = schema.textLabel;
     if ($("newKbText")) $("newKbText").value = "";
     if ($("newKbVideos")) $("newKbVideos").value = "";
-    if ($("newKey")) $("newKey").placeholder = "e.g. yoruba creation story";
+    // The video field only applies to text+media collections.
+    if ($("newKbVideoWrap")) $("newKbVideoWrap").style.display = schema.kind === "text+media" ? "" : "none";
+    if ($("newKey")) $("newKey").placeholder = activeCol.key === "ifaKnowledgeBase" ? "e.g. yoruba creation story" : "e.g. 7";
   } else {
     $("newValue").value = "{\n  \n}";
   }
@@ -2255,16 +2341,11 @@ $("newBtn").onclick = () => {
 };
 $("createBtn").onclick = async () => {
   let value;
-  const isKb = activeCol && activeCol.key === "ifaKnowledgeBase";
-  if (isKb) {
-    // Build the { text, media } object programmatically — always valid JSON,
-    // no hand-written braces or quoting for the contributor.
+  const schema = activeCol && friendlyFormFor(activeCol.key);
+  if (schema) {
     const text = ($("newKbText") ? $("newKbText").value : "").trim();
-    if (!text) return toast("Enter the answer text", true);
-    const videoLines = ($("newKbVideos") ? $("newKbVideos").value : "")
-      .split("\n").map((l) => l.trim()).filter(Boolean);
-    const media = videoLines.map((url) => ({ type: "video", title: "", url }));
-    value = { text, media };
+    if (!text) return toast("Enter the " + schema.textLabel.toLowerCase(), true);
+    value = friendlyToValue(schema, text, $("newKbVideos") ? $("newKbVideos").value : "");
   } else {
     try { value = JSON.parse($("newValue").value); }
     catch { return toast("New item value must be valid JSON", true); }
