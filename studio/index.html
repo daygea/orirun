@@ -280,13 +280,25 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
 @media (max-width:900px){
   .shell{grid-template-columns:1fr;grid-template-rows:auto auto auto 1fr;height:auto;min-height:100vh}
   /* The desktop layout pins nav/items/main and the .ops areas to explicit
-     grid cells (col/row) to prevent overlap. The mobile layout stacks them,
-     so clear those pins and let them auto-flow into the stacked rows. */
-  .shell > nav, .shell > .items, .shell > main, .ops{grid-column:auto;grid-row:auto}
+     grid cells (col/row) to prevent overlap. The mobile layout stacks them, so
+     clear those pins and let them auto-flow. min-width:0 is ESSENTIAL: a grid
+     child defaults to min-width:auto and won't shrink below its content width,
+     so wide content (logs table, long IDs) would force a horizontal drag. */
+  .shell > nav, .shell > .items, .shell > main, .ops{grid-column:auto;grid-row:auto;min-width:0;max-width:100%}
+  .ops, .ops > *{max-width:100%}
+  .ops *{overflow-wrap:anywhere}
+  .ops pre, .ops table{overflow-x:auto;max-width:100%;display:block}
   header{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 12px;gap:6px;position:sticky;top:0;z-index:60}
-  nav.area-nav{order:3;width:100%;margin-left:0;display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  nav.area-nav::-webkit-scrollbar{display:none}
-  nav.area-nav button{flex:0 0 auto;min-height:40px}
+  /* The right group (db badge, who-am-i, Refresh, Sign out) WRAPS full-width so
+     Refresh/Sign out are never pushed off the edge. */
+  header .right{margin-left:0;width:100%;flex-wrap:wrap;justify-content:flex-start;gap:8px;order:2}
+  header .right .btn{flex:0 0 auto;min-height:38px}
+  /* Cap the username so a long name can't push Sign out off the row. */
+  header .right #whoami{max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* All area tabs are primary destinations, so they WRAP onto multiple lines —
+     every tab (Settings, To Verify…) visible at once, no hidden h-scroll. */
+  nav.area-nav{order:3;width:100%;max-width:100%;margin-left:0;display:flex;gap:6px;flex-wrap:wrap;overflow-x:visible;padding:4px 0 2px}
+  nav.area-nav button{flex:0 1 auto;min-height:40px}
   .shell > nav{display:flex;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px;-webkit-overflow-scrolling:touch}
   .shell > nav h2{display:none}
   .col-item{white-space:nowrap;margin:0 6px 0 0;flex-shrink:0;min-height:40px;display:flex;align-items:center}
