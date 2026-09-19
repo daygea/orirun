@@ -5423,8 +5423,11 @@ async function revealApp() {
       t.style.display = superTabs.includes(t.dataset.area) ? "" : "none";
     });
     showArea("content");
-    await loadCollections();
-    loadNotifications(); // surfaces the elder "to verify" badge for superadmin too
+    // A failed data fetch here (slow/flaky network, or the service worker
+    // updating mid-refresh) must NOT abort the reveal and leave a blank page —
+    // the console shell is already shown; the data simply loads or retries.
+    try { await loadCollections(); } catch (e) { console.warn("loadCollections failed on boot:", e); }
+    try { loadNotifications(); } catch (e) { /* non-blocking */ }
   }
 }
 
@@ -5618,12 +5621,28 @@ if (location.protocol === "file:") {
 
 /* Boot: confirm session BEFORE showing anything but the login card. */
 (async function boot() {
-  setLoggedOutChrome(true);
-  const me = await refreshSessionChip();
-  if (me?.authenticated && ["superadmin", "elder", "babalawo"].includes(me.role)) {
-    await revealApp();
-  } else {
-    gateToLogin();
+  try {
+    setLoggedOutChrome(true);
+    const me = await refreshSessionChip();
+    if (me?.authenticated && ["superadmin", "elder", "babalawo"].includes(me.role)) {
+      await revealApp();
+    } else {
+      gateToLogin();
+    }
+  } catch (err) {
+    // Boot must NEVER leave a blank page (header only). If anything in the
+    // session/reveal chain throws — usually a transient network failure on
+    // refresh, or the service worker updating — fall back to the login screen
+    // so the person can simply sign in / retry, and surface a hint.
+    console.error("Studio boot failed:", err);
+    try { gateToLogin(); } catch (e) { /* last resort below */ }
+    try {
+      document.body.classList.add("auth-only");
+      const authState = document.getElementById("authState");
+      if (authState) authState.style.display = "";
+      const err2 = document.getElementById("signinError") || document.getElementById("loginError");
+      if (err2) err2.textContent = "Couldn't reach the server — check your connection and try again.";
+    } catch (e) { /* nothing more we can do */ }
   }
 })();
 </script>
