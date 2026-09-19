@@ -1001,12 +1001,20 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="panel" id="myContactPanel" style="display:none;margin-bottom:16px">
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">Your contact details</div>
       <div style="font-size:12px;opacity:.7;margin-bottom:8px;max-width:74ch">
-        How we reach you about your contributions — a phone/WhatsApp number is best. Optional, and only visible to administrators.
+        How we reach you about your contributions — a phone/WhatsApp number is best. You can keep both a phone and an email. Optional, and only visible to administrators.
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="myContactInput" type="text" placeholder="Phone/WhatsApp or email"
-          style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
-        <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => saveMyContact())">Save</button>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:420px">
+        <label style="display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600">
+          Phone / WhatsApp
+          <input id="myPhoneInput" type="text" placeholder="e.g. 0803…"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:3px;font-size:12px;font-weight:600">
+          Email
+          <input id="myEmailInput" type="email" placeholder="you@email.com"
+            style="padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        </label>
+        <button class="btn btn-green btn-sm" type="button" style="align-self:flex-start" onclick="lockBtn(event, () => saveMyContact())">Save contact details</button>
       </div>
       <div id="myContactNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
     </div>
@@ -5456,25 +5464,29 @@ function enterAuthoringMode(role) {
   if (contactPanel) { contactPanel.style.display = ""; loadMyContact(); }
 }
 
-// Self-service contact: load the caller's own phone/email into the panel.
+// Self-service contact: load the caller's own phone AND email into the panel.
 async function loadMyContact() {
   try {
     const res = await studioApi("/me/contact");
     if (!res.ok) return;
     const d = await res.json();
-    const val = d.phone || d.email || "";
-    if ($("myContactInput")) $("myContactInput").value = val;
-    if ($("myContactNote")) $("myContactNote").textContent = val ? "" : "No contact on file yet.";
+    if ($("myPhoneInput")) $("myPhoneInput").value = d.phone || "";
+    if ($("myEmailInput")) $("myEmailInput").value = d.email || "";
+    if ($("myContactNote")) $("myContactNote").textContent = (d.phone || d.email) ? "" : "No contact on file yet.";
   } catch { /* non-blocking */ }
 }
 async function saveMyContact() {
-  const contact = ($("myContactInput") ? $("myContactInput").value : "").trim();
+  const phone = ($("myPhoneInput") ? $("myPhoneInput").value : "").trim();
+  const email = ($("myEmailInput") ? $("myEmailInput").value : "").trim();
   try {
-    const res = await studioApi("/me/contact", { method: "POST", body: JSON.stringify({ contact }) });
+    const res = await studioApi("/me/contact", { method: "POST", body: JSON.stringify({ phone, email }) });
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Could not save");
-    if ($("myContactNote")) $("myContactNote").textContent = (d.phone || d.email)
-      ? "Saved — we'll reach you at " + (d.phone || d.email) + "." : "Contact cleared.";
+    const bits = [];
+    if (d.phone) bits.push(d.phone);
+    if (d.email) bits.push(d.email);
+    if ($("myContactNote")) $("myContactNote").textContent = bits.length
+      ? "Saved — we'll reach you at " + bits.join(" and ") + "." : "Contact cleared.";
     toast("Contact details saved");
   } catch (err) {
     toast("Couldn't save: " + err.message, true);
