@@ -996,6 +996,21 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       it has been verified. You can keep editing a verse until it's verified.
     </p>
 
+    <!-- Your contact details — self-service, so a changed number/email never
+         needs an administrator. Shown to every logged-in contributor. -->
+    <div class="panel" id="myContactPanel" style="display:none;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Your contact details</div>
+      <div style="font-size:12px;opacity:.7;margin-bottom:8px;max-width:74ch">
+        How we reach you about your contributions — a phone/WhatsApp number is best. Optional, and only visible to administrators.
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="myContactInput" type="text" placeholder="Phone/WhatsApp or email"
+          style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:13px">
+        <button class="btn btn-green btn-sm" type="button" onclick="lockBtn(event, () => saveMyContact())">Save</button>
+      </div>
+      <div id="myContactNote" style="font-size:11px;opacity:.6;margin-top:4px"></div>
+    </div>
+
     <!-- Offer to serve as a verifier — shown only to contributors (babaláwo). It's
          a request; an administrator confirms elder standing. -->
     <div class="panel" id="verifierOfferPanel" style="display:none;margin-bottom:16px;background:#fbf7ee;border:1px solid #ecdcb8">
@@ -1378,8 +1393,8 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
           <input id="suUser" autocomplete="username" class="auth-input">
           <label for="suPass" class="auth-label">Password <span class="auth-hint">(8+ characters)</span></label>
           <input id="suPass" type="password" autocomplete="new-password" class="auth-input">
-          <label for="suEmail" class="auth-label">Email <span class="auth-hint">(optional — so you can be reached for recognition)</span></label>
-          <input id="suEmail" type="email" autocomplete="email" class="auth-input">
+          <label for="suEmail" class="auth-label">Phone or email <span class="auth-hint">(optional — how we'll reach you; WhatsApp number is fine)</span></label>
+          <input id="suEmail" type="text" autocomplete="tel" inputmode="text" placeholder="e.g. 0803… or you@email.com" class="auth-input">
           <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12.5px;line-height:1.5;cursor:pointer">
             <input id="suElderWish" type="checkbox" style="margin-top:3px;flex-shrink:0">
             <span data-translate>I am an elder or senior babaláwo willing to help <strong>verify</strong> others' contributions. (You'll start as a contributor; an administrator will confirm elder standing.)</span>
@@ -2666,6 +2681,32 @@ async function loadUsers() {
       emailRow.appendChild(emailBtn);
       card.appendChild(emailRow);
 
+      // Phone / WhatsApp — the primary way to reach contributors. Editable by
+      // superadmin; a tap-to-WhatsApp link shown when a number is present.
+      const phoneRow = document.createElement("div");
+      phoneRow.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin-top:4px";
+      const phoneInput = document.createElement("input");
+      phoneInput.type = "text";
+      phoneInput.value = u.phone || "";
+      phoneInput.placeholder = "phone / WhatsApp number";
+      phoneInput.style.cssText = "padding:6px 9px;border:1px solid var(--line,#d9e4dc);border-radius:7px;font-size:12px;flex:1;min-width:150px";
+      const phoneBtn = document.createElement("button");
+      phoneBtn.className = "btn btn-ghost btn-sm";
+      phoneBtn.textContent = "Save phone";
+      phoneBtn.onclick = () => lockBtn(phoneBtn, () => setUserPhone(u.id, phoneInput.value.trim(), u.username));
+      phoneRow.appendChild(document.createTextNode("📱"));
+      phoneRow.appendChild(phoneInput);
+      phoneRow.appendChild(phoneBtn);
+      if (u.phone) {
+        const wa = document.createElement("a");
+        wa.href = "https://wa.me/" + String(u.phone).replace(/[^\d]/g, "");
+        wa.target = "_blank"; wa.rel = "noopener";
+        wa.textContent = "WhatsApp";
+        wa.style.cssText = "color:#0f7b3d;font-size:12px;text-decoration:none;white-space:nowrap";
+        phoneRow.appendChild(wa);
+      }
+      card.appendChild(phoneRow);
+
       const actions = document.createElement("div");
       actions.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;align-items:center";
 
@@ -2737,6 +2778,17 @@ async function setUserEmail(id, email, username) {
     loadUsers();
   } catch (err) {
     toast("Email save failed: " + err.message, true);
+  }
+}
+async function setUserPhone(id, phone, username) {
+  try {
+    const res = await api("/users/" + id + "/phone", { method: "POST", body: JSON.stringify({ phone }) });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || "Could not save phone");
+    toast(phone ? ("Phone saved for " + username) : ("Phone cleared for " + username));
+    loadUsers();
+  } catch (err) {
+    toast("Phone save failed: " + err.message, true);
   }
 }
 
@@ -5399,6 +5451,34 @@ function enterAuthoringMode(role) {
     if (role === "babalawo") { offer.style.display = ""; loadVerifierRequestState(); }
     else offer.style.display = "none";
   }
+  // Every logged-in contributor can view/update their own contact details.
+  const contactPanel = document.getElementById("myContactPanel");
+  if (contactPanel) { contactPanel.style.display = ""; loadMyContact(); }
+}
+
+// Self-service contact: load the caller's own phone/email into the panel.
+async function loadMyContact() {
+  try {
+    const res = await studioApi("/me/contact");
+    if (!res.ok) return;
+    const d = await res.json();
+    const val = d.phone || d.email || "";
+    if ($("myContactInput")) $("myContactInput").value = val;
+    if ($("myContactNote")) $("myContactNote").textContent = val ? "" : "No contact on file yet.";
+  } catch { /* non-blocking */ }
+}
+async function saveMyContact() {
+  const contact = ($("myContactInput") ? $("myContactInput").value : "").trim();
+  try {
+    const res = await studioApi("/me/contact", { method: "POST", body: JSON.stringify({ contact }) });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || "Could not save");
+    if ($("myContactNote")) $("myContactNote").textContent = (d.phone || d.email)
+      ? "Saved — we'll reach you at " + (d.phone || d.email) + "." : "Contact cleared.";
+    toast("Contact details saved");
+  } catch (err) {
+    toast("Couldn't save: " + err.message, true);
+  }
 }
 
 // Reflects whether the logged-in contributor already has an open verifier offer.
@@ -5491,14 +5571,14 @@ document.getElementById("signupForm")?.addEventListener("submit", async (e) => {
   try {
     const username = $("suUser").value.trim();
     const password = $("suPass").value;
-    const email = $("suEmail").value.trim();
+    const contact = $("suEmail").value.trim();
     const wishesToVerify = !!$("suElderWish")?.checked;
     if (!username || !password) throw new Error("Username and password are required.");
     if (password.length < 8) throw new Error("Password must be at least 8 characters.");
     const res = await fetch(API_BASE + "/api/auth/signup", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, email: email || undefined, wishesToVerify }),
+      body: JSON.stringify({ username, password, contact: contact || undefined, wishesToVerify }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Sign-up failed");
