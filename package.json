@@ -1,4 +1,11 @@
 {
+  "name": "orirun-frontend",
+  "private": true,
+  "scripts": {
+    "bump": "node scripts/bump-build.js",
+    "predeploy": "node scripts/bump-build.js",
+    "deploy": "echo 'BUILD bumped. Now: git add -A && git commit -m \"deploy\" && git push'"
+  },
   "dependencies": {
     "dotenv": "^16.5.0"
   }
