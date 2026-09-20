@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>Orírùn · Content Studio</title>
-<link rel="icon" href="public/img/favicon.png">
+<link rel="icon" href="/public/img/favicon.png">
 <style>
 /* ─────────────────────────────────────────────────────────────
    Orírùn Content Studio
@@ -1552,11 +1552,21 @@ $("clearAllLogsBtn").onclick = async () => {
    The app stays fully hidden until we confirm a superadmin session.
    Nothing is fetched or shown pre-login except the sign-in card. */
 async function whoAmI() {
+  // Fast timeout so a network/DNS drop fails in a few seconds instead of the
+  // browser's ~16s default — boot needs a quick answer to show the right screen.
+  // Distinguishes "reachable but signed out" (401/403) from "couldn't reach the
+  // server at all" (throw / timeout / 5xx) so boot can show a connection message
+  // with Retry rather than a silent blank shell.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(API_BASE + "/api/auth/me", { credentials: "include" });
-    if (!res.ok) return null;
+    const res = await fetch(API_BASE + "/api/auth/me", { credentials: "include", signal: ctrl.signal });
+    if (res.status === 401 || res.status === 403) return { authenticated: false };
+    if (!res.ok) return { authenticated: false, netError: true, status: res.status };
     return await res.json();
-  } catch { return null; }
+  } catch {
+    return { authenticated: false, netError: true, offline: true };
+  } finally { clearTimeout(timer); }
 }
 async function refreshSessionChip() {
   const me = await whoAmI();
@@ -1658,14 +1668,70 @@ if (location.protocol === "file:") {
   toast("Opened as a file — sessions may not stick. Open the served /studio URL instead.", true);
 }
 
-/* Boot: confirm session BEFORE showing anything but the login card. */
+/* A lightweight boot overlay so the page is NEVER blank while the session is
+   being confirmed, and so a clear, actionable message shows if the server can't
+   be reached — instead of a silent blank shell (the old ~16s hang on a DNS /
+   network drop). */
+function orBootOverlay() {
+  let el = document.getElementById("orBootOverlay");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "orBootOverlay";
+    el.style.cssText =
+      "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;" +
+      "justify-content:center;background:var(--bg,#0f1a14);color:var(--fg,#e8f0ea);" +
+      "font-family:system-ui,-apple-system,sans-serif;padding:24px;text-align:center";
+    el.innerHTML =
+      '<div style="max-width:360px">' +
+      '<div id="orBootSpin" style="width:34px;height:34px;margin:0 auto 16px;' +
+      'border:3px solid rgba(255,255,255,.25);border-top-color:currentColor;' +
+      'border-radius:50%;animation:orspin .9s linear infinite"></div>' +
+      '<div id="orBootMsg" style="font-size:15px;line-height:1.5;opacity:.92">Checking your session…</div>' +
+      '<div id="orBootActions" style="margin-top:18px;display:none">' +
+      '<button id="orBootRetry" type="button" style="padding:9px 18px;border-radius:8px;' +
+      'border:0;background:#c98a2b;color:#1a1205;font-weight:600;cursor:pointer">Try again</button>' +
+      '</div></div>';
+    (document.body || document.documentElement).appendChild(el);
+    if (!document.getElementById("orspinKf")) {
+      const st = document.createElement("style");
+      st.id = "orspinKf";
+      st.textContent = "@keyframes orspin{to{transform:rotate(360deg)}}";
+      document.head.appendChild(st);
+    }
+  }
+  return {
+    remove() { el.remove(); },
+    error(msg) {
+      const spin = document.getElementById("orBootSpin"); if (spin) spin.style.display = "none";
+      const m = document.getElementById("orBootMsg");
+      if (m) m.textContent = msg || "Couldn't reach the server. Check your connection and try again.";
+      const acts = document.getElementById("orBootActions"); if (acts) acts.style.display = "";
+      const btn = document.getElementById("orBootRetry"); if (btn) btn.onclick = () => location.reload();
+    },
+  };
+}
+
+/* Boot: confirm session BEFORE showing anything but the login card — but never
+   leave the page blank while doing so. */
 (async function boot() {
-  setLoggedOutChrome(true);
-  const me = await refreshSessionChip();
-  if (me?.authenticated && me.role === "superadmin") {
-    await revealApp();
-  } else {
+  const bootUI = orBootOverlay();   // shown immediately: no blank shell, ever
+  try {
+    setLoggedOutChrome(true);
+    const me = await refreshSessionChip();
+    if (me?.authenticated && me.role === "superadmin") {
+      bootUI.remove();
+      await revealApp();
+      return;
+    }
+    if (me?.netError) {
+      bootUI.error("Couldn't reach the server. Check your connection and try again.");
+      return;
+    }
+    bootUI.remove();
     gateToLogin();
+  } catch (err) {
+    console.error("Admin boot failed:", err);
+    bootUI.error("Something went wrong starting the console. Please try again.");
   }
 })();
 </script>
