@@ -214,7 +214,7 @@ function _verseReadingHTML(vr, solutionInfo) {
     return esc(teaser(r.interpretation));
   };
   const card = (r) => `
-    <details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
+    <details class="verse-card" data-vid="${esc(r.verseId || "")}" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
         <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser(r)}</span>
         ${r.provenance?.contributor ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : ""}
@@ -230,22 +230,22 @@ function _verseReadingHTML(vr, solutionInfo) {
   let othersHTML = "";
   if (shown.length) {
     const cards = shown.map(card).join("");
-    // "See all" — when more supporting verses exist than we render, offer a tap
-    // that fetches the rest in pages (kept out of the initial payload for scale).
+    // ONE progressive "load more": a single control pages the rest of THIS
+    // cast's supporting verses inline, with an honest remaining count. When the
+    // cast is exhausted it hands off to a subtle "Explore the whole Odù" link —
+    // one path, no second competing button or contradictory count.
     const total = (typeof vr.totalOthers === "number") ? vr.totalOthers : others.length;
     const remaining = Math.max(0, total - shown.length);
-    const seeAll = remaining > 0 ? `
-      <div style="text-align:center;margin-top:12px;">
-        <button type="button" class="verse-see-all btn btn-ghost btn-sm"
-          data-odu="${esc(vr.odu || "")}" data-ori="${esc(vr.orientation || "")}" data-offset="${shown.length}"
-          data-translate>See all ${total} verses ↓</button>
-      </div>
-      <div class="verse-more-slot" style="margin-top:8px;"></div>` : "";
     othersHTML = `
-      <div class="verse-others" style="margin-top:18px;">
+      <div class="verse-others" data-odu="${esc(vr.odu || "")}" data-ori="${esc(vr.orientation || "")}" data-leadvid="${esc((vr.lead && vr.lead.verseId) || "")}" style="margin-top:18px;">
         <div style="font-size:11px;font-weight:700;color:var(--of-ink-soft,#8a9a8f);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;" data-translate>Ifá also speaks through these verses</div>
-        ${cards}
-        ${seeAll}
+        <div class="verse-list">${cards}</div>
+        <div class="verse-more-wrap" style="text-align:center;margin-top:12px;${remaining > 0 ? "" : "display:none;"}">
+          <button type="button" class="verse-more btn btn-ghost btn-sm" data-offset="${shown.length}" data-total="${total}" data-translate>Show more verses (${remaining} more)</button>
+        </div>
+        <div class="verse-odu-wrap" style="text-align:center;margin-top:10px;${remaining === 0 ? "" : "display:none;"}">
+          <button type="button" class="verse-odu-more btn btn-ghost btn-sm" data-offset="0" data-translate>Explore the whole Odù</button>
+        </div>
       </div>`;
   }
 
@@ -266,26 +266,7 @@ function _verseReadingHTML(vr, solutionInfo) {
       <div class="enquiry-result" style="margin-top:10px;"></div>
     </div>` : "";
 
-  // Browse-all — exploration path, distinct from the reading. Shown only when
-  // the corpus holds more verses than the (capped) reading surfaced, so seekers
-  // can reach every verse for this cast — or widen to the whole Odù — if they wish.
-  const corpusTotal = (typeof vr.corpusTotal === "number") ? vr.corpusTotal : 0;
-  const readingShown = (typeof vr.totalOthers === "number") ? vr.totalOthers : (vr.others || []).length;
-  const browseHTML = (corpusTotal > readingShown && vr.odu && vr.orientation) ? `
-    <div class="verse-browse" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--of-line,#e6efe4);"
-         data-odu="${esc(vr.odu)}" data-ori="${esc(vr.orientation)}">
-      <button type="button" class="verse-browse-open btn btn-ghost btn-sm" data-translate>Browse all ${corpusTotal} verses for this cast</button>
-      <div class="verse-browse-panel" style="display:none;margin-top:12px;">
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
-          <button type="button" class="browse-scope active" data-scope="cast" style="font-size:12px;padding:5px 10px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:var(--of-tint,#fbfdfa);cursor:pointer;" data-translate>This cast</button>
-          <button type="button" class="browse-scope" data-scope="odu" style="font-size:12px;padding:5px 10px;border:1px solid var(--of-line,#e6efe4);border-radius:6px;background:#fff;cursor:pointer;" data-translate>Whole Odù</button>
-        </div>
-        <div class="browse-list"></div>
-        <button type="button" class="browse-more btn btn-ghost btn-sm" style="display:none;margin-top:10px;" data-translate>Load more</button>
-      </div>
-    </div>` : "";
-
-  return leadHTML + eboBox + othersHTML + browseHTML + confirmHTML;
+  return leadHTML + eboBox + othersHTML + confirmHTML;
 }
 
 /* PART B — wire the "confirm your enquiry" control. Delegated so it works for
@@ -374,70 +355,29 @@ document.addEventListener("input", (e) => {
   }
 });
 
-// Browse-all (exploration path). Open the panel, switch scope (this cast / whole
-// Odù), and page the full set. Distinct from the reading — this is the corpus.
-document.addEventListener("click", (e) => {
-  const open = e.target.closest(".verse-browse-open");
-  if (!open) return;
-  const wrap = open.closest(".verse-browse");
-  const panel = wrap && wrap.querySelector(".verse-browse-panel");
-  if (!panel) return;
-  const showing = panel.style.display !== "none";
-  panel.style.display = showing ? "none" : "block";
-  if (!showing && !panel.dataset.loaded) {
-    _browseLoad(wrap, "cast", 0, true);
-    panel.dataset.loaded = "1";
+// Append verse cards into a list, skipping any whose verseId is already shown
+// (the whole-Odù set overlaps the cast set, so dedup keeps it clean). Returns
+// how many NEW cards were appended.
+function _appendVerseCards(list, items) {
+  const seen = new Set();
+  // Seed with the lead verse's id — it's rendered above (not inside .verse-list),
+  // and the whole-Odù scope includes it, so this stops it re-appearing as a card.
+  const box = list.closest(".verse-others");
+  if (box && box.dataset.leadvid) seen.add(box.dataset.leadvid);
+  list.querySelectorAll(".verse-card[data-vid]").forEach((el) => { if (el.dataset.vid) seen.add(el.dataset.vid); });
+  let html = "", n = 0;
+  for (const r of (items || [])) {
+    const id = r.verseId || "";
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
+    html += _verseCardHTML(r);
+    n++;
   }
-});
-
-document.addEventListener("click", (e) => {
-  const tab = e.target.closest(".browse-scope");
-  if (!tab) return;
-  const wrap = tab.closest(".verse-browse");
-  const panel = wrap && wrap.querySelector(".verse-browse-panel");
-  if (!panel) return;
-  panel.querySelectorAll(".browse-scope").forEach((b) => {
-    b.classList.toggle("active", b === tab);
-    b.style.background = b === tab ? "var(--of-tint,#fbfdfa)" : "#fff";
-  });
-  _browseLoad(wrap, tab.getAttribute("data-scope"), 0, true);
-});
-
-document.addEventListener("click", (e) => {
-  const more = e.target.closest(".browse-more");
-  if (!more) return;
-  const wrap = more.closest(".verse-browse");
-  const scope = wrap.dataset.scope || "cast";
-  const offset = parseInt(wrap.dataset.offset, 10) || 0;
-  _browseLoad(wrap, scope, offset, false);
-});
-
-async function _browseLoad(wrap, scope, offset, reset) {
-  const odu = wrap.getAttribute("data-odu");
-  const ori = wrap.getAttribute("data-ori");
-  const panel = wrap.querySelector(".verse-browse-panel");
-  const list = panel.querySelector(".browse-list");
-  const moreBtn = panel.querySelector(".browse-more");
-  if (reset) { list.innerHTML = '<span style="font-size:12px;color:#8a9a8f;" data-translate>Loading…</span>'; wrap.dataset.scope = scope; }
-  try {
-    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/browse?scope=${encodeURIComponent(scope)}&offset=${offset}&limit=10`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const cards = (data.items || []).map(_verseCardHTML).join("");
-    if (reset) list.innerHTML = cards || '<span style="font-size:12.5px;color:#7a8a80;" data-translate>No verses to show.</span>';
-    else list.insertAdjacentHTML("beforeend", cards);
-    const newOffset = offset + (data.items || []).length;
-    wrap.dataset.offset = newOffset;
-    if (data.hasMore) {
-      moreBtn.style.display = "";
-      moreBtn.textContent = `Load more (${data.total - newOffset} left)`;
-    } else {
-      moreBtn.style.display = "none";
-    }
+  if (html) {
+    list.insertAdjacentHTML("beforeend", html);
     if (window.translateDynamicContent) { try { window.translateDynamicContent(list); } catch {} }
-  } catch {
-    list.innerHTML = '<span style="font-size:12px;color:#c0392b;" data-translate>Could not load verses.</span>';
   }
+  return n;
 }
 
 // Lived-outcome capture — the strongest learning signal. On a PAST reading in
@@ -497,7 +437,7 @@ function _verseCardHTML(r) {
     ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2b6b3a;" data-translate>Medicine · ẹbọ · àkóse</summary>
       <div class="ori-section-text" style="margin-top:8px;white-space:pre-wrap;" lang="yo" translate="no">${r.practicalNotes.map(esc).join("<br>")}</div></details>`
     : "";
-  return `<details class="verse-card" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
+  return `<details class="verse-card" data-vid="${esc(r.verseId || "")}" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
         <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser}</span>${contributor}
       </summary>
@@ -505,31 +445,78 @@ function _verseCardHTML(r) {
     </details>`;
 }
 
+/* Progressive "Show more verses" — one control that pages THIS cast's remaining
+   supporting verses inline, chunk by chunk, with an honest remaining count. When
+   the cast is exhausted it hands off to the "Explore the whole Odù" link. */
+const _STEP_CAST = 6;
 document.addEventListener("click", async (e) => {
-  const btn = e.target.closest(".verse-see-all");
+  const btn = e.target.closest(".verse-more");
   if (!btn) return;
-  const odu = btn.dataset.odu, ori = btn.dataset.ori;
+  const box = btn.closest(".verse-others");
+  const list = box && box.querySelector(".verse-list");
+  if (!box || !list) return;
+  const odu = box.dataset.odu, ori = box.dataset.ori;
   let offset = parseInt(btn.dataset.offset, 10) || 0;
-  btn.disabled = true;
   const original = btn.textContent;
-  btn.textContent = "Loading…";
+  btn.disabled = true; btn.textContent = "Loading…";
   try {
-    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/verses?offset=${offset}&limit=5`;
+    const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/verses?offset=${offset}&limit=${_STEP_CAST}`;
     const res = await fetch(url);
     const data = await res.json();
-    const slot = btn.closest(".verse-others")?.querySelector(".verse-more-slot");
-    if (slot && data.items) slot.insertAdjacentHTML("beforeend", data.items.map(_verseCardHTML).join(""));
+    _appendVerseCards(list, data.items);
     offset += (data.items || []).length;
     btn.dataset.offset = offset;
-    if (data.hasMore) {
+    const total = (typeof data.total === "number") ? data.total : (parseInt(btn.dataset.total, 10) || offset);
+    const remaining = Math.max(0, total - offset);
+    if (data.hasMore && remaining > 0) {
       btn.disabled = false;
-      btn.textContent = `Load more (${data.total - offset} left)`;
+      btn.textContent = `Show more verses (${remaining} more)`;
     } else {
-      btn.remove(); // all loaded
+      // Cast exhausted → retire this control, offer whole-Odù exploration.
+      const wrap = box.querySelector(".verse-more-wrap"); if (wrap) wrap.style.display = "none";
+      const oduWrap = box.querySelector(".verse-odu-wrap"); if (oduWrap) oduWrap.style.display = "";
     }
   } catch {
-    btn.disabled = false;
-    btn.textContent = original;
+    btn.disabled = false; btn.textContent = original;
+  }
+});
+
+/* "Explore the whole Odù" — the opt-in wider set (all orientations). It overlaps
+   the cast verses already shown, so we dedup by verseId and keep fetching pages
+   until we surface something new (or run out), so a click never looks inert. */
+const _STEP_ODU = 8;
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".verse-odu-more");
+  if (!btn) return;
+  const box = btn.closest(".verse-others");
+  const list = box && box.querySelector(".verse-list");
+  if (!box || !list) return;
+  const odu = box.dataset.odu, ori = box.dataset.ori;
+  let offset = parseInt(btn.dataset.offset, 10) || 0;
+  const original = btn.textContent;
+  btn.disabled = true; btn.textContent = "Loading…";
+  try {
+    let appended = 0, hasMore = true, guard = 0;
+    while (appended === 0 && hasMore && guard < 25) {
+      guard++;
+      const url = `/api/verses/reading/${encodeURIComponent(odu)}/${encodeURIComponent(ori)}/browse?scope=odu&offset=${offset}&limit=${_STEP_ODU}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const items = data.items || [];
+      appended += _appendVerseCards(list, items);
+      offset += items.length;
+      hasMore = !!data.hasMore;
+    }
+    btn.dataset.offset = offset;
+    if (hasMore) {
+      btn.disabled = false; btn.textContent = "Explore more of this Odù";
+    } else {
+      const wrap = box.querySelector(".verse-odu-wrap");
+      if (wrap) wrap.innerHTML = '<span style="font-size:12px;color:var(--of-ink-soft,#8a9a8f);" data-translate>That’s every verse for this Odù.</span>';
+      if (window.translateDynamicContent) { try { window.translateDynamicContent(box); } catch {} }
+    }
+  } catch {
+    btn.disabled = false; btn.textContent = original;
   }
 });
 
