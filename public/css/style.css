@@ -2193,9 +2193,24 @@ body{
   #ifa-tip-box.tip-below::after { top: -6px;    border-right: none; border-bottom: none; }
   #ifa-tip-box.tip-above::after { bottom: -6px; border-left: none;  border-top: none;  }
 }
-/* ── App-native reading: summary clamp, grouped details, media reveal, action bar ── */
-.dv-interp-wrap:not(.is-open) .dv-interp{
-  display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden;
+/* ── App-native reading: grouped details, media reveal, action bar ── */
+/* Verse & interpretation text is NEVER clamped — the full ẹsẹ and its meaning
+   always show. (This supersedes an earlier 6-line "-webkit-line-clamp" + read-more
+   design; the rule is kept as an explicit no-op so any lingering .dv-interp markup
+   from an older build renders in full instead of being cut off at 6 lines.) */
+.dv-interp-wrap .dv-interp,
+.dv-interp{
+  display:block; -webkit-line-clamp:none; -webkit-box-orient:initial;
+  max-height:none; overflow:visible;
+}
+
+/* Belt-and-suspenders: an expanded verse card, and any verse/interpretation body,
+   must never be height-capped, clipped, or line-clamped by anything. */
+.verse-card[open]{ overflow:visible; }
+.verse-card [lang="yo"], .verse-card .ori-section-text,
+.ase-verse, #extraAse{
+  max-height:none !important; overflow:visible !important;
+  -webkit-line-clamp:none !important; display:block;
 }
 .dv-readmore{
   margin-top:8px; padding:0; background:none; border:none; cursor:pointer;

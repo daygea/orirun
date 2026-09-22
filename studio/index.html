@@ -3729,7 +3729,14 @@ async function suggestVerseDiacritics() {
     const d = await res.json();
     if (!res.ok) throw new Error(d.error || "Suggestion failed");
     if (Array.isArray(d.suggestion) && d.suggestion.length) {
-      if (confirmAct("Replace the Yorùbá text with the suggested tone marks? Review every mark after — the machine can be wrong.")) {
+      // Safety net: diacritics only ADD marks — they must never drop words. If
+      // the suggestion carries fewer words than the input, something truncated
+      // it; never let it overwrite the verse (this caused long verses to be
+      // saved cut off).
+      const wc = (arr) => arr.join(" ").split(/\s+/).filter(Boolean).length;
+      if (wc(d.suggestion) < wc(lines)) {
+        toast("Tone-mark suggestion looked incomplete (it would drop text), so it was not applied. Your verse is unchanged.", true);
+      } else if (confirmAct("Replace the Yorùbá text with the suggested tone marks? Review every mark after — the machine can be wrong.")) {
         $("vfYoruba").value = d.suggestion.join("\n");
         toast("Tone marks applied — please review every line before saving.");
       }
