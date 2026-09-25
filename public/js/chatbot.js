@@ -108,7 +108,11 @@ document.addEventListener("DOMContentLoaded", function () {
 document.addEventListener("keydown", function (event) {
     if (event.target.id === "chatbot-input" && event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
-        sendMessage();
+        // Route Enter through the same busy guard as the send button so the two
+        // paths share one in-flight lock (no double-send on rapid Enter).
+        const sendBtn = document.getElementById("send-btn");
+        if (window.withBusy && sendBtn) window.withBusy(sendBtn, sendMessage);
+        else sendMessage();
     }
 });
 

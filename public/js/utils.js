@@ -1040,9 +1040,6 @@ const termsHtml = `
 window.addEventListener("DOMContentLoaded", () => {
     const params = new URLSearchParams(window.location.search);
     
-    if (params.get("open") === "contribute") {
-        showContributionModal();
-    }
     if (params.get("open") === "about") {
         showAboutModal();
     }
@@ -1057,6 +1054,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 function showContributionModal() {
     const modal = document.getElementById("contributionModal");
+    if (!modal) return; // modal retired — contributors now use the studio
     const closeBtn = modal.querySelector(".customClose");
 
     modal.style.display = "block";
@@ -1110,14 +1108,6 @@ async function showHonoredModal() {
         body.innerHTML = '<p class="honored-empty" data-translate>Could not load the keepers just now. Please try again.</p>';
     }
 }
-
-document.getElementById("contributionCategory").addEventListener("change", function () {
-    // Legacy ifaFields block was removed when Ifá + Babaláwo merged; guard
-    // against its absence. The unified Ifá fields are handled by
-    // babalawo-contribution.js (syncBabalawoFields).
-    const ifaFields = document.getElementById("ifaFields");
-    if (ifaFields) ifaFields.style.display = this.value === "Ifa" ? "block" : "none";
-});
 
 /* -----------------------------
    CATEGORY TOGGLE LOGIC
@@ -1229,6 +1219,7 @@ function resetForm() {
 
 function closeModal() {
     const modal = document.getElementById("contributionModal");
+    if (!modal) return; // modal retired — contributors now use the studio
     modal.style.opacity = "0";
     setTimeout(() => {
         modal.style.display = "none";

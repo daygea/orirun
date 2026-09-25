@@ -86,6 +86,61 @@ function hidePreloader() {
   if (preloader) preloader.style.display = "none";
 }
 
+/* ── Async-button busy state ──────────────────────────────────────────────
+   Global best practice for any button that fires a network action: the moment
+   it's clicked it must (1) give feedback, (2) refuse further clicks until the
+   action settles (no double-submit), and (3) always return to normal — on
+   success OR failure — so it never ends up stuck. withBusy() wraps a handler to
+   do exactly this. Feedback is applied BEFORE the first await, which is the gap
+   that made "Reveal Wisdom" feel dead on a slow network (its first act was a
+   network round-trip with no UI change). */
+(function injectBtnBusyStyle() {
+  if (typeof document === "undefined" || document.getElementById("or-btnbusy-style")) return;
+  const s = document.createElement("style");
+  s.id = "or-btnbusy-style";
+  s.textContent =
+    ".btn-spinner{display:inline-block;width:1em;height:1em;margin-right:.45em;" +
+    "vertical-align:-0.15em;border:2px solid currentColor;border-top-color:transparent;" +
+    "border-radius:50%;animation:orBtnSpin .7s linear infinite}" +
+    "@keyframes orBtnSpin{to{transform:rotate(360deg)}}" +
+    ".is-busy{cursor:progress!important;opacity:.9}";
+  (document.head || document.documentElement).appendChild(s);
+})();
+
+async function withBusy(el, fn, opts) {
+  opts = opts || {};
+  const label = opts.label || "";
+  if (typeof fn !== "function") return;
+  if (!el) return fn();                                   // no element → just run
+  if (el.dataset && el.dataset.busy === "1") return;      // re-entrancy guard — ignore repeat clicks
+  // Offline short-circuit: an immediate honest message beats a silent hang.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    if (typeof toast === "function") toast("You appear to be offline — check your connection and try again.", true);
+    else alert("You appear to be offline — check your connection and try again.");
+    return;
+  }
+  const prevHTML = el.innerHTML;
+  const rect = el.getBoundingClientRect ? el.getBoundingClientRect() : { width: 0 };
+  if (rect.width) el.style.minWidth = Math.ceil(rect.width) + "px"; // hold size → no layout jump
+  el.dataset.busy = "1";
+  el.classList.add("is-busy");
+  el.setAttribute("aria-busy", "true");
+  if ("disabled" in el) el.disabled = true; else el.setAttribute("aria-disabled", "true");
+  el.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span>' + (label ? "<span>" + label + "</span>" : "");
+  try {
+    return await fn();
+  } finally {
+    el.dataset.busy = "";
+    el.classList.remove("is-busy");
+    el.style.minWidth = "";
+    el.removeAttribute("aria-busy");
+    if ("disabled" in el) el.disabled = false; else el.removeAttribute("aria-disabled");
+    el.innerHTML = prevHTML;                              // restores original label (with its data-translate)
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(el); } catch (e) {} }
+  }
+}
+window.withBusy = withBusy;
+
 /* Render a verse-based reading (step 2). Leads with the most-specific verified
    interpretation, then offers the other verified analyses beneath ("Ifá also
    speaks…"). Every interpretation shows its named provenance — the verse
