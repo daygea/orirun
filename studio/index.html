@@ -555,6 +555,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <button class="area-tab" data-area="settings" onclick="showArea('settings')">Settings</button>
       <button class="area-tab" data-area="authoring" onclick="showArea('authoring')" style="display:none">My Verses</button>
       <button class="area-tab" data-area="verify" onclick="showArea('verify')" style="display:none">To Verify</button>
+      <button class="area-tab" data-area="kb" onclick="showArea('kb')" style="display:none">Knowledge Base</button>
     </nav>
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
@@ -844,6 +845,47 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="log-count" id="usersNote" style="margin-bottom:10px"></div>
     <div id="usersList" style="display:flex;flex-direction:column;gap:8px"></div>
     <div id="usersPager" style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"></div>
+  </section>
+
+  <section class="ops" id="area-kb" aria-label="Chatbot knowledge base" style="display:none">
+    <div class="panel">
+      <h2 style="margin:0 0 4px">Chatbot Knowledge Base</h2>
+      <p style="font-size:12.5px;opacity:.72;margin:0 0 12px;max-width:80ch">
+        Topics the Learning Corner chatbot answers from. Edits publish to seekers immediately, and each change is recorded with your name.
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <input id="kbSearch" type="text" autocomplete="off" placeholder="Search topics…" oninput="renderKbList()"
+          style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
+        <button class="btn btn-green" type="button" onclick="openKbForm()">+ New topic</button>
+        <button class="btn btn-ghost" type="button" onclick="loadKb()">Refresh</button>
+      </div>
+      <div id="kbList"></div>
+    </div>
+
+    <div class="panel" id="kbFormPanel" style="display:none;margin-top:16px">
+      <h3 id="kbFormTitle" style="margin:0 0 12px">New topic</h3>
+      <div class="mb-3">
+        <label>Topic keywords <span style="opacity:.6;font-weight:400">(comma-separated — the chatbot matches a question against any of these)</span></label>
+        <input id="kbKey" type="text" autocomplete="off" placeholder="e.g. ejiogbe, eji ogbe, first odu"
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
+      </div>
+      <div class="mb-3">
+        <label>Answer</label>
+        <textarea id="kbText" rows="6" placeholder="The answer the chatbot gives for this topic…"
+          style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px;line-height:1.6;font-family:inherit"></textarea>
+      </div>
+      <div class="mb-3">
+        <label>Media <span style="opacity:.6;font-weight:400">(optional — audio/video links shown with the answer)</span></label>
+        <div id="kbMediaList"></div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="kbAddMediaRow()">+ Add audio/video link</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <button class="btn btn-green" id="kbSaveBtn" type="button" onclick="saveKbEntry()">Save</button>
+        <button class="btn btn-ghost" type="button" onclick="closeKbForm()">Cancel</button>
+        <button class="btn btn-ghost" id="kbDeleteBtn" type="button" onclick="deleteKbEntry()"
+          style="display:none;margin-left:auto;color:#b3261e">Delete topic</button>
+      </div>
+    </div>
   </section>
 
   <section class="ops" id="area-settings" aria-label="Settings" style="display:none">
@@ -2461,6 +2503,8 @@ window.showArea = function (area) {
   if (area === "users" && window.__STAFF_ROLE__ && window.__STAFF_ROLE__ !== "superadmin") return;
   // Settings is superadmin-only (backend enforces it too).
   if (area === "settings" && window.__STAFF_ROLE__ && window.__STAFF_ROLE__ !== "superadmin") return;
+  // Knowledge Base is elder + superadmin only (backend enforces it too).
+  if (area === "kb" && window.__STAFF_ROLE__ && !["elder", "superadmin"].includes(window.__STAFF_ROLE__)) return;
   document.querySelectorAll(".area-tab").forEach((t) =>
     t.classList.toggle("is-active", t.dataset.area === area));
   // content area = the original three grid panes. The rail is the nav
@@ -2480,6 +2524,8 @@ window.showArea = function (area) {
   if (authArea) authArea.style.display = area === "authoring" ? "flex" : "none";
   var verifyArea = document.getElementById("area-verify");
   if (verifyArea) verifyArea.style.display = area === "verify" ? "flex" : "none";
+  var kbArea = document.getElementById("area-kb");
+  if (kbArea) kbArea.style.display = area === "kb" ? "flex" : "none";
   // Show a quick top progress bar for the click→content gap.
   if (area === "dashboard") {
     orTopbarStart();
@@ -2498,6 +2544,9 @@ window.showArea = function (area) {
   } else if (area === "verify") {
     orTopbarStart();
     Promise.resolve(loadVerifyQueue()).finally(orTopbarDone);
+  } else if (area === "kb") {
+    orTopbarStart();
+    Promise.resolve(loadKb()).finally(orTopbarDone);
   }
 };
 
@@ -5354,6 +5403,10 @@ async function refreshSessionChip() {
     // superadmin gets the same tab rather than a separate editor-only path.
     var verifyTab = document.querySelector('.area-tab[data-area="verify"]');
     if (verifyTab) verifyTab.style.display = (me.role === "superadmin" || me.role === "elder") ? "" : "none";
+    // Knowledge Base editor — elders and superadmins (elders also get it via the
+    // authoring view; this covers the superadmin full-studio path).
+    var kbTab = document.querySelector('.area-tab[data-area="kb"]');
+    if (kbTab) kbTab.style.display = (me.role === "superadmin" || me.role === "elder") ? "" : "none";
     // Bulk signal seeding is an authority action — superadmin + elder only
     // (backend enforces the same). It seeds the reading ranking's signals.
     var seedPanel = document.getElementById("seedPanel");
@@ -5465,8 +5518,8 @@ async function revealApp() {
    the authoring area. Backend routes enforce the same limits, so this is a
    clean UI, not a security boundary on its own. */
 function enterAuthoringMode(role) {
-  // Contributors see "My Verses"; elders also see "To Verify".
-  const allowed = role === "elder" ? ["authoring", "verify"] : ["authoring"];
+  // Contributors see "My Verses"; elders also see "To Verify" and the KB editor.
+  const allowed = role === "elder" ? ["authoring", "verify", "kb"] : ["authoring"];
   document.querySelectorAll(".area-tab").forEach((t) => {
     const keep = allowed.includes(t.dataset.area);
     t.style.display = keep ? "" : "none";
@@ -5646,6 +5699,153 @@ window.addEventListener("beforeunload", (e) => { if (itemDirty) e.preventDefault
 
 if (location.protocol === "file:") {
   toast("Opened as a file — sessions may not stick. Open the served /studio URL instead.", true);
+}
+
+/* ── Chatbot Knowledge Base editor (elders + superadmin) ──────────────────
+   Manages the ifaKnowledgeBase collection through the KB-scoped /api/studio/kb
+   endpoints. Direct-publish: a save is live immediately and recorded with the
+   editor's name (server-side audit). Entry shape mirrors what the chatbot reads:
+   { text, media:[{type,url,title}] }, keyed by comma-separated topic keywords. */
+let _kbEntries = {};
+let _kbEditingKey = null;
+
+async function loadKb() {
+  const list = $("kbList");
+  if (list) list.innerHTML = (typeof orLoaderHTML === "function") ? orLoaderHTML("Loading topics…") : "Loading…";
+  try {
+    const res = await studioApi("/kb");
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const d = await res.json();
+    _kbEntries = d.entries || {};
+    renderKbList();
+  } catch (err) {
+    if (list) list.innerHTML = "";
+    toast("Could not load the knowledge base: " + err.message, true);
+  }
+}
+
+function renderKbList() {
+  const list = $("kbList");
+  if (!list) return;
+  const q = ($("kbSearch") ? $("kbSearch").value : "").toLowerCase().trim();
+  const keys = Object.keys(_kbEntries)
+    .sort((a, b) => a.localeCompare(b))
+    .filter((k) => !q || k.toLowerCase().includes(q) || String((_kbEntries[k] && _kbEntries[k].text) || "").toLowerCase().includes(q));
+  if (!keys.length) {
+    list.innerHTML = '<div style="opacity:.6">No topics' + (q ? " match your search" : " yet") + '.</div>';
+    return;
+  }
+  list.innerHTML = keys.map((k) => {
+    const e = _kbEntries[k] || {};
+    const media = (e.media || []).length;
+    const teaser = String(e.text || "").slice(0, 100);
+    return '<button type="button" class="col-item kb-item" data-kbkey="' + escapeHtml(k) + '" style="display:block;width:100%;text-align:left;margin-bottom:6px">' +
+      '<div class="name">' + escapeHtml(k) + '</div>' +
+      '<div class="meta"><span>' + escapeHtml(teaser) + (teaser.length >= 100 ? "…" : "") + '</span>' +
+      (media ? ' <span class="pill">' + media + ' media</span>' : "") + '</div></button>';
+  }).join("");
+}
+
+// Delegated: open a topic from the list.
+document.addEventListener("click", (e) => {
+  const b = e.target.closest(".kb-item");
+  if (b) openKbForm(b.getAttribute("data-kbkey"));
+});
+
+function openKbForm(key) {
+  _kbEditingKey = key || null;
+  $("kbFormPanel").style.display = "";
+  $("kbFormTitle").textContent = key ? "Edit topic" : "New topic";
+  const e = key ? (_kbEntries[key] || { text: "", media: [] }) : { text: "", media: [] };
+  $("kbKey").value = key || "";
+  // The key is the map identity — editing changes text/media, not the name.
+  // (To rename, delete the topic and create it afresh.)
+  $("kbKey").disabled = !!key;
+  $("kbText").value = e.text || "";
+  _kbRenderMedia(e.media || []);
+  $("kbDeleteBtn").style.display = key ? "" : "none";
+  $("kbFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeKbForm() {
+  $("kbFormPanel").style.display = "none";
+  _kbEditingKey = null;
+}
+
+function _kbRenderMedia(media) {
+  const wrap = $("kbMediaList");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  (media || []).forEach((m) => _kbAddMediaRow(m));
+}
+function kbAddMediaRow() { _kbAddMediaRow({ type: "audio", url: "", title: "" }); }
+function _kbAddMediaRow(m) {
+  const wrap = $("kbMediaList");
+  if (!wrap) return;
+  m = m || {};
+  const row = document.createElement("div");
+  row.className = "kb-media-row";
+  row.style.cssText = "display:flex;gap:6px;margin-bottom:6px;align-items:center";
+  row.innerHTML =
+    '<select class="kb-m-type" style="padding:7px;border:1px solid var(--line,#d9e4dc);border-radius:6px">' +
+      '<option value="audio"' + (m.type !== "video" ? " selected" : "") + '>Audio</option>' +
+      '<option value="video"' + (m.type === "video" ? " selected" : "") + '>Video</option></select>' +
+    '<input class="kb-m-url" placeholder="https://… link" value="' + escapeHtml(m.url || "") + '" style="flex:1;min-width:0;padding:7px;border:1px solid var(--line,#d9e4dc);border-radius:6px">' +
+    '<input class="kb-m-title" placeholder="Title" value="' + escapeHtml(m.title || "") + '" style="flex:1;min-width:0;padding:7px;border:1px solid var(--line,#d9e4dc);border-radius:6px">' +
+    '<button type="button" class="btn btn-ghost btn-sm" title="Remove" onclick="this.closest(\'.kb-media-row\').remove()">✕</button>';
+  wrap.appendChild(row);
+}
+function _kbCollectMedia() {
+  return [...document.querySelectorAll("#kbMediaList .kb-media-row")].map((r) => ({
+    type: r.querySelector(".kb-m-type").value,
+    url: r.querySelector(".kb-m-url").value.trim(),
+    title: r.querySelector(".kb-m-title").value.trim(),
+  })).filter((m) => m.url);
+}
+
+async function saveKbEntry() {
+  const key = $("kbKey").value.trim();
+  const text = $("kbText").value.trim();
+  if (!key) { toast("Enter the topic keywords", true); return; }
+  if (!text) { toast("Enter the answer text", true); return; }
+  const value = { text, media: _kbCollectMedia() };
+  const btn = $("kbSaveBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Saving…"; }
+  try {
+    let res;
+    if (_kbEditingKey) {
+      res = await studioApi("/kb/items/" + encodeURIComponent(_kbEditingKey), { method: "PUT", body: JSON.stringify({ value }) });
+    } else {
+      res = await studioApi("/kb/items", { method: "POST", body: JSON.stringify({ key, value }) });
+    }
+    const d = await res.json();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) throw new Error(d.error || "Save failed");
+    toast(_kbEditingKey ? "Topic updated — live now" : "Topic added — live now");
+    closeKbForm();
+    loadKb();
+  } catch (err) {
+    toast("Save failed: " + err.message, true);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Save"; }
+  }
+}
+
+async function deleteKbEntry() {
+  if (!_kbEditingKey) return;
+  if (!confirmAct("Delete this topic? The chatbot will stop answering from it. This is recorded with your name.")) return;
+  try {
+    const res = await studioApi("/kb/items/" + encodeURIComponent(_kbEditingKey), { method: "DELETE" });
+    const d = await res.json();
+    if (res.status === 401 || res.status === 403) return gateToLogin();
+    if (!res.ok) throw new Error(d.error || "Delete failed");
+    toast("Topic deleted");
+    closeKbForm();
+    loadKb();
+  } catch (err) {
+    toast("Delete failed: " + err.message, true);
+  }
 }
 
 /* A lightweight boot overlay so the page is NEVER blank while the session is
