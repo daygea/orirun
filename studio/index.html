@@ -854,7 +854,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
         Topics the Learning Corner chatbot answers from. Edits publish to seekers immediately, and each change is recorded with your name.
       </p>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <input id="kbSearch" type="text" autocomplete="off" placeholder="Search topics…" oninput="renderKbList()"
+        <input id="kbSearch" type="text" autocomplete="off" placeholder="Search topics…" oninput="_kbPage=1;renderKbList()"
           style="flex:1;min-width:200px;padding:8px 10px;border:1px solid var(--line,#d9e4dc);border-radius:8px;font-size:14px">
         <button class="btn btn-green" type="button" onclick="openKbForm()">+ New topic</button>
         <button class="btn btn-ghost" type="button" onclick="loadKb()">Refresh</button>
@@ -1674,6 +1674,10 @@ function showAuth() {
 function renderCollections() {
   const wrap = $("colList"); wrap.innerHTML = "";
   for (const c of collections) {
+    // The chatbot knowledge base has its own dedicated editor (the "Knowledge
+    // Base" tab) with a purpose-built form. Hide it from the generic content rail
+    // so superadmins use that better editor — one path, one form, for everyone.
+    if (c.key === "ifaKnowledgeBase") continue;
     const btn = document.createElement("button");
     btn.className = "col-item" + (activeCol?.key === c.key ? " active" : "");
     const src = String(c.source || "");
@@ -5708,6 +5712,8 @@ if (location.protocol === "file:") {
    { text, media:[{type,url,title}] }, keyed by comma-separated topic keywords. */
 let _kbEntries = {};
 let _kbEditingKey = null;
+let _kbPage = 1;
+const KB_PAGE_SIZE = 20;
 
 async function loadKb() {
   const list = $("kbList");
@@ -5718,6 +5724,7 @@ async function loadKb() {
     if (!res.ok) throw new Error("HTTP " + res.status);
     const d = await res.json();
     _kbEntries = d.entries || {};
+    _kbPage = 1;
     renderKbList();
   } catch (err) {
     if (list) list.innerHTML = "";
@@ -5736,7 +5743,13 @@ function renderKbList() {
     list.innerHTML = '<div style="opacity:.6">No topics' + (q ? " match your search" : " yet") + '.</div>';
     return;
   }
-  list.innerHTML = keys.map((k) => {
+  // Paginate — the KB has hundreds of topics, so render one page at a time.
+  const pages = Math.max(1, Math.ceil(keys.length / KB_PAGE_SIZE));
+  if (_kbPage > pages) _kbPage = pages;
+  if (_kbPage < 1) _kbPage = 1;
+  const start = (_kbPage - 1) * KB_PAGE_SIZE;
+  const pageKeys = keys.slice(start, start + KB_PAGE_SIZE);
+  const items = pageKeys.map((k) => {
     const e = _kbEntries[k] || {};
     const media = (e.media || []).length;
     const teaser = String(e.text || "").slice(0, 100);
@@ -5745,6 +5758,24 @@ function renderKbList() {
       '<div class="meta"><span>' + escapeHtml(teaser) + (teaser.length >= 100 ? "…" : "") + '</span>' +
       (media ? ' <span class="pill">' + media + ' media</span>' : "") + '</div></button>';
   }).join("");
+  const from = start + 1, to = start + pageKeys.length;
+  const pager =
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap">' +
+      '<span style="font-size:12px;opacity:.7">Showing ' + from + '–' + to + ' of ' + keys.length + '</span>' +
+      '<span style="display:flex;gap:6px;align-items:center">' +
+        '<button type="button" class="btn btn-ghost btn-sm"' + (_kbPage <= 1 ? " disabled" : "") + ' onclick="kbGoPage(' + (_kbPage - 1) + ')">‹ Prev</button>' +
+        '<span style="font-size:12px;opacity:.7">' + _kbPage + ' / ' + pages + '</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm"' + (_kbPage >= pages ? " disabled" : "") + ' onclick="kbGoPage(' + (_kbPage + 1) + ')">Next ›</button>' +
+      '</span>' +
+    '</div>';
+  list.innerHTML = items + pager;
+}
+
+function kbGoPage(p) {
+  _kbPage = p;
+  renderKbList();
+  const list = $("kbList");
+  if (list && list.scrollIntoView) list.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 // Delegated: open a topic from the list.
