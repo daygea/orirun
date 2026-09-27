@@ -5504,7 +5504,7 @@ async function revealApp() {
     // A superadmin has every right: the standard console tabs PLUS "To Verify"
     // (so they can sign off on content like an elder). "My Verses" stays hidden
     // — it's the contributor's own-authoring view, not a console feature.
-    const superTabs = ["content", "dashboard", "logs", "verses", "users", "settings", "verify"];
+    const superTabs = ["content", "dashboard", "logs", "verses", "users", "settings", "verify", "kb"];
     document.querySelectorAll(".area-tab").forEach((t) => {
       t.style.display = superTabs.includes(t.dataset.area) ? "" : "none";
     });
