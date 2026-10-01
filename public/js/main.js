@@ -113,10 +113,24 @@ async function withBusy(el, fn, opts) {
   if (typeof fn !== "function") return;
   if (!el) return fn();                                   // no element → just run
   if (el.dataset && el.dataset.busy === "1") return;      // re-entrancy guard — ignore repeat clicks
-  // Offline short-circuit: an immediate honest message beats a silent hang.
-  if (typeof navigator !== "undefined" && navigator.onLine === false) {
-    if (typeof toast === "function") toast("You appear to be offline — check your connection and try again.", true);
-    else alert("You appear to be offline — check your connection and try again.");
+  // Offline handling. Two kinds of action:
+  //  • cache-served reads (a divination / numerology reveal) pass
+  //    {allowOffline:true} — the Service Worker can serve the reading from its
+  //    cached corpus, so we let them run and the reading path falls back on its
+  //    own if the cache misses.
+  //  • genuinely online-only actions (the assistant) keep the guard and get an
+  //    honest, specific message instead of a silent hang.
+  // We judge "offline" from REAL request outcomes (orirunIsOnline) when the
+  // resilience layer is loaded, not the unreliable navigator.onLine flag alone.
+  const reallyOffline = (typeof window.orirunIsOnline === "function")
+    ? !window.orirunIsOnline()
+    : (typeof navigator !== "undefined" && navigator.onLine === false);
+  if (reallyOffline && !opts.allowOffline) {
+    const msg = (typeof window.orirunOfflineNotice === "function")
+      ? window.orirunOfflineNotice(opts.feature)
+      : (opts.feature || "This feature") + " needs an internet connection. Please reconnect and try again.";
+    if (typeof toast === "function") toast(msg, true);
+    else alert(msg);
     return;
   }
   const prevHTML = el.innerHTML;
@@ -140,6 +154,23 @@ async function withBusy(el, fn, opts) {
   }
 }
 window.withBusy = withBusy;
+
+/* Meaningful, translatable message for a failed data fetch. Distinguishes a
+   dropped connection from a server problem, and never shows a seeker a raw
+   developer string like "Failed to fetch Odu data". Used by every reveal path's
+   catch block so the person always sees something they can act on. */
+function orirunFetchMessage(feature) {
+  const f = feature || "This";
+  const offline = (typeof window.orirunIsOnline === "function" && !window.orirunIsOnline()) ||
+                  (typeof navigator !== "undefined" && navigator.onLine === false);
+  if (offline) {
+    return (typeof window.orirunOfflineNotice === "function")
+      ? window.orirunOfflineNotice(f)
+      : f + " needs an internet connection. Please reconnect and try again.";
+  }
+  return f + " couldn’t be loaded just now — the server may be waking up. Please try again in a moment.";
+}
+window.orirunFetchMessage = orirunFetchMessage;
 
 /* Render a verse-based reading (step 2). Leads with the most-specific verified
    interpretation, then offers the other verified analyses beneath ("Ifá also
@@ -1561,7 +1592,7 @@ const performUserDivination = async (
             <p data-translate>Special appreciation is extended to all Babalawo, for their publicly
               shared teachings and insights, as well as to Dunad Solutions Limited and the Aminat
               Olanbiwoninu Kadri Foundation for their invaluable support.</p>
-            <p style="font-size:0.92em;line-height:1.55;" data-translate>Are you a babaláwo or ìyánífá? <a href="#" onclick="openBabalawoContribution(); return false;" style="color:var(--primary,#0f7b3d);font-weight:600;text-decoration:underline;">Contribute a verse or teaching</a> — credited to you by name once a verifying elder has reviewed it.</p>
+            <p style="font-size:0.92em;line-height:1.55;" data-translate>Are you a babaláwo or ìyánífá? <a href="https://orirun.com/studio" target="_blank" rel="noopener" style="color:var(--primary,#0f7b3d);font-weight:600;text-decoration:underline;">Contribute a verse or teaching</a> — credited to you by name once a verifying elder has reviewed it.</p>
             <p style="font-style:italic;font-size:0.9em;color:var(--of-ink-soft);text-align:center;" data-translate>
               This content is inspired by collective Ifá traditions, scholarly works, and community-preserved
               teachings, shared for educational purposes only.
@@ -1681,8 +1712,16 @@ const performUserDivination = async (
     }, 500);
 
   } catch (err) {
+    // A seeker should never see "Failed to fetch Odu data". Show a meaningful,
+    // translatable message — offline vs. server-waking — with a way to retry.
+    const msg = orirunFetchMessage("This reading");
     resultElement.innerHTML = `
-      <center><span class="alert alert-info" data-translate>${err.message}</span></center>`;
+      <center>
+        <span class="alert alert-info" data-translate>${msg}</span><br/>
+        <button type="button" class="btn btn-sm btn-default" style="margin-top:10px"
+          onclick="withBusy(this, function(){ return performUserDivination(); }, {label:'Revealing…', allowOffline:true})"
+          data-translate>Try again</button>
+      </center>`;
     if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   } finally {
     hidePreloader();
@@ -1821,7 +1860,87 @@ async function _oriBoot() {
 
   initDailyGuidance().catch(err => console.warn("Daily guidance init failed:", err));
 
+  // Fill the offline corpus in the background so ANY cast reveals offline later.
+  // Kicked off at idle, well after first paint, so it never competes with the
+  // seeker's first reading.
+  scheduleCorpusWarm();
+
 }
+
+/* ─────────────────────────────────────────────────────────────
+ *  OFFLINE CORPUS WARMER
+ *  Walks the 256 Odù endpoints in the background (idle time, small
+ *  batches) while online, so the Service Worker's NetworkFirst API cache
+ *  holds the whole corpus. Result: once a seeker has been online at least
+ *  once, ANY cast reveals its full Odù message offline — not only the few
+ *  Odù they happened to open before.
+ *
+ *  • Online always wins: this only fills the cache. The live reading path
+ *    still hits the network first, so studio edits show instantly online.
+ *  • Polite: idle kickoff, 6-at-a-time batches with a breath between, and a
+ *    skip for Odù already cached — so it never floods the network or the SW.
+ *  • Self-refreshing: re-warms at most once every 24h, topping up the
+ *    offline copy of Odù the seeker hasn't opened since the last pass.
+ *  • Safe: entirely best-effort; any failure is swallowed and retried next
+ *    load. Needs a controlling Service Worker — without one there is no
+ *    offline store to fill, so it no-ops.
+ * ───────────────────────────────────────────────────────────── */
+function scheduleCorpusWarm() {
+  const start = () => { warmOfflineCorpus().catch(() => {}); };
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(start, { timeout: 8000 });
+  } else {
+    setTimeout(start, 4000);
+  }
+}
+
+async function warmOfflineCorpus() {
+  try {
+    if (!("caches" in window)) return;                                   // no Cache Storage → nothing to fill
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return; // no SW in control → no offline store
+    if (navigator.onLine === false) return;                             // offline now → try again next load
+
+    const LAST_KEY = "orirun_corpus_warm_ts";
+    const DAY = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let last = 0;
+    try { last = parseInt(localStorage.getItem(LAST_KEY) || "0", 10) || 0; } catch {}
+    const forceRefresh = (now - last) >= DAY;   // once a day, refresh even cached entries
+
+    const names = (typeof allOdus !== "undefined" ? allOdus : []).map(o => o.name).filter(Boolean);
+    if (!names.length) return;
+
+    // Learn which Odù are already cached, so a normal top-up skips them and only
+    // the genuinely-missing ones hit the network.
+    const cached = new Set();
+    if (!forceRefresh) {
+      try {
+        const cacheNames = await caches.keys();
+        const apiName = cacheNames.find(k => /apidata/.test(k));
+        if (apiName) {
+          const c = await caches.open(apiName);
+          for (const req of await c.keys()) {
+            try { cached.add(decodeURIComponent(new URL(req.url).pathname)); } catch {}
+          }
+        }
+      } catch {}
+    }
+
+    const BATCH = 6;
+    for (let i = 0; i < names.length; i += BATCH) {
+      if (navigator.onLine === false) return;   // disconnected mid-pass → resume next load
+      const slice = names.slice(i, i + BATCH);
+      await Promise.all(slice.map(async (name) => {
+        const path = `/api/odu/${encodeURIComponent(name)}`;
+        if (!forceRefresh && cached.has(`/api/odu/${name}`)) return;   // already offline-ready
+        try { await fetch(path); } catch { /* individual miss → next pass retries */ }
+      }));
+      await new Promise(r => setTimeout(r, 400));   // breathe between batches
+    }
+    try { localStorage.setItem(LAST_KEY, String(now)); } catch {}
+  } catch { /* warming is best-effort and must never surface to the seeker */ }
+}
+window.warmOfflineCorpus = warmOfflineCorpus;
 
 // Boot on DOMContentLoaded instead of window.onload: reveal + setup no longer
 // wait for every image and late resource. main.js is a deferred script, so
@@ -1967,7 +2086,8 @@ async function displayMeaning(number) {
   } catch (error) {
     console.error("Error fetching numerology data:", error);
     document.getElementById("divinationResult").innerHTML =
-      `<center><span class="alert alert-info">${error.message}</span></center>`;
+      `<center><span class="alert alert-info" data-translate>${orirunFetchMessage("This number reading")}</span></center>`;
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(document.getElementById("divinationResult")); } catch {} }
   } finally {
     hidePreloader();
   }
@@ -2614,7 +2734,8 @@ function parseEnergyAccordion(text) {
     console.error(error);
     hidePreloader();
     resultElement.innerHTML =
-      `<center><span class="alert alert-info" data-translate>${error.message}</span></center>`;
+      `<center><span class="alert alert-info" data-translate>${orirunFetchMessage("This birth chart")}</span></center>`;
+    if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   }
 };
 

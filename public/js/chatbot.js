@@ -111,7 +111,7 @@ document.addEventListener("keydown", function (event) {
         // Route Enter through the same busy guard as the send button so the two
         // paths share one in-flight lock (no double-send on rapid Enter).
         const sendBtn = document.getElementById("send-btn");
-        if (window.withBusy && sendBtn) window.withBusy(sendBtn, sendMessage);
+        if (window.withBusy && sendBtn) window.withBusy(sendBtn, sendMessage, {feature:'The assistant'});
         else sendMessage();
     }
 });
