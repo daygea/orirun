@@ -1389,28 +1389,43 @@ const performUserDivination = async (
       `&solution=${encodeURIComponent(solution)}` +
       `&detail=${encodeURIComponent(solutionDetails)}`;
 
-    // Core Odù data on a time budget. We try the live request (fresh content —
-    // studio edits show instantly on a healthy network), but wait at most
-    // NET_BUDGET; if the network is dead or crawling we fall back to the cached
-    // copy the corpus warmer stored, so the reveal still answers in seconds
-    // instead of hanging on the server-wake / retry chain.
-    const NET_BUDGET = 7000;
-    let oduRes = null;
-    try {
-      oduRes = await withTimeout(fetch(`/api/odu/${encodeURIComponent(mainCast)}`), NET_BUDGET);
-    } catch { oduRes = null; }
-    if (!oduRes || !oduRes.ok) {
-      const cached = await getCachedOduResponse(mainCast);
-      if (cached) oduRes = cached;
+    // ── Core Odù data: cache-first for instant reveals, network to stay fresh ──
+    // A seeker should not watch a spinner when a good copy is already on the
+    // device. We read the cached copy (local, instant) and fire the live request
+    // in parallel. If the device HAS a cached Odù we paint it almost at once,
+    // giving the network only a brief grace to win with fresher content; if it
+    // does NOT, we wait on the network up to a hard ceiling, then surface an
+    // honest message. On a healthy network the live copy wins the grace race in
+    // well under a second, so studio edits still show immediately — the cached
+    // copy only carries the reveal when the network is slow or dead.
+    const NET_BUDGET  = 7000;   // hard ceiling when there is no cached copy to show
+    const CACHE_GRACE = 1200;   // max wait for the live copy when a cached one exists
+
+    const netOdu = withTimeout(fetch(`/api/odu/${encodeURIComponent(mainCast)}`), NET_BUDGET)
+      .then((r) => (r && r.ok ? r : null))
+      .catch(() => null);
+    const cachedOdu = await getCachedOduResponse(mainCast);
+
+    let oduRes;
+    if (cachedOdu) {
+      oduRes = await Promise.race([
+        netOdu,
+        new Promise((res) => setTimeout(() => res(null), CACHE_GRACE))
+      ]);
+      if (!oduRes) oduRes = cachedOdu;     // network slower than the grace → paint cache now
+    } else {
+      oduRes = await netOdu;               // nothing cached → must wait (bounded)
     }
     if (!oduRes || !oduRes.ok) throw new Error("ODU_UNAVAILABLE");
     const oduData = await oduRes.json();
 
-    // Enrichments (community feedback + verified verse reading) are optional and
-    // must never hold up the reveal — bound them too, and degrade to null.
+    // ── Enrichments (community feedback + verified verse reading): optional, and
+    // must never hold up the reveal. Short budget so a slow network can't stall
+    // the paint — they degrade to null and the base reading shows regardless.
+    const ENRICH_BUDGET = 2500;
     const [fbRes, verseRes] = await Promise.all([
-      withTimeout(fetch(feedbackUrl), NET_BUDGET).catch(() => null),
-      withTimeout(fetch(verseReadingUrl), NET_BUDGET).catch(() => null)
+      withTimeout(fetch(feedbackUrl), ENRICH_BUDGET).catch(() => null),
+      withTimeout(fetch(verseReadingUrl), ENRICH_BUDGET).catch(() => null)
     ]);
 
     // Verse reading, if the corpus has a verified interpretation for this cast.
