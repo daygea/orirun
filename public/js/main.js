@@ -172,6 +172,47 @@ function orirunFetchMessage(feature) {
 }
 window.orirunFetchMessage = orirunFetchMessage;
 
+/* Bound a promise with a hard deadline. On a connected-but-dead or extremely
+   slow network, navigator.onLine is TRUE, so the request runs the full stack
+   (server wake-up polling + 12s timeouts + a retry) and the spinner hangs ~40s.
+   Racing each reveal fetch against a short budget means we wait a predictable
+   few seconds, then fall back to the offline cache or an honest message —
+   never an open-ended hang. The underlying fetch is abandoned, not awaited. */
+function withTimeout(promise, ms, label) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(label || "timeout")), ms);
+    Promise.resolve(promise).then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); }
+    );
+  });
+}
+window.orirunWithTimeout = withTimeout;
+
+/* Read a previously-cached Odù response straight from the Service Worker's API
+   cache, bypassing the network entirely. This is what lets a reveal answer
+   instantly from the warmed corpus the moment the live request is too slow. */
+async function getCachedOduResponse(name) {
+  try {
+    if (!("caches" in window)) return null;
+    const cacheNames = await caches.keys();
+    const apiName = cacheNames.find((k) => /apidata/.test(k));
+    if (!apiName) return null;
+    const c = await caches.open(apiName);
+    const target = `/api/odu/${name}`;
+    for (const req of await c.keys()) {
+      let p;
+      try { p = decodeURIComponent(new URL(req.url).pathname); } catch { continue; }
+      if (p === target) {
+        const res = await c.match(req);
+        if (res) return res;
+      }
+    }
+  } catch { /* cache unavailable → caller surfaces the honest message */ }
+  return null;
+}
+window.getCachedOduResponse = getCachedOduResponse;
+
 /* Render a verse-based reading (step 2). Leads with the most-specific verified
    interpretation, then offers the other verified analyses beneath ("Ifá also
    speaks…"). Every interpretation shows its named provenance — the verse
@@ -1348,14 +1389,29 @@ const performUserDivination = async (
       `&solution=${encodeURIComponent(solution)}` +
       `&detail=${encodeURIComponent(solutionDetails)}`;
 
-    const [oduRes, fbRes, verseRes] = await Promise.all([
-      fetch(`/api/odu/${encodeURIComponent(mainCast)}`),
-      fetch(feedbackUrl).catch(() => null),
-      fetch(verseReadingUrl).catch(() => null)
-    ]);
-
-    if (!oduRes.ok) throw new Error("Failed to fetch Odu data");
+    // Core Odù data on a time budget. We try the live request (fresh content —
+    // studio edits show instantly on a healthy network), but wait at most
+    // NET_BUDGET; if the network is dead or crawling we fall back to the cached
+    // copy the corpus warmer stored, so the reveal still answers in seconds
+    // instead of hanging on the server-wake / retry chain.
+    const NET_BUDGET = 7000;
+    let oduRes = null;
+    try {
+      oduRes = await withTimeout(fetch(`/api/odu/${encodeURIComponent(mainCast)}`), NET_BUDGET);
+    } catch { oduRes = null; }
+    if (!oduRes || !oduRes.ok) {
+      const cached = await getCachedOduResponse(mainCast);
+      if (cached) oduRes = cached;
+    }
+    if (!oduRes || !oduRes.ok) throw new Error("ODU_UNAVAILABLE");
     const oduData = await oduRes.json();
+
+    // Enrichments (community feedback + verified verse reading) are optional and
+    // must never hold up the reveal — bound them too, and degrade to null.
+    const [fbRes, verseRes] = await Promise.all([
+      withTimeout(fetch(feedbackUrl), NET_BUDGET).catch(() => null),
+      withTimeout(fetch(verseReadingUrl), NET_BUDGET).catch(() => null)
+    ]);
 
     // Verse reading, if the corpus has a verified interpretation for this cast.
     let verseReading = null;
@@ -2034,7 +2090,10 @@ async function displayMeaning(number) {
   showPreloader();
 
   try {
-    const response = await fetch(`/api/numerology/${number}`);
+    // Bounded like the Odù reveal: a dead/slow-but-connected network falls back
+    // fast (the Service Worker serves the cached numerology within its 6s window,
+    // which beats our 7s budget) instead of hanging on the server-wake chain.
+    const response = await withTimeout(fetch(`/api/numerology/${number}`), 7000);
     if (!response.ok) throw new Error("Failed to fetch numerology meaning");
 
     const data  = await response.json();
