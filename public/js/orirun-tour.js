@@ -62,7 +62,9 @@ document.addEventListener("DOMContentLoaded", function () {
       { target: "#tour-guidance-link", title: "Today's Guidance",
         body: "Tap here any time to receive your personalised daily guidance — rooted in your numerology, your Orisha alignment, and the energy of the current hour." },
       { target: "#or-cast-link", title: "Today's Ifa Wisdom",
-        body: "You've seen how to set each part of a reading yourself. <strong>Today's Ifa Wisdom</strong> is the other way: tap it and a cast falls as it does with the opèlè — the Odù, its orientation, and the prescribed offering all settle on their own, and the wisdom is revealed. Use it when you'd rather let Ifá guide for the day." }
+        body: "You've seen how to set each part of a reading yourself. <strong>Today's Ifa Wisdom</strong> is the other way: tap it and a cast falls as it does with the opèlè — the Odù, its orientation, and the prescribed offering all settle on their own, and the wisdom is revealed. Use it when you'd rather let Ifá guide for the day." },
+      { target: "#tour-contribute-link", title: "Contribute (babaláwo / elder)",
+        body: "Are you a Babalawo or Iyanifa? Contribute a verse or teaching credited to you by name." }
     ];
 
     if (window.innerWidth < 576) {

@@ -229,8 +229,8 @@ function _verseReadingHTML(vr, solutionInfo) {
     const ver = r.verifiedBy;
     if (!rec && !ver) return "";
     const bits = [];
-    if (rec) bits.push(`<span data-translate>recorded by</span> ${esc(rec)}`);
-    if (ver) bits.push(`<span data-translate>verified by</span> ${esc(ver)}`);
+    // if (rec) bits.push(`<span data-translate>recorded by</span> ${esc(rec)}`);
+    // if (ver) bits.push(`<span data-translate>verified by</span> ${esc(ver)}`);
     return `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">${bits.join(" · ")}</div>`;
   };
   // Collapsible verse — the source the interpretation rests on. Shown beneath
@@ -270,11 +270,13 @@ function _verseReadingHTML(vr, solutionInfo) {
         ${struct}
       </div>`;
   };
-  const interpDisc = (r) => `
-      <details style="margin-top:10px;">
-        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
-        <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
-      </details>`;
+  // const interpDisc = (r) => `
+  //     <details style="margin-top:10px;">
+  //       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+  //       <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
+  //     </details>`;
+
+    const interpDisc = (r) => ``;
 
   // Practical/ritual notes — only present when the seeker is allowed to see them
   // (the backend gates this by the dashboard toggle). The Yorùbá terms within are
@@ -545,8 +547,10 @@ function _verseCardHTML(r) {
   };
   const contributor = r.provenance?.contributor
     ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
+  // const cred = r.provenance?.contributor
+  //   ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
   const cred = r.provenance?.contributor
-    ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
+    ? `` : "";
   // Verse-first, matching the lead and the initial supporting cards: the ẹsẹ Ifá
   // shows prominently, its interpretation is the collapsed "What Ifá says".
   const hasVerse = r.normalized && r.yoruba && r.yoruba.length;
@@ -556,9 +560,12 @@ function _verseCardHTML(r) {
   const verseBlock = hasVerse
     ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${r.yoruba.map(esc).join("<br>")}</div>`
     : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
+  // const interp = hasVerse
+  //   ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+  //     <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
+  //   : "";
   const interp = hasVerse
-    ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
-      <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
+    ? ``
     : "";
   const practical = (r.practicalNotes && r.practicalNotes.length)
     ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2b6b3a;" data-translate>Medicine · ẹbọ · àkóse</summary>
