@@ -546,10 +546,9 @@ function _verseCardHTML(r) {
   };
   const contributor = r.provenance?.contributor
     ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
-  // const cred = r.provenance?.contributor
-  //   ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
   const cred = r.provenance?.contributor
-    ? `` : "";
+    ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
+
   // Verse-first, matching the lead and the initial supporting cards: the ẹsẹ Ifá
   // shows prominently, its interpretation is the collapsed "What Ifá says".
   const hasVerse = r.normalized && r.yoruba && r.yoruba.length;
