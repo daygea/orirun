@@ -270,13 +270,12 @@ function _verseReadingHTML(vr, solutionInfo) {
         ${struct}
       </div>`;
   };
-  // const interpDisc = (r) => `
-  //     <details style="margin-top:10px;">
-  //       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
-  //       <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
-  //     </details>`;
+  const interpDisc = (r) => `
+      <details style="margin-top:10px;">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+        <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p>
+      </details>`;
 
-    const interpDisc = (r) => ``;
 
   // Practical/ritual notes — only present when the seeker is allowed to see them
   // (the backend gates this by the dashboard toggle). The Yorùbá terms within are
@@ -560,13 +559,11 @@ function _verseCardHTML(r) {
   const verseBlock = hasVerse
     ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${r.yoruba.map(esc).join("<br>")}</div>`
     : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
-  // const interp = hasVerse
-  //   ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
-  //     <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
-  //   : "";
   const interp = hasVerse
-    ? ``
+    ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--of-green-deep,#0a5a2c);" data-translate>What Ifá says</summary>
+      <p class="ori-section-text" style="margin-top:8px;" data-translate>${esc(r.interpretation)}</p></details>`
     : "";
+
   const practical = (r.practicalNotes && r.practicalNotes.length)
     ? `<details style="margin-top:10px;"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2b6b3a;" data-translate>Medicine · ẹbọ · àkóse</summary>
       <div class="ori-section-text" style="margin-top:8px;white-space:pre-wrap;" lang="yo" translate="no">${r.practicalNotes.map(esc).join("<br>")}</div></details>`
