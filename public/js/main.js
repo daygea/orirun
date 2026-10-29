@@ -333,7 +333,7 @@ function _verseReadingHTML(vr, solutionInfo) {
   const remaining = Math.max(0, others.length - shown.length);
   const teaser = (t) => {
     const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
-    return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+    return first.length > 130 ? first.slice(0, 128).trim() + "…" : first;
   };
   // A short teaser of the VERSE itself (its first Yorùbá line) for the collapsed
   // card summary — so supporting verses, like the lead, are met as verse first.
@@ -349,7 +349,7 @@ function _verseReadingHTML(vr, solutionInfo) {
     const verseTeaser = (r) => {
     if ((r.normalized || r.verifiedBy) && r.yoruba && r.yoruba.length) {
       const first = esc(r.yoruba[0]);
-      return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+      return first.length > 130 ? first.slice(0, 128).trim() + "…" : first;
     }
     // No public verse text → interpretation teaser so the card still says
     // something meaningful. Should now be rare — only un-verified,
@@ -360,8 +360,7 @@ function _verseReadingHTML(vr, solutionInfo) {
   const card = (r) => `
     <details class="verse-card" data-vid="${esc(r.verseId || "")}" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser(r)}</span>
-        ${r.provenance?.contributor ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : ""}
+        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser(r)}</span>
       </summary>
       <div style="padding:0 12px 12px;">
         ${leadVerseBlock(r) || `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`}
@@ -558,12 +557,12 @@ function _verseCardHTML(r) {
   const esc = (s) => String(s == null ? "" : s);
   const teaser = (t) => {
     const first = String(t || "").split(/(?<=[.!?])\s/)[0] || String(t || "");
-    return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+    return first.length > 130 ? first.slice(0, 128).trim() + "…" : first;
   };
-  const contributor = r.provenance?.contributor
-    ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
-  const cred = r.provenance?.contributor
-    ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
+  // const contributor = r.provenance?.contributor
+  //   ? `<span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(r.provenance.contributor)}</span>` : "";
+  // const cred = r.provenance?.contributor
+  //   ? `<div style="font-size:11.5px;color:var(--of-ink-soft);margin-top:8px;font-style:italic;">verse from ${esc(r.provenance.contributor)}</div>` : "";
 
   // Verse-first, matching the lead and the initial supporting cards: the ẹsẹ Ifá
   // shows prominently, its interpretation is the collapsed "What Ifá says".
@@ -575,9 +574,9 @@ function _verseCardHTML(r) {
       // Verse-first, matching the lead and the initial supporting cards.
   const hasVerse = (r.normalized || r.verifiedBy) && r.yoruba && r.yoruba.length;
   const verseTeaser = hasVerse
-    ? (esc(r.yoruba[0]).length > 90 ? esc(r.yoruba[0]).slice(0, 88).trim() + "…" : esc(r.yoruba[0]))
+    ? (esc(r.yoruba[0]).length > 130 ? esc(r.yoruba[0]).slice(0, 128).trim() + "…" : esc(r.yoruba[0]))
     : esc(teaser(r.interpretation));
-    
+
   const verseBlock = hasVerse
     ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${r.yoruba.map(esc).join("<br>")}</div>`
     : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
@@ -592,9 +591,9 @@ function _verseCardHTML(r) {
     : "";
   return `<details class="verse-card" data-vid="${esc(r.verseId || "")}" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-        <span style="flex:1;min-width:0;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser}</span>${contributor}
+        <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:var(--of-ink-soft,#7a8a80);" data-translate>${verseTeaser}</span>
       </summary>
-      <div style="padding:0 12px 12px;">${verseBlock}${interp}${practical}${cred}</div>
+      <div style="padding:0 12px 12px;">${verseBlock}${interp}${practical}</div>
     </details>`;
 }
 
