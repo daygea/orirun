@@ -248,7 +248,12 @@ function _verseReadingHTML(vr, solutionInfo) {
   // (Verse shown only when normalized/tone-marked; otherwise we lead with the
   // interpretation as a fallback so the reading still stands.)
   const leadVerseBlock = (r) => {
-    if (!r.normalized || !(r.yoruba && r.yoruba.length)) return "";
+    // if (!r.normalized || !(r.yoruba && r.yoruba.length)) return "";
+        // The verse shows when it is normalized (tone-marked) OR verified
+    // (an elder has vouched for it). Verification alone is enough — a
+    // verified verse is safe to display even before normalization.
+    const showVerse = r.normalized || !!r.verifiedBy;
+    if (!showVerse || !(r.yoruba && r.yoruba.length)) return "";
     const yor = r.yoruba.map((l) => esc(l)).join("<br>");
     const eng = (r.english && r.english.length)
       ? `<div style="margin-top:8px;color:var(--of-ink-soft);font-style:italic;" data-translate>${r.english.map(esc).join("<br>")}</div>` : "";
@@ -332,15 +337,26 @@ function _verseReadingHTML(vr, solutionInfo) {
   };
   // A short teaser of the VERSE itself (its first Yorùbá line) for the collapsed
   // card summary — so supporting verses, like the lead, are met as verse first.
-  const verseTeaser = (r) => {
-    if (r.normalized && r.yoruba && r.yoruba.length) {
+  // const verseTeaser = (r) => {
+  //   if (r.normalized && r.yoruba && r.yoruba.length) {
+  //     const first = esc(r.yoruba[0]);
+  //     return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
+  //   }
+  //   // No public verse text (un-normalized) → fall back to the interpretation
+  //   // teaser so the card still says something meaningful.
+  //   return esc(teaser(r.interpretation));
+  // };
+    const verseTeaser = (r) => {
+    if ((r.normalized || r.verifiedBy) && r.yoruba && r.yoruba.length) {
       const first = esc(r.yoruba[0]);
       return first.length > 90 ? first.slice(0, 88).trim() + "…" : first;
     }
-    // No public verse text (un-normalized) → fall back to the interpretation
-    // teaser so the card still says something meaningful.
+    // No public verse text → interpretation teaser so the card still says
+    // something meaningful. Should now be rare — only un-verified,
+    // un-normalized submissions reach this branch.
     return esc(teaser(r.interpretation));
   };
+
   const card = (r) => `
     <details class="verse-card" data-vid="${esc(r.verseId || "")}" style="border:1px solid var(--of-line,#e6efe4);border-radius:8px;margin-bottom:7px;overflow:hidden;">
       <summary style="cursor:pointer;list-style:none;padding:10px 12px;display:flex;align-items:center;gap:10px;">
@@ -551,10 +567,17 @@ function _verseCardHTML(r) {
 
   // Verse-first, matching the lead and the initial supporting cards: the ẹsẹ Ifá
   // shows prominently, its interpretation is the collapsed "What Ifá says".
-  const hasVerse = r.normalized && r.yoruba && r.yoruba.length;
+  // const hasVerse = r.normalized && r.yoruba && r.yoruba.length;
+  // const verseTeaser = hasVerse
+  //   ? (esc(r.yoruba[0]).length > 90 ? esc(r.yoruba[0]).slice(0, 88).trim() + "…" : esc(r.yoruba[0]))
+  //   : esc(teaser(r.interpretation));
+
+      // Verse-first, matching the lead and the initial supporting cards.
+  const hasVerse = (r.normalized || r.verifiedBy) && r.yoruba && r.yoruba.length;
   const verseTeaser = hasVerse
     ? (esc(r.yoruba[0]).length > 90 ? esc(r.yoruba[0]).slice(0, 88).trim() + "…" : esc(r.yoruba[0]))
     : esc(teaser(r.interpretation));
+    
   const verseBlock = hasVerse
     ? `<div style="font-size:15px;line-height:1.8;color:var(--of-ink);padding:12px 14px;background:var(--of-paper-2,#f5f1e6);border-radius:8px;" lang="yo" translate="no">${r.yoruba.map(esc).join("<br>")}</div>`
     : `<p class="ori-section-text" style="margin:0 0 4px;" data-translate>${esc(r.interpretation)}</p>`;
