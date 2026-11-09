@@ -190,8 +190,9 @@ function orirunNoticeCard(msg, retryOnclick) {
          style="margin-top:16px;padding:9px 22px;border-radius:999px;font-weight:600;">Try again</button>`
     : "";
   return `
-    <div style="max-width:420px;margin:22px auto;padding:24px 22px;background:rgba(255,255,255,.72);
-      border:1px solid rgba(15,123,61,.18);border-radius:16px;text-align:center;
+    <div data-notice role="status" aria-live="polite" tabindex="-1"
+      style="max-width:420px;margin:22px auto;padding:24px 22px;background:rgba(255,255,255,.72);
+      border:1px solid rgba(15,123,61,.18);border-radius:16px;text-align:center;outline:none;
       box-shadow:0 4px 18px rgba(0,0,0,.06);">
       <div aria-hidden="true" style="width:48px;height:48px;margin:0 auto 14px;border-radius:50%;
         display:flex;align-items:center;justify-content:center;
@@ -201,6 +202,21 @@ function orirunNoticeCard(msg, retryOnclick) {
     </div>`;
 }
 window.orirunNoticeCard = orirunNoticeCard;
+
+/* Render a notice into a container AND bring it into focus: a failed reveal can
+   land below the fold, so we scroll the card to centre and move focus to it so
+   the seeker (and screen readers) notice why the reading didn't appear. */
+function renderNotice(el, msg, retryOnclick) {
+  if (!el) return;
+  el.innerHTML = orirunNoticeCard(msg, retryOnclick);
+  if (window.translateDynamicContent) { try { window.translateDynamicContent(el); } catch {} }
+  try {
+    const card = el.querySelector("[data-notice]") || el;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => { try { card.focus({ preventScroll: true }); } catch {} }, 320);
+  } catch {}
+}
+window.renderNotice = renderNotice;
 
 /* Bound a promise with a hard deadline. On a connected-but-dead or extremely
    slow network, navigator.onLine is TRUE, so the request runs the full stack
@@ -1872,11 +1888,11 @@ const performUserDivination = async (
     // A seeker should never see "Failed to fetch Odu data". Show a meaningful,
     // translatable message — offline vs. server-waking — with a way to retry.
     const msg = orirunFetchMessage("This reading");
-    resultElement.innerHTML = orirunNoticeCard(
+    renderNotice(
+      resultElement,
       msg,
       "withBusy(this, function(){ return performUserDivination(); }, {label:'Revealing…', allowOffline:true})"
     );
-    if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   } finally {
     hidePreloader();
     removeControl();
@@ -2242,8 +2258,7 @@ async function displayMeaning(number) {
 
   } catch (error) {
     console.error("Error fetching numerology data:", error);
-    document.getElementById("divinationResult").innerHTML =
-      orirunNoticeCard(orirunFetchMessage("This number reading"));
+    renderNotice(document.getElementById("divinationResult"), orirunFetchMessage("This number reading"));
     if (window.translateDynamicContent) { try { window.translateDynamicContent(document.getElementById("divinationResult")); } catch {} }
   } finally {
     hidePreloader();
@@ -2890,8 +2905,7 @@ function parseEnergyAccordion(text) {
   } catch (error) {
     console.error(error);
     hidePreloader();
-    resultElement.innerHTML =
-      orirunNoticeCard(orirunFetchMessage("This birth chart"));
+    renderNotice(resultElement, orirunFetchMessage("This birth chart"));
     if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   }
 };
