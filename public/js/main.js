@@ -172,6 +172,36 @@ function orirunFetchMessage(feature) {
 }
 window.orirunFetchMessage = orirunFetchMessage;
 
+/* A calm, self-contained notice card for a reveal that couldn't load (offline
+   or server waking). Replaces the old full-width `.alert` span, which overflowed
+   the card on a phone. Width-capped, centred, with an icon and an optional
+   "Try again" button. `retryOnclick` is a JS string wired to the reveal action;
+   omit it for flows without a clean one-tap retry. */
+function orirunNoticeCard(msg, retryOnclick) {
+  const icon =
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>' +
+    '<path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>' +
+    '<path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>' +
+    '<line x1="12" y1="20" x2="12.01" y2="20"/></svg>';
+  const retry = retryOnclick
+    ? `<button type="button" class="btn btn-sm btn-default" onclick="${retryOnclick}" data-translate
+         style="margin-top:16px;padding:9px 22px;border-radius:999px;font-weight:600;">Try again</button>`
+    : "";
+  return `
+    <div style="max-width:420px;margin:22px auto;padding:24px 22px;background:rgba(255,255,255,.72);
+      border:1px solid rgba(15,123,61,.18);border-radius:16px;text-align:center;
+      box-shadow:0 4px 18px rgba(0,0,0,.06);">
+      <div aria-hidden="true" style="width:48px;height:48px;margin:0 auto 14px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        background:rgba(15,123,61,.10);color:var(--primary,#0f7b3d);">${icon}</div>
+      <p data-translate style="margin:0;color:#3a4a3d;font-size:1em;line-height:1.6;">${msg}</p>
+      ${retry}
+    </div>`;
+}
+window.orirunNoticeCard = orirunNoticeCard;
+
 /* Bound a promise with a hard deadline. On a connected-but-dead or extremely
    slow network, navigator.onLine is TRUE, so the request runs the full stack
    (server wake-up polling + 12s timeouts + a retry) and the spinner hangs ~40s.
@@ -1842,13 +1872,10 @@ const performUserDivination = async (
     // A seeker should never see "Failed to fetch Odu data". Show a meaningful,
     // translatable message — offline vs. server-waking — with a way to retry.
     const msg = orirunFetchMessage("This reading");
-    resultElement.innerHTML = `
-      <center>
-        <span class="alert alert-info" data-translate>${msg}</span><br/>
-        <button type="button" class="btn btn-sm btn-default" style="margin-top:10px"
-          onclick="withBusy(this, function(){ return performUserDivination(); }, {label:'Revealing…', allowOffline:true})"
-          data-translate>Try again</button>
-      </center>`;
+    resultElement.innerHTML = orirunNoticeCard(
+      msg,
+      "withBusy(this, function(){ return performUserDivination(); }, {label:'Revealing…', allowOffline:true})"
+    );
     if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   } finally {
     hidePreloader();
@@ -2216,7 +2243,7 @@ async function displayMeaning(number) {
   } catch (error) {
     console.error("Error fetching numerology data:", error);
     document.getElementById("divinationResult").innerHTML =
-      `<center><span class="alert alert-info" data-translate>${orirunFetchMessage("This number reading")}</span></center>`;
+      orirunNoticeCard(orirunFetchMessage("This number reading"));
     if (window.translateDynamicContent) { try { window.translateDynamicContent(document.getElementById("divinationResult")); } catch {} }
   } finally {
     hidePreloader();
@@ -2864,7 +2891,7 @@ function parseEnergyAccordion(text) {
     console.error(error);
     hidePreloader();
     resultElement.innerHTML =
-      `<center><span class="alert alert-info" data-translate>${orirunFetchMessage("This birth chart")}</span></center>`;
+      orirunNoticeCard(orirunFetchMessage("This birth chart"));
     if (window.translateDynamicContent) { try { window.translateDynamicContent(resultElement); } catch {} }
   }
 };
