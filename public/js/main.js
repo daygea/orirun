@@ -730,11 +730,38 @@ async function fetchFreeOdus() {
     window.__READING_PRICE_INTL__ = Number.isFinite(Number(data.readingPriceIntl)) ? Number(data.readingPriceIntl) : window.__READING_PRICE__;
     window.__INTL_CURRENCY__ = data.intlCurrency === "USD" ? "USD" : "NGN";
     window.__PAYWALL_STATE_LOADED__ = true;
+    // Remember the last-known paywall state so a reading taken OFFLINE can honour
+    // it instead of failing closed with a donate prompt the user can't even pay.
+    try {
+      localStorage.setItem("orirun_paywall_state", JSON.stringify({
+        freeOdus,
+        paywallEnabled:   window.__PAYWALL_ENABLED__,
+        readingPrice:     window.__READING_PRICE__,
+        readingPriceIntl: window.__READING_PRICE_INTL__,
+        intlCurrency:     window.__INTL_CURRENCY__
+      }));
+    } catch {}
   } catch (error) {
     console.error("Failed to fetch freeOdus:", error);
-    freeOdus = ["Ejiogbe", "Osa Owonrin"];
-    // Do NOT mark state loaded on failure — the reading will fail-closed
-    // (treat as paywalled) rather than leak a paid reading for free.
+    // Offline / server unreachable. Fall back to the LAST-KNOWN paywall state
+    // saved on a previous successful load, so a reading behaves exactly as it did
+    // when last online (donation model → open). With a stored state we mark it
+    // loaded; with none at all we keep conservative defaults and let the access
+    // decision fail OPEN only when offline (a donate prompt is useless with no
+    // network, and the reading itself is served from cache).
+    let restored = null;
+    try { restored = JSON.parse(localStorage.getItem("orirun_paywall_state") || "null"); } catch {}
+    if (restored && Array.isArray(restored.freeOdus)) {
+      freeOdus = restored.freeOdus;
+      window.__PAYWALL_ENABLED__    = restored.paywallEnabled === true;
+      window.__READING_PRICE__      = Number.isFinite(Number(restored.readingPrice)) ? Number(restored.readingPrice) : 100000;
+      window.__READING_PRICE_INTL__ = Number.isFinite(Number(restored.readingPriceIntl)) ? Number(restored.readingPriceIntl) : window.__READING_PRICE__;
+      window.__INTL_CURRENCY__      = restored.intlCurrency === "USD" ? "USD" : "NGN";
+      window.__PAYWALL_STATE_LOADED__ = true;   // known-good last state
+    } else {
+      freeOdus = ["Ejiogbe", "Osa Owonrin"];
+      // __PAYWALL_STATE_LOADED__ left unset → access fails open only when offline.
+    }
   } finally {
     if (typeof _markPaywallReady === "function") _markPaywallReady();
   }
@@ -1540,14 +1567,18 @@ const performUserDivination = async (
       isOduPaid(mainCast, orientation, specificOrientation, solution, solutionDetails);
 
     // Access decision. If we have EVER loaded paywall state (even from an earlier
-    // fetch), trust the last-known value. Only if state was NEVER loaded (very
-    // first reading + a network failure) do we fail-closed — treat as paywalled
-    // to avoid leaking a paid reading free. This closes the cache/race bug while
-    // not spuriously locking readings when the paywall is simply off.
+    // fetch or the last-known copy saved offline), trust it. If state was NEVER
+    // loaded, fail CLOSED only while online (where a transient hiccup shouldn't
+    // leak a paid reading and the user can still pay); fail OPEN while offline,
+    // because a donate prompt can't be paid with no network and the reading is
+    // served from cache — so the seeker should simply get their reading.
     const _everLoaded = window.__PAYWALL_STATE_LOADED__ === true;
+    const _isOffline = (typeof window.orirunIsOnline === "function")
+      ? !window.orirunIsOnline()
+      : (typeof navigator !== "undefined" && navigator.onLine === false);
     const OPEN_ACCESS = _everLoaded
       ? (window.__PAYWALL_ENABLED__ !== true)   // trust the loaded state
-      : false;                                   // never loaded → fail closed
+      : _isOffline;                              // never loaded → open offline, closed online
 
     if (OPEN_ACCESS || hasAccess) {
       const tip = (text) =>
