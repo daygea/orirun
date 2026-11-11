@@ -298,9 +298,9 @@ async function sendMessage(userInput, options = {}) {
     // Mark provenance so a seeker can tell the tradition's own recorded words
     // (curated / verified) from the AI's synthesis. Styled distinctly in CSS.
     const _srcClass = source === "Internal" ? "msg-curated" : "msg-ai";
-    const _srcLabel = source === "Internal"
-      ? '<div class="msg-source msg-source-curated"><span data-translate>From Orírùn\'s recorded knowledge</span></div>'
-      : '<div class="msg-source msg-source-ai"><span data-translate>Interpreted by Orírùn\'s guide</span></div>';
+    // Source header removed — every reply renders as a plain chat bubble, like
+    // the user's own messages. (Provenance is still tracked via _srcClass/source.)
+    const _srcLabel = "";
     botWrapper.innerHTML =
       `<div class="chat-message bot-message ${_srcClass}" id="${_msgId}">${_srcLabel}${aiText}</div>` +
       `<button class="report-btn" onclick="reportChatMessage('${_msgId}')" ` +
