@@ -5335,9 +5335,12 @@ function flat(o) {
 }
 function cellText(v) {
   if (v == null) return "";
-  if (typeof v === "object") return JSON.stringify(v).slice(0, 120);
+  if (typeof v === "object") return escapeHtml(JSON.stringify(v).slice(0, 120));
   const s = String(v);
-  return /\d{4}-\d{2}-\d{2}T/.test(s) ? new Date(s).toLocaleString() : s.slice(0, 140);
+  const out = /\d{4}-\d{2}-\d{2}T/.test(s) ? new Date(s).toLocaleString() : s.slice(0, 140);
+  // Escape — log values can contain HTML (e.g. a reply with a link). Rendering it
+  // raw (and sliced mid-tag) corrupts the table layout, so always show as text.
+  return escapeHtml(out);
 }
 
 // Renders the current server-provided page (no client-side slicing).

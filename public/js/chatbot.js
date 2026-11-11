@@ -568,11 +568,19 @@ function resetChatMemory() {
 }
 
 async function logChat(userMessage, botResponse) {
+    // Store a plain-text version — some replies (e.g. the WhatsApp referral) are
+    // HTML; the log should read as clean text, not markup.
+    const plain = String(botResponse == null ? "" : botResponse)
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<\/(p|div|li)>/gi, " ")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
     try {
         await fetch(`${SERVER_URL}/api/chat/log`, {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ userMessage, botResponse }),
+            body:    JSON.stringify({ userMessage, botResponse: plain }),
         });
     } catch (error) {
         console.error("Failed to log chat:", error);
