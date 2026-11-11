@@ -560,6 +560,7 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
     <div class="right">
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
       <span id="whoami" style="opacity:.85"></span>
+      <a class="btn btn-ghost" id="consultLink" href="./consultations.html" style="display:none">Consultations</a>
       <button class="btn btn-ghost" id="refreshBtn" title="Reload collections">↻ Refresh</button>
       <button class="btn btn-ghost" id="logoutBtn" style="display:none">Sign out</button>
     </div>
@@ -5452,9 +5453,13 @@ async function refreshSessionChip() {
       if (canSeed) { try { initSeedOduCombo(); } catch (e) {} }
     }
     $("logoutBtn").style.display = "";
+    var consultLink = document.getElementById("consultLink");
+    if (consultLink) consultLink.style.display = "";
   } else {
     $("whoami").textContent = "";
     $("logoutBtn").style.display = "none";
+    var consultLinkOff = document.getElementById("consultLink");
+    if (consultLinkOff) consultLinkOff.style.display = "none";
   }
   return me;
 }
