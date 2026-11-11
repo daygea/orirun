@@ -66,6 +66,11 @@
   .form textarea{min-height:64px;resize:vertical}
   .form .full{grid-column:1/-1}
   .splitpreview{font-size:.85rem;color:var(--muted);background:#faf9f3;border:1px dashed var(--line);border-radius:9px;padding:8px 10px}
+  details.more{border-top:1px solid var(--line);padding-top:10px}
+  details.more>summary{cursor:pointer;font-size:.85rem;font-weight:600;color:var(--primary-ink);list-style:none;user-select:none}
+  details.more>summary::-webkit-details-marker{display:none}
+  details.more>summary:before{content:"▸ "}
+  details.more[open]>summary:before{content:"▾ "}
   .msg{padding:10px 12px;border-radius:9px;margin:10px 0;font-size:.9rem}
   .msg.err{background:#f8e9e9;color:var(--danger)} .msg.ok{background:#e7f1ea;color:var(--primary-ink)}
   .empty{padding:36px 16px;text-align:center;color:var(--muted)}
@@ -75,7 +80,11 @@
 <body>
 <header>
   <h1>🧿 Orírùn — Consultations</h1>
-  <span class="who" id="who"></span>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+    <span class="who" id="who"></span>
+    <a class="btn ghost sm" href="./index.html">Studio</a>
+    <button class="btn ghost sm" id="signout" style="display:none" onclick="signOut()">Sign out</button>
+  </div>
 </header>
 <div class="wrap">
   <div id="boot" class="card center muted">Loading…</div>
@@ -83,7 +92,7 @@
 </div>
 
 <!-- Create / edit form -->
-<div class="overlay" id="overlay">
+<div class="overlay" id="overlay" onclick="if(event.target===this) closeForm()">
   <div class="panel">
     <h2 id="formTitle">New consultation</h2>
     <div class="muted" style="font-size:.85rem">Seeker details stay private to you — the babaláwo never sees contact details.</div>
@@ -111,18 +120,8 @@
           <datalist id="babalawoList"></datalist>
         </div>
       </div>
-      <div class="full"><label>Babaláwo display name (optional)</label><input id="f_babalawoName" placeholder="e.g. Awo Ifáyemí" /></div>
-      <div class="full"><label>Request note (what the seeker asked)</label><textarea id="f_requestNote" placeholder="Short summary of the question"></textarea></div>
       <div class="row">
         <div><label>Amount</label><input id="f_amount" type="number" min="0" step="1" value="0" oninput="renderSplit()" /></div>
-        <div><label>Platform %</label><input id="f_platformPct" type="number" min="0" max="100" step="1" value="30" oninput="renderSplit()" /></div>
-      </div>
-      <div class="splitpreview" id="splitPreview"></div>
-      <div class="row">
-        <div><label>Payment reference</label><input id="f_paymentRef" placeholder="transfer ref" /></div>
-        <div><label>Currency</label><input id="f_currency" value="NGN" /></div>
-      </div>
-      <div class="row">
         <div><label>Status</label>
           <select id="f_status">
             <option value="requested">Requested</option>
@@ -132,11 +131,24 @@
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
-        <div><label>Babaláwo payout</label>
-          <select id="f_payoutStatus"><option value="owed">Owed</option><option value="paid">Paid</option></select>
-        </div>
       </div>
-      <div class="full"><label>Internal notes (only you)</label><textarea id="f_notes"></textarea></div>
+      <div class="splitpreview" id="splitPreview"></div>
+      <details class="more full">
+        <summary>More details</summary>
+        <div class="form" style="margin-top:12px">
+          <div class="row">
+            <div><label>Platform %</label><input id="f_platformPct" type="number" min="0" max="100" step="1" value="30" oninput="renderSplit()" /></div>
+            <div><label>Babaláwo payout</label><select id="f_payoutStatus"><option value="owed">Owed</option><option value="paid">Paid</option></select></div>
+          </div>
+          <div class="row">
+            <div><label>Payment reference</label><input id="f_paymentRef" placeholder="transfer ref" /></div>
+            <div><label>Currency</label><input id="f_currency" value="NGN" /></div>
+          </div>
+          <div class="full"><label>Babaláwo display name (optional)</label><input id="f_babalawoName" placeholder="e.g. Awo Ifáyemí" /></div>
+          <div class="full"><label>Request note (what the seeker asked)</label><textarea id="f_requestNote" placeholder="Short summary of the question"></textarea></div>
+          <div class="full"><label>Internal notes (only you)</label><textarea id="f_notes"></textarea></div>
+        </div>
+      </details>
       <div class="full" style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
         <button class="btn ghost" type="button" onclick="closeForm()">Cancel</button>
         <button class="btn danger" type="button" id="deleteBtn" style="display:none" onclick="removeEntry()">Delete</button>
@@ -181,8 +193,9 @@ var ME = null;
     if(!res.ok || !j.authenticated){ return showSignIn(); }
     ME = j;
     el("who").textContent = (j.username || j.role) + " · " + j.role;
+    el("signout").style.display = "";
     if(j.role === "superadmin") return initAdmin();
-    if(j.role === "babalawo")  return initBabalawo();
+    if(j.role === "babalawo" || j.role === "elder") return initBabalawo();
     return showNoAccess();
   }catch(e){ showSignIn(); }
 })();
@@ -194,7 +207,11 @@ function showSignIn(){
 }
 function showNoAccess(){
   el("boot").style.display="none"; el("app").style.display="block";
-  el("app").innerHTML = '<div class="card center"><p>The consultations ledger is available to the administrator and to babaláwos for their own records.</p></div>';
+  el("app").innerHTML = '<div class="card center"><p>The consultations ledger is available to the administrator and to babaláwos and elders for their own records.</p></div>';
+}
+async function signOut(){
+  try{ await fetch(API_BASE + "/api/auth/logout", { method:"POST", credentials:"include" }); }catch(e){}
+  location.href = "./index.html";
 }
 
 /* ════════════════ BABALÁWO: my consultations (read-only) ════════════════ */

@@ -561,7 +561,6 @@ table.logs tr.row:hover td{background:var(--leaf-soft)}
       <span class="db-badge" id="dbBadge"><span class="dot"></span><span id="dbBadgeText">checking…</span></span>
       <span id="whoami" style="opacity:.85"></span>
       <a class="btn btn-ghost" id="consultLink" href="./consultations.html" style="display:none">Consultations</a>
-      <button class="btn btn-ghost" id="refreshBtn" title="Reload collections">↻ Refresh</button>
       <button class="btn btn-ghost" id="logoutBtn" style="display:none">Sign out</button>
     </div>
   </header>
@@ -5474,7 +5473,7 @@ function setLoggedOutChrome(loggedOut) {
   document.querySelector('.shell > nav[aria-label="Content collections"]').style.visibility = loggedOut ? "hidden" : "";
   document.querySelector('section.items').style.visibility = loggedOut ? "hidden" : "";
   $("dbBadge").style.display = loggedOut ? "none" : "";
-  $("refreshBtn").style.display = loggedOut ? "none" : "";
+  var _refreshBtn = $("refreshBtn"); if (_refreshBtn) _refreshBtn.style.display = loggedOut ? "none" : "";
   // Area tabs: hide the whole nav until signed in (and keep them inert).
   const areaNav = document.querySelector("nav.area-nav");
   if (areaNav) areaNav.style.display = loggedOut ? "none" : "";
@@ -5735,7 +5734,7 @@ $("logoutBtn").onclick = async () => {
   gateToLogin();
 };
 
-$("refreshBtn").onclick = loadCollections;
+(function(){ var _rb = $("refreshBtn"); if (_rb) _rb.onclick = loadCollections; })();
 window.addEventListener("beforeunload", (e) => { if (itemDirty) e.preventDefault(); });
 
 if (location.protocol === "file:") {
